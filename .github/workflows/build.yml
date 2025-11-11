@@ -1,0 +1,168 @@
+name: Build Windows ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Chọn chế độ build (ví dụ: 7-32, ALL-64, AUTO)"
+        required: true
+        type: choice
+        options:
+          - AUTO
+          - 7-32
+          - 7-64
+          - 10-32
+          - 10-64
+          - 10-32-ltsc
+          - 10-64-ltsc
+          - 11-64
+          - 11-64-ltsc
+          - ALL-32
+          - ALL-64
+          - ALL-32-LITE
+          - ALL-64-LITE
+          - SPLIT
+          - xoa-dll
+
+env:
+  GH_PAT: ${{ secrets.GH_PAT }}
+  SCRIPT_REPO: ${{ vars.SCRIPT_REPO || 'github.com/tuthanika/VIETSTAR-Windows' }}
+  RCLONE_CONF_REPO: ${{ vars.RCLONE_CONF_REPO || 'github.com/tuthanika/Rclone-Auto-Refresh-Token' }}
+  RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'D:\\RUN\\rclone.conf' }}
+  SCRIPT_PATH: ${{ vars.SCRIPT_PATH || 'D:\\RUN' }}
+  INSTALL_PATH: ${{ vars.INSTALL_PATH || 'D:\\TOOLS' }}
+  MOUNT_PATH: ${{ var.MOUNT_PATH || 'D:\\RUN\\mount' }}
+  vietstar: ${{ var.VIETSTAR || 'D:\\RUN\\vietstar' }}
+  OK_UPLOAD: ${{ var.OK_UPLOAD || 'D:\\RUN\\mount\\VIETSTAR' }}
+  silent: ${{ var.SILENT || 'D:\\RUN\\mount\\Silent\\Apps\\exe' }}
+  oem: ${{ var.OEM || 'D:\\RUN\\0.OEM' }}
+  dll: ${{ var.DLL || 'D:\\RUN\\1.DLL' }}
+  driver: ${{ var.DRIVER || 'D:\\RUN\\z.DRIVER' }}
+  iso: ${{ var.ISO || 'D:\\RUN\\z.ISO' }}
+  boot7: ${{ var.BOOT7 || 'D:\\RUN\\z.BOOT7' }}
+  bootwim: ${{ var.BOOTWIM || 'C:\\1' }}
+  REMOTE_NAME: ${{ var.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
+  REMOTE_TARGET: ${{ var.REMOTE_TARGET || 'VIETSTAR' }}
+  rclone_flag: ${{ var.RCLONE_FLAG || '--fast-list --delete-during --checksum --no-update-modtime --transfers 8 --checkers 8 --contimeout 60s --timeout 300s --retries 3 --low-level-retries 10 --fast-list --onedrive-delta --server-side-across-configs --onedrive-no-versions --onedrive-hard-delete --onedrive-av-override --drive-copy-shortcut-content --drive-acknowledge-abuse --drive-stop-on-upload-limit --drive-stop-on-download-limit --checksum --track-renames --no-update-modtime' }}
+  OLD_LIMIT: ${{ vars.OLD_LIMIT || 3 }}
+  MODE_PATTERNS: ${{ vars.MODE_PATTERNS || '7-32=*windows_7*x86*.iso\n7-64=*windows_7*x64*.iso\n10-32-ltsc=*windows_10*ltsc*x86*.iso\n10-64-ltsc=*windows_10*ltsc*x64*.iso\n10-32=*windows_10*version*x86*.iso\n10-64=*windows_10*version*x64*.iso\n11-64=*windows_11*version*x64*.iso\n11-64-ltsc=*windows_11*ltsc*x64*.iso\nALL-32=*windows_all*_x86_*.iso\nALL-64=*windows_all*_x64_*.iso' }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Tạo thư mục cần thiết
+        run: |
+          mkdir "%SCRIPT_PATH%" 2>nul
+          mkdir "%MOUNT_PATH%" 2>nul
+          mkdir "%INSTALL_PATH%" 2>nul
+
+      - name: Cài đặt rclone, 7-Zip, imdisk
+        run: |
+          curl -L -o "%INSTALL_PATH%\\rclone.zip" https://downloads.rclone.org/rclone-current-windows-amd64.zip
+          powershell -Command "Expand-Archive -Path '%INSTALL_PATH%\\rclone.zip' -DestinationPath '%INSTALL_PATH%\\rclone' -Force"
+          setx PATH "%INSTALL_PATH%\\rclone\\rclone-*-windows-amd64" /M
+
+          curl -L -o "%INSTALL_PATH%\\7z.exe" https://www.7-zip.org/a/7z2301-x64.exe
+          start /wait "" "%INSTALL_PATH%\\7z.exe" /S
+
+          curl -L -o "%INSTALL_PATH%\\imdisk.msi" https://www.ltr-data.se/files/imdiskinst.msi
+          msiexec /i "%INSTALL_PATH%\\imdisk.msi" /quiet /norestart
+
+      - name: Tải rclone.conf từ repo riêng tư
+        run: |
+          git clone https://${{ env.GH_PAT }}@${{ env.RCLONE_CONF_REPO }} temp-rclone
+          copy /Y "temp-rclone\\rclone.conf" "%RCLONE_CONFIG_PATH%"
+          rmdir /s /q temp-rclone
+
+      - name: Clone script từ repo riêng tư vào SCRIPT_PATH
+        run: |
+          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
+
+      - name: Mount remote bằng rclone
+        run: |
+          rclone --config "%RCLONE_CONFIG_PATH%" mount %REMOTE_NAME%: "%MOUNT_PATH%" --vfs-cache-mode full --daemon
+
+      - name: Chạy script build ISO
+        run: |
+          cd /d "%SCRIPT_PATH%"
+          call zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }}
+
+      - name: Xử lý ISO sau khi build
+        shell: cmd
+        run: |
+          @echo off
+          setlocal enabledelayedexpansion
+          set "mode=${{ github.event.inputs.mode }}"
+
+          rem === Tra pattern theo mode ===
+          set "pattern="
+          for /f "tokens=1,* delims==" %%a in ('echo %MODE_PATTERNS% ^| findstr /i "^%mode%="') do (
+              set "pattern=%%b"
+          )
+
+          if not defined pattern (
+              echo [ERROR] Không tìm thấy pattern cho chế độ %mode%
+              exit /b 1
+          )
+
+          rem === Kiểm tra file ISO trong vietstar theo pattern ===
+          set "found=0"
+          for %%f in ("%vietstar%\%pattern%") do (
+              set "found=1"
+
+              rem === Di chuyển file cũ trong OK_UPLOAD vào old ===
+              for %%x in ("%OK_UPLOAD%\%pattern%") do (
+                  if not exist "%OK_UPLOAD%\old" mkdir "%OK_UPLOAD%\old"
+                  echo [INFO] Di chuyển %%~nxx từ OK_UPLOAD vào old
+                  move /Y "%%x" "%OK_UPLOAD%\old\"
+              )
+
+              rem === Lọc và xóa bản cũ nhất trong old nếu vượt quá OLD_LIMIT ===
+              set "count=0"
+              for /f %%i in ('dir /b /a:-d /o:d "%OK_UPLOAD%\old\%pattern%" 2^>nul') do (
+                  set /a count+=1
+                  set "file[!count!]=%%i"
+              )
+
+              if !count! GTR %OLD_LIMIT% (
+                  set /a excess=!count! - %OLD_LIMIT%
+                  for /L %%j in (1,1,!excess!) do (
+                      echo [INFO] Xóa bản cũ: !file[%%j]!
+                      rclone delete "%REMOTE_NAME%:%REMOTE_TARGET%/old/!file[%%j]!" %rclone_flag% --config "%RCLONE_CONFIG_PATH%"
+                  )
+              )
+
+              rem === Upload file mới bằng rclone copy ===
+              echo [INFO] Upload %%~nxf từ vietstar lên remote
+              rclone copy "%%f" "%REMOTE_NAME%:%REMOTE_TARGET%" --progress %rclone_flag% --config "%RCLONE_CONFIG_PATH%"
+          )
+
+          if "!found!"=="0" (
+              echo [ERROR] Không tìm thấy file ISO trong %vietstar% theo pattern %pattern%
+              exit /b 1
+          )
+
+          endlocal
+		  
+      - name: Tạo README.md ghi thông tin bản build mới
+        shell: cmd
+        run: |
+          echo date: %DATE% > "%SCRIPT_PATH%\README.md"
+          for %%f in ("%vietstar%\*.iso") do (
+            echo Name: %%~nxf >> "%SCRIPT_PATH%\README.md"
+            echo Size: %%~zf bytes >> "%SCRIPT_PATH%\README.md"
+            certutil -hashfile "%%f" MD5 | findstr /v "hash" >> "%SCRIPT_PATH%\README.md"
+            echo. >> "%SCRIPT_PATH%\README.md"
+          )
+	  
+      - name: Commit README.md vào repo hiện tại
+        run: |
+          cd "%SCRIPT_PATH%"
+          git config --global user.email "ci@vietstar.local"
+          git config --global user.name "vietstar-ci"
+          git add README.md
+          git commit -m "Update README with latest build info"
+          git push
+  
