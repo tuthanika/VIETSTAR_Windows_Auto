@@ -99,6 +99,7 @@ jobs:
             Write-Error "Không tìm thấy rclone.exe trong $rclonePath"
             exit 1
           }
+          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
           Move-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe"
 
 
