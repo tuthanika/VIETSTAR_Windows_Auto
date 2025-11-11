@@ -102,9 +102,11 @@ jobs:
           New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
           Move-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe"
 
-
           # Kiểm tra rclone
           & "$env:SCRIPT_PATH\rclone.exe" version
+          
+          Invoke-WebRequest -Uri "https://github.com/winfsp/winfsp/releases/download/v1.12.22339/winfsp-1.12.22339.msi" -OutFile "$env:INSTALL_PATH\winfsp.msi"
+          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$env:INSTALL_PATH\winfsp.msi`" /quiet /norestart" -Wait
 
       - name: Tải rclone.conf trực tiếp từ GitHub
         shell: cmd
