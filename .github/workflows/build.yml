@@ -115,7 +115,7 @@ jobs:
       - name: Mount remote bằng rclone
         shell: cmd
         run: |
-          rclone cmount %REMOTE_NAME%: "%MOUNT_PATH%" --config "%RCLONE_CONFIG_PATH%" --vfs-cache-mode full
+          rclone mount %REMOTE_NAME%: "%MOUNT_PATH%" --config "%RCLONE_CONFIG_PATH%" --cmount --vfs-cache-mode full
 
       - name: Chạy script build ISO
         shell: cmd
