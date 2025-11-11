@@ -121,10 +121,19 @@ jobs:
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
 
       - name: Mount remote bằng rclone
-        shell: cmd
+        shell: pwsh
         run: |
-          %SCRIPT_PATH%\\rclone.exe cmount %REMOTE_NAME%: "%MOUNT_PATH%" --config "%RCLONE_CONFIG_PATH%" --vfs-cache-mode full --daemon
-          
+          Start-Process -FilePath "$env:SCRIPT_PATH\rclone.exe" `
+            -ArgumentList @(
+              "cmount",
+              "$env:REMOTE_NAME:`:",
+              "$env:MOUNT_PATH",
+              "--config", "$env:RCLONE_CONFIG_PATH",
+              "--cmount",
+              "--vfs-cache-mode", "full"
+            ) `
+            -WindowStyle Hidden
+    
       - name: Chạy script build ISO
         shell: cmd
         run: |
