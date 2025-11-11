@@ -80,7 +80,10 @@ jobs:
         run: |
           curl -L -o "%INSTALL_PATH%\\rclone.zip" https://downloads.rclone.org/rclone-current-windows-amd64.zip
           powershell -ExecutionPolicy Bypass -NoProfile -Command "Expand-Archive -Path '%INSTALL_PATH%\rclone.zip' -DestinationPath '%INSTALL_PATH%\rclone' -Force"
-          setx PATH "%INSTALL_PATH%\\rclone\\rclone-*-windows-amd64" /M
+          for /d %%i in ("%INSTALL_PATH%\rclone\rclone-*") do ^(
+            set "PATH=%%i;%PATH%"
+          ^)
+          rclone version
 
           curl -L -o "%INSTALL_PATH%\\7z.exe" https://www.7-zip.org/a/7z2301-x64.exe
           start /wait "" "%INSTALL_PATH%\\7z.exe" /S
