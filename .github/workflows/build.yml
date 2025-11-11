@@ -58,11 +58,12 @@ jobs:
           mkdir "%SCRIPT_PATH%" 2>nul
           mkdir "%MOUNT_PATH%" 2>nul
           mkdir "%INSTALL_PATH%" 2>nul
-
+          
       - name: Cài đặt rclone, 7-Zip, imdisk
+        shell: cmd
         run: |
           curl -L -o "%INSTALL_PATH%\\rclone.zip" https://downloads.rclone.org/rclone-current-windows-amd64.zip
-          powershell -Command "Expand-Archive -Path '%INSTALL_PATH%\\rclone.zip' -DestinationPath '%INSTALL_PATH%\\rclone' -Force"
+          powershell -ExecutionPolicy Bypass -NoProfile -Command "Expand-Archive -Path '%INSTALL_PATH%\rclone.zip' -DestinationPath '%INSTALL_PATH%\rclone' -Force"
           setx PATH "%INSTALL_PATH%\\rclone\\rclone-*-windows-amd64" /M
 
           curl -L -o "%INSTALL_PATH%\\7z.exe" https://www.7-zip.org/a/7z2301-x64.exe
@@ -70,7 +71,7 @@ jobs:
 
           curl -L -o "%INSTALL_PATH%\\imdisk.msi" https://www.ltr-data.se/files/imdiskinst.msi
           msiexec /i "%INSTALL_PATH%\\imdisk.msi" /quiet /norestart
-
+     
       - name: Tải rclone.conf từ repo riêng tư
         run: |
           git clone https://${{ env.GH_PAT }}@${{ env.RCLONE_CONF_REPO }} temp-rclone
