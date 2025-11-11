@@ -85,12 +85,12 @@ jobs:
           curl -L -o "%INSTALL_PATH%\\7z.exe" https://www.7-zip.org/a/7z2301-x64.exe
           start /wait "" "%INSTALL_PATH%\\7z.exe" /S
      
-      - name: Tải rclone.conf từ repo riêng tư
+      - name: Tải rclone.conf trực tiếp từ GitHub
         shell: cmd
         run: |
-          git clone https://${{ env.GH_PAT }}@${{ env.RCLONE_CONF_REPO }} temp-rclone
-          copy /Y "temp-rclone\\rclone.conf" "%RCLONE_CONFIG_PATH%"
-          rmdir /s /q temp-rclone
+          curl -H "Authorization: token %GH_PAT%" ^
+               -L -o "%RCLONE_CONFIG_PATH%" ^
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
       - name: Clone script từ repo riêng tư vào SCRIPT_PATH
         run: |
