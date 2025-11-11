@@ -84,9 +84,6 @@ jobs:
 
           curl -L -o "%INSTALL_PATH%\\7z.exe" https://www.7-zip.org/a/7z2301-x64.exe
           start /wait "" "%INSTALL_PATH%\\7z.exe" /S
-
-          curl -L -o "%INSTALL_PATH%\\imdisk.msi" https://www.ltr-data.se/files/imdiskinst.msi
-          msiexec /i "%INSTALL_PATH%\\imdisk.msi" /quiet /norestart
      
       - name: Tải rclone.conf từ repo riêng tư
         run: |
