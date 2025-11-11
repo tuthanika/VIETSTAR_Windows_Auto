@@ -92,13 +92,12 @@ jobs:
           # Tìm thư mục rclone thực tế
           $rcloneDir = Get-ChildItem "$env:INSTALL_PATH\rclone" | Where-Object { $_.Name -like "rclone-*" } | Select-Object -First 1
           $rclonePath = "$($rcloneDir.FullName)"
-          Write-Host "Rclone path: $rclonePath"
 
-          # Gán vào PATH tạm thời
-          $env:PATH = "$rclonePath;$env:PATH"
+          # Di chuyển rclone.exe về SCRIPT_PATH
+          Move-Item "$rclonePath\rclone.exe" "$env:SCRIPT_PATH\rclone.exe"
 
           # Kiểm tra rclone
-          & "$rclonePath\rclone.exe" version
+          & "$env:SCRIPT_PATH\rclone.exe" version
 
       - name: Tải rclone.conf trực tiếp từ GitHub
         shell: cmd
@@ -115,8 +114,8 @@ jobs:
       - name: Mount remote bằng rclone
         shell: cmd
         run: |
-          rclone mount %REMOTE_NAME%: "%MOUNT_PATH%" --config "%RCLONE_CONFIG_PATH%" --cmount --vfs-cache-mode full
-
+          %SCRIPT_PATH%\\rclone.exe mount %REMOTE_NAME%: "%MOUNT_PATH%" --config "%RCLONE_CONFIG_PATH%" --cmount --vfs-cache-mode full
+          
       - name: Chạy script build ISO
         shell: cmd
         run: |

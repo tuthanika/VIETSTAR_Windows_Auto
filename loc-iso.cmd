@@ -44,13 +44,13 @@ for %%f in ("%vietstar%\%pattern%") do (
         set /a excess=!count! - %OLD_LIMIT%
         for /L %%j in (1,1,!excess!) do (
             echo [INFO] Xóa bản cũ: !file[%%j]!
-            rclone delete "%REMOTE_NAME%:%REMOTE_TARGET%/old/!file[%%j]!" %rclone_flag% --config "%RCLONE_CONFIG_PATH%"
+            %SCRIPT_PATH%\rclone.exe delete "%REMOTE_NAME%:%REMOTE_TARGET%/old/!file[%%j]!" %rclone_flag% --config "%RCLONE_CONFIG_PATH%"
         )
     )
 
     rem === Upload file mới bằng rclone copy ===
     echo [INFO] Upload %%~nxf từ vietstar lên remote
-    rclone copy "%%f" "%REMOTE_NAME%:%REMOTE_TARGET%" --progress %rclone_flag% --config "%RCLONE_CONFIG_PATH%"
+    %SCRIPT_PATH%\rclone.exe copy "%%f" "%REMOTE_NAME%:%REMOTE_TARGET%" --progress %rclone_flag% --config "%RCLONE_CONFIG_PATH%"
 )
 
 if "!found!"=="0" (
