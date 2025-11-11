@@ -93,7 +93,14 @@ jobs:
           $rcloneDir = Get-ChildItem "$env:INSTALL_PATH\rclone" | Where-Object { $_.Name -like "rclone-*" } | Select-Object -First 1
           $rclonePath = "$($rcloneDir.FullName)"
           Write-Host "Rclone path: $rclonePath"
-          Move-Item "$rclonePath\rclone.exe" "$env:SCRIPT_PATH\rclone.exe"
+          
+          $rcloneExe = Get-ChildItem "$rclonePath" -Recurse -Filter "rclone.exe" | Select-Object -First 1
+          if (-not $rcloneExe) {
+            Write-Error "Không tìm thấy rclone.exe trong $rclonePath"
+            exit 1
+          }
+          Move-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe"
+
 
           # Kiểm tra rclone
           & "$env:SCRIPT_PATH\rclone.exe" version
