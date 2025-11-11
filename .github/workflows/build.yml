@@ -28,18 +28,18 @@ env:
   GH_PAT: ${{ secrets.GH_PAT }}
   SCRIPT_REPO: ${{ vars.SCRIPT_REPO || 'github.com/tuthanika/VIETSTAR-Windows' }}
   RCLONE_CONF_REPO: ${{ vars.RCLONE_CONF_REPO || 'github.com/tuthanika/Rclone-Auto-Refresh-Token' }}
-  RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'D:\\RUN\\rclone.conf' }}
-  SCRIPT_PATH: ${{ vars.SCRIPT_PATH || 'D:\\RUN' }}
-  INSTALL_PATH: ${{ vars.INSTALL_PATH || 'D:\\TOOLS' }}
-  MOUNT_PATH: ${{ vars.MOUNT_PATH || 'D:\\RUN\\mount' }}
-  vietstar: ${{ vars.VIETSTAR || 'D:\\RUN\\vietstar' }}
-  OK_UPLOAD: ${{ vars.OK_UPLOAD || 'D:\\RUN\\mount\\z.VIETSTAR' }}
-  silent: ${{ vars.SILENT || 'D:\\RUN\\mount\\Silent\\Apps\\exe' }}
-  oem: ${{ vars.OEM || 'D:\\RUN\\0.OEM' }}
-  dll: ${{ vars.DLL || 'D:\\RUN\\1.DLL' }}
-  driver: ${{ vars.DRIVER || 'D:\\RUN\\mount\\z.DRIVER' }}
-  iso: ${{ vars.ISO || 'D:\\RUN\\mount\\z.ISO' }}
-  boot7: ${{ vars.BOOT7 || 'D:\\RUN\\mount\\z.BOOT7' }}
+  RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\\RUN\\rclone.conf' }}
+  SCRIPT_PATH: ${{ vars.SCRIPT_PATH || 'C:\\RUN' }}
+  INSTALL_PATH: ${{ vars.INSTALL_PATH || 'C:\\TOOLS' }}
+  MOUNT_PATH: ${{ vars.MOUNT_PATH || 'C:\\RUN\\mount' }}
+  vietstar: ${{ vars.VIETSTAR || 'C:\\RUN\\vietstar' }}
+  OK_UPLOAD: ${{ vars.OK_UPLOAD || 'C:\\RUN\\mount\\z.VIETSTAR' }}
+  silent: ${{ vars.SILENT || 'C:\\RUN\\mount\\Silent\\Apps\\exe' }}
+  oem: ${{ vars.OEM || 'C:\\RUN\\0.OEM' }}
+  dll: ${{ vars.DLL || 'C:\\RUN\\1.DLL' }}
+  driver: ${{ vars.DRIVER || 'C:\\RUN\\mount\\z.DRIVER' }}
+  iso: ${{ vars.ISO || 'C:\\RUN\\mount\\z.ISO' }}
+  boot7: ${{ vars.BOOT7 || 'C:\\RUN\\mount\\z.BOOT7' }}
   bootwim: ${{ vars.BOOTWIM || 'C:\\1' }}
   REMOTE_NAME: ${{ vars.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
   REMOTE_TARGET: ${{ vars.REMOTE_TARGET || 'z.VIETSTAR' }}
