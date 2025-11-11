@@ -53,6 +53,22 @@ jobs:
     runs-on: windows-latest
 
     steps:
+    
+      - name: Gán biến môi trường cho cmd
+        shell: cmd
+        run: |
+          set SCRIPT_PATH=%SCRIPT_PATH%
+          set INSTALL_PATH=%INSTALL_PATH%
+          set MOUNT_PATH=%MOUNT_PATH%
+          set RCLONE_CONFIG_PATH=%RCLONE_CONFIG_PATH%
+          set REMOTE_NAME=%REMOTE_NAME%
+          set REMOTE_TARGET=%REMOTE_TARGET%
+          set vietstar=%vietstar%
+          set OK_UPLOAD=%OK_UPLOAD%
+          set rclone_flag=%rclone_flag%
+          set OLD_LIMIT=%OLD_LIMIT%
+          set MODE_PATTERNS=%MODE_PATTERNS%
+
       - name: Tạo thư mục cần thiết
         run: |
           mkdir "%SCRIPT_PATH%" 2>nul
