@@ -96,7 +96,7 @@ jobs:
           @echo off
           set "mode=${{ github.event.inputs.mode }}"
           call "%SCRIPT_PATH%\loc-iso.cmd" !mode!
-  
+
       - name: Tạo README.md ghi thông tin bản build mới
         shell: cmd
         run: |
@@ -107,7 +107,7 @@ jobs:
             certutil -hashfile "%%f" MD5 | findstr /v "hash" >> "%SCRIPT_PATH%\README.md"
             echo. >> "%SCRIPT_PATH%\README.md"
           )
-	  
+
       - name: Commit README.md vào repo hiện tại
         run: |
           cd "%SCRIPT_PATH%"
