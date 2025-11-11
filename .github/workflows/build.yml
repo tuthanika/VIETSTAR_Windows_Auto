@@ -114,9 +114,6 @@ jobs:
               exit /b 1
           )
 
-    rem === Tiếp tục xử lý ISO như di chuyển, xóa, upload...
-
-
           rem === Kiểm tra file ISO trong vietstar theo pattern ===
           set "found=0"
           for %%f in ("%vietstar%\%pattern%") do (
