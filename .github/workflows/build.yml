@@ -75,19 +75,31 @@ jobs:
           mkdir "%MOUNT_PATH%" 2>nul
           mkdir "%INSTALL_PATH%" 2>nul
           
-      - name: Cài đặt rclone, 7-Zip, imdisk
-        shell: cmd
+      - name: Cài đặt rclone, 7-Zip và gán PATH
+        shell: pwsh
         run: |
-          curl -L -o "%INSTALL_PATH%\\rclone.zip" https://downloads.rclone.org/rclone-current-windows-amd64.zip
-          powershell -ExecutionPolicy Bypass -NoProfile -Command "Expand-Archive -Path '%INSTALL_PATH%\rclone.zip' -DestinationPath '%INSTALL_PATH%\rclone' -Force"
-          for /d %%i in ("%INSTALL_PATH%\rclone\rclone-*") do ^(
-            set "PATH=%%i;%PATH%"
-          ^)
-          rclone version
+          # Tải và cài đặt 7-Zip
+          Invoke-WebRequest -Uri "https://www.7-zip.org/a/7z2301-x64.exe" -OutFile "$env:INSTALL_PATH\7z.exe"
+          Start-Process -FilePath "$env:INSTALL_PATH\7z.exe" -ArgumentList "/S" -Wait
 
-          curl -L -o "%INSTALL_PATH%\\7z.exe" https://www.7-zip.org/a/7z2301-x64.exe
-          start /wait "" "%INSTALL_PATH%\\7z.exe" /S
-     
+          # Tải rclone.zip
+          Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile "$env:INSTALL_PATH\rclone.zip"
+
+          # Giải nén bằng 7-Zip
+          $sevenZip = "C:\Program Files\7-Zip\7z.exe"
+          & $sevenZip x "$env:INSTALL_PATH\rclone.zip" -o"$env:INSTALL_PATH\rclone" -y
+
+          # Tìm thư mục rclone thực tế
+          $rcloneDir = Get-ChildItem "$env:INSTALL_PATH\rclone" | Where-Object { $_.Name -like "rclone-*" } | Select-Object -First 1
+          $rclonePath = "$($rcloneDir.FullName)"
+          Write-Host "Rclone path: $rclonePath"
+
+          # Gán vào PATH tạm thời
+          $env:PATH = "$rclonePath;$env:PATH"
+
+          # Kiểm tra rclone
+          & "$rclonePath\rclone.exe" version
+
       - name: Tải rclone.conf trực tiếp từ GitHub
         shell: cmd
         run: |
