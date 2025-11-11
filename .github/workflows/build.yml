@@ -91,9 +91,8 @@ jobs:
 
           # Tìm thư mục rclone thực tế
           $rcloneDir = Get-ChildItem "$env:INSTALL_PATH\rclone" | Where-Object { $_.Name -like "rclone-*" } | Select-Object -First 1
-          $rclonePath = $rcloneDir.FullName
-
-          # Di chuyển rclone.exe về SCRIPT_PATH
+          $rclonePath = "$($rcloneDir.FullName)"
+          Write-Host "Rclone path: $rclonePath"
           Move-Item "$rclonePath\rclone.exe" "$env:SCRIPT_PATH\rclone.exe"
 
           # Kiểm tra rclone
