@@ -86,6 +86,7 @@ jobs:
           start /wait "" "%INSTALL_PATH%\\7z.exe" /S
      
       - name: Tải rclone.conf từ repo riêng tư
+        shell: cmd
         run: |
           git clone https://${{ env.GH_PAT }}@${{ env.RCLONE_CONF_REPO }} temp-rclone
           copy /Y "temp-rclone\\rclone.conf" "%RCLONE_CONFIG_PATH%"
@@ -96,10 +97,12 @@ jobs:
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
 
       - name: Mount remote bằng rclone
+        shell: cmd
         run: |
           rclone cmount %REMOTE_NAME%: "%MOUNT_PATH%" --config "%RCLONE_CONFIG_PATH%" --vfs-cache-mode full
 
       - name: Chạy script build ISO
+        shell: cmd
         run: |
           cd /d "%SCRIPT_PATH%"
           call zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }}
