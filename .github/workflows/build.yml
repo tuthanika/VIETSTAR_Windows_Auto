@@ -138,6 +138,7 @@ jobs:
         shell: cmd
         run: |
           cd /d "%SCRIPT_PATH%"
+          dir "%SCRIPT_PATH%\zzz.Windows-imdisk.cmd"
           call zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }}
 
       - name: Xử lý ISO sau khi build
