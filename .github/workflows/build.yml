@@ -120,7 +120,7 @@ jobs:
           Start-Process -FilePath "$env:SCRIPT_PATH\rclone.exe" `
             -ArgumentList @(
               "cmount",
-              "$env:REMOTE_NAME:`:",
+              "$env:REMOTE_NAME:",
               "$env:MOUNT_PATH",
               "--config", "$env:RCLONE_CONFIG_PATH",
               "--cmount",
@@ -128,12 +128,22 @@ jobs:
             ) `
             -WindowStyle Hidden
             
-          if (Test-Path "$env:MOUNT_PATH`:") {
-              Get-ChildItem "$env:MOUNT_PATH`:"
-          } else {
-              Write-Host "❌ Mount thất bại"
-          }
-      
+          # Chờ mount sẵn sàng (tối đa 30 giây)
+              $timeout = 30
+              while ($timeout -gt 0) {
+                if (Test-Path "$env:MOUNT_PATH`:") {
+                  Write-Host "✅ Mount thành công"
+                  break
+                }
+                Start-Sleep -Seconds 1
+                $timeout--
+              }
+
+              if ($timeout -eq 0) {
+                Write-Host "❌ Timeout mount rclone"
+                exit 1
+              }
+              
           & "$env:SCRIPT_PATH\zzz.Windows-imdisk.cmd" $env:MODE   
 
       - name: Xử lý ISO sau khi build
