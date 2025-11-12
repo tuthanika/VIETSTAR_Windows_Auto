@@ -123,5 +123,5 @@ jobs:
       - name: Kiểm tra nội dung SCRIPT_PATH sau khi clone
         shell: pwsh
         run: |
-      Write-Host "📁 Liệt kê toàn bộ nội dung trong $env:SCRIPT_PATH (bao gồm thư mục con và file ẩn)"
-      Get-ChildItem -Path "$env:SCRIPT_PATH" -Recurse -Force | Format-List FullName, Attributes, Length
+          Write-Host "📁 Liệt kê toàn bộ nội dung trong $env:SCRIPT_PATH (bao gồm thư mục con và file ẩn)"
+          Get-ChildItem -Path "$env:SCRIPT_PATH" -Recurse -Force | Format-List FullName, Attributes, Length
