@@ -53,7 +53,7 @@ jobs:
     runs-on: windows-latest
 
     steps: 
-            
+    
       - name: Gán biến môi trường cho cmd
         shell: cmd
         run: |
@@ -70,8 +70,7 @@ jobs:
           set MODE_PATTERNS=${{ env.MODE_PATTERNS }}
           set MODE=${{ github.event.inputs.mode }}
     
-      - name: Tạo thư mục cần thiết
-        shell: cmd   
+      - name: Tạo thư mục cần thiết   
         run: |
           mkdir "%SCRIPT_PATH%" 2>nul
           mkdir "%MOUNT_PATH%" 2>nul
