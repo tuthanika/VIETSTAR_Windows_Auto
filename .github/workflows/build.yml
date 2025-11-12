@@ -128,6 +128,12 @@ jobs:
             ) `
             -WindowStyle Hidden
             
+          if (Test-Path "$env:MOUNT_PATH`:") {
+              Get-ChildItem "$env:MOUNT_PATH`:"
+          } else {
+              Write-Host "❌ Mount thất bại"
+          }
+      
           & "$env:SCRIPT_PATH\zzz.Windows-imdisk.cmd" $env:MODE   
 
       - name: Xử lý ISO sau khi build
