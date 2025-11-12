@@ -32,7 +32,6 @@ env:
   SCRIPT_PATH: ${{ vars.SCRIPT_PATH || 'C:\\RUN' }}
   INSTALL_PATH: ${{ vars.INSTALL_PATH || 'C:\\TOOLS' }}
   MOUNT_PATH: ${{ vars.MOUNT_PATH || 'C:\\RUN\\mount' }}
-  REPO_PATH: ${{ vars.REPO_PATH || 'C:\\REPO' }}
   vietstar: ${{ vars.VIETSTAR || 'C:\\RUN\\vietstar' }}
   OK_UPLOAD: ${{ vars.OK_UPLOAD || 'C:\\RUN\\mount\\z.VIETSTAR' }}
   silent: ${{ vars.SILENT || 'C:\\RUN\\mount\\Silent\\Apps\\exe' }}
@@ -48,17 +47,16 @@ env:
   OLD_LIMIT: ${{ vars.OLD_LIMIT || 3 }}
   MODE_PATTERNS: ${{ vars.MODE_PATTERNS || '' }}
   MODE: ${{ github.event.inputs.mode }}
+  REPO_PATH: ${{ github.workspace }}
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps: 
-    
+   
       - name: Checkout repo chính vào 
         uses: actions/checkout@v4
-        with:
-          path: ${{ env.REPO_PATH }}
 
       - name: Tạo thư mục cần thiết   
         run: |
@@ -143,17 +141,17 @@ jobs:
       - name: Tạo README.md ghi thông tin bản build mới
         shell: cmd
         run: |
-          echo date: %DATE% > "%SCRIPT_PATH%\README.md"
+          echo date: %DATE% > "%REPO_PATH%\README.md"
           for %%f in ("%vietstar%\*.iso") do (
-            echo Name: %%~nxf >> "%SCRIPT_PATH%\README.md"
-            echo Size: %%~zf bytes >> "%SCRIPT_PATH%\README.md"
-            certutil -hashfile "%%f" MD5 | findstr /v "hash" >> "%SCRIPT_PATH%\README.md"
-            echo. >> "%SCRIPT_PATH%\README.md"
+            echo Name: %%~nxf >> "%REPO_PATH%\README.md"
+            echo Size: %%~zf bytes >> "%REPO_PATH%\README.md"
+            certutil -hashfile "%%f" MD5 | findstr /v "hash" >> "%REPO_PATH%\README.md"
+            echo. >> "%REPO_PATH%\README.md"
           )
 
       - name: Commit README.md vào repo hiện tại
         run: |
-          cd "%SCRIPT_PATH%"
+          cd "%REPO_PATH%"
           git config --global user.email "ci@vietstar.local"
           git config --global user.name "vietstar-ci"
           git add README.md
