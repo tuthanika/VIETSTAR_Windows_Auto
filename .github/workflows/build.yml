@@ -75,6 +75,10 @@ jobs:
           mkdir "%MOUNT_PATH%" 2>nul
           mkdir "%INSTALL_PATH%" 2>nul
           
+      - name: Clone script từ repo riêng tư vào SCRIPT_PATH
+        run: |
+          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
+          
       - name: Cài đặt rclone, 7-Zip và gán PATH
         shell: pwsh
         run: |
@@ -107,10 +111,6 @@ jobs:
           
           Invoke-WebRequest -Uri "https://github.com/winfsp/winfsp/releases/download/v1.12.22339/winfsp-1.12.22339.msi" -OutFile "$env:INSTALL_PATH\winfsp.msi"
           Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$env:INSTALL_PATH\winfsp.msi`" /quiet /norestart" -Wait
-
-      - name: Clone script từ repo riêng tư vào SCRIPT_PATH
-        run: |
-          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
 
       - name: Tải rclone.conf trực tiếp từ GitHub
         shell: cmd
