@@ -120,6 +120,12 @@ jobs:
         run: |
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
 
+      - name: Kiểm tra nội dung SCRIPT_PATH sau khi clone
+        shell: pwsh
+        run: |
+          Write-Host "📁 Liệt kê nội dung trong $env:SCRIPT_PATH"
+          Get-ChildItem -Path "$env:SCRIPT_PATH" -Recurse | Select-Object FullName
+
       - name: Mount remote bằng rclone
         shell: pwsh
         run: |
@@ -138,8 +144,7 @@ jobs:
         shell: cmd
         run: |
           set MODE=${{ github.event.inputs.mode }}
-          set SCRIPT_PATH=%SCRIPT_PATH%
-          call "C:\RUN\zzz.Windows-imdisk.cmd" %MODE%
+          call "%SCRIPT_PATH%\zzz.Windows-imdisk.cmd" %MODE%
 
       - name: Xử lý ISO sau khi build
         shell: cmd
