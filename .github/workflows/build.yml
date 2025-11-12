@@ -108,6 +108,10 @@ jobs:
           Invoke-WebRequest -Uri "https://github.com/winfsp/winfsp/releases/download/v1.12.22339/winfsp-1.12.22339.msi" -OutFile "$env:INSTALL_PATH\winfsp.msi"
           Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$env:INSTALL_PATH\winfsp.msi`" /quiet /norestart" -Wait
 
+      - name: Clone script từ repo riêng tư vào SCRIPT_PATH
+        run: |
+          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
+
       - name: Tải rclone.conf trực tiếp từ GitHub
         shell: cmd
         run: |
@@ -115,10 +119,6 @@ jobs:
           curl -H "Authorization: token %GH_PAT%" ^
                -L -o "%RCLONE_CONFIG_PATH%" ^
                https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
-
-      - name: Clone script từ repo riêng tư vào SCRIPT_PATH
-        run: |
-          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
 
       - name: Kiểm tra nội dung SCRIPT_PATH sau khi clone
         shell: pwsh
