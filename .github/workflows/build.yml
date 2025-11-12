@@ -114,7 +114,7 @@ jobs:
           Write-Host "📁 Liệt kê toàn bộ nội dung trong $env:SCRIPT_PATH (bao gồm thư mục con và file ẩn)"
           Get-ChildItem -Path "$env:SCRIPT_PATH" -Recurse -Force | Format-List FullName, Attributes, Length
 
-      - name: Mount remote bằng rclone
+      - name: Mount remote bằng rclone và build iso
         shell: pwsh
         run: |
           Start-Process -FilePath "$env:SCRIPT_PATH\rclone.exe" `
@@ -127,11 +127,8 @@ jobs:
               "--vfs-cache-mode", "full"
             ) `
             -WindowStyle Hidden
-
-      - name: Chạy script build ISO
-        shell: cmd
-        run: |
-          call "%SCRIPT_PATH%\zzz.Windows-imdisk.cmd" %MODE%
+            
+          & "$env:SCRIPT_PATH\zzz.Windows-imdisk.cmd" $env:MODE   
 
       - name: Xử lý ISO sau khi build
         shell: cmd
