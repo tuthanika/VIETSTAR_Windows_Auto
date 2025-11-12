@@ -137,7 +137,8 @@ jobs:
       - name: Chạy script build ISO
         shell: cmd
         run: |
-          call "%SCRIPT_PATH%\zzz.Windows-imdisk.cmd" ${{ github.event.inputs.mode }}
+          set MODE=${{ github.event.inputs.mode }}
+          call "%SCRIPT_PATH%\zzz.Windows-imdisk.cmd" %MODE%
 
       - name: Xử lý ISO sau khi build
         shell: cmd
