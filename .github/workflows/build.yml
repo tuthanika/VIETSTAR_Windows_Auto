@@ -55,6 +55,7 @@ jobs:
     steps: 
     
       - name: Tạo thư mục cần thiết
+        shell: cmd
         run: |
           mkdir ${{ env.SCRIPT_PATH }} 2>nul
           mkdir ${{ env.MOUNT_PATH }} 2>nul
