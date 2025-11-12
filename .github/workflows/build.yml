@@ -52,35 +52,121 @@ jobs:
   build:
     runs-on: windows-latest
 
-    steps:
+    steps: 
     
-      - name: Gán biến môi trường cho cmd
-        shell: cmd
-        run: |
-          set SCRIPT_PATH=%SCRIPT_PATH%
-          set INSTALL_PATH=%INSTALL_PATH%
-          set MOUNT_PATH=%MOUNT_PATH%
-          set RCLONE_CONFIG_PATH=%RCLONE_CONFIG_PATH%
-          set REMOTE_NAME=%REMOTE_NAME%
-          set REMOTE_TARGET=%REMOTE_TARGET%
-          set vietstar=%vietstar%
-          set OK_UPLOAD=%OK_UPLOAD%
-          set rclone_flag=%rclone_flag%
-          set OLD_LIMIT=%OLD_LIMIT%
-          set MODE_PATTERNS=%MODE_PATTERNS%
-
       - name: Tạo thư mục cần thiết
         run: |
-          mkdir "%SCRIPT_PATH%" 2>nul
-          mkdir "%MOUNT_PATH%" 2>nul
-          mkdir "%INSTALL_PATH%" 2>nul
+          mkdir ${{ env.SCRIPT_PATH }} 2>nul
+          mkdir ${{ env.MOUNT_PATH }} 2>nul
+          mkdir ${{ env.INSTALL_PATH }} 2>nul
           
       - name: Clone script từ repo riêng tư vào SCRIPT_PATH
         run: |
-          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} ${{ env.SCRIPT_PATH }}     
+          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} ${{ env.SCRIPT_PATH }}  
+          
+      - name: Cài đặt rclone, 7-Zip và gán PATH
+        shell: pwsh
+        run: |
+          # Tải và cài đặt 7-Zip
+          Invoke-WebRequest -Uri "https://www.7-zip.org/a/7z2301-x64.exe" -OutFile "$env:INSTALL_PATH\7z.exe"
+          Start-Process -FilePath "$env:INSTALL_PATH\7z.exe" -ArgumentList "/S" -Wait
+
+          # Tải rclone.zip
+          Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile "$env:INSTALL_PATH\rclone.zip"
+
+          # Giải nén bằng 7-Zip
+          $sevenZip = "C:\Program Files\7-Zip\7z.exe"
+          & $sevenZip x "$env:INSTALL_PATH\rclone.zip" -o"$env:INSTALL_PATH\rclone" -y
+
+          # Tìm thư mục rclone thực tế
+          $rcloneDir = Get-ChildItem "$env:INSTALL_PATH\rclone" | Where-Object { $_.Name -like "rclone-*" } | Select-Object -First 1
+          $rclonePath = "$($rcloneDir.FullName)"
+          Write-Host "Rclone path: $rclonePath"
+          
+          $rcloneExe = Get-ChildItem "$rclonePath" -Recurse -Filter "rclone.exe" | Select-Object -First 1
+          if (-not $rcloneExe) {
+            Write-Error "Không tìm thấy rclone.exe trong $rclonePath"
+            exit 1
+          }
+          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
+          Move-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe"
+
+          # Kiểm tra rclone
+          & "$env:SCRIPT_PATH\rclone.exe" version
+          
+          Invoke-WebRequest -Uri "https://github.com/winfsp/winfsp/releases/download/v1.12.22339/winfsp-1.12.22339.msi" -OutFile "$env:INSTALL_PATH\winfsp.msi"
+          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$env:INSTALL_PATH\winfsp.msi`" /quiet /norestart" -Wait
+
+      - name: Tải rclone.conf trực tiếp từ GitHub
+        shell: cmd
+        run: |
+          curl -H "Authorization: token ${{ env.GH_PAT }}" ^
+               -L -o "${{ env.RCLONE_CONFIG_PATH }}" ^
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
       - name: Kiểm tra nội dung SCRIPT_PATH sau khi clone
         shell: pwsh
         run: |
           Write-Host "📁 Liệt kê toàn bộ nội dung trong $env:SCRIPT_PATH (bao gồm thư mục con và file ẩn)"
           Get-ChildItem -Path "$env:SCRIPT_PATH" -Recurse -Force | Format-List FullName, Attributes, Length
+
+      - name: Mount remote bằng rclone
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "$env:SCRIPT_PATH\rclone.exe" `
+            -ArgumentList @(
+              "cmount",
+              "$env:REMOTE_NAME:`:",
+              "$env:MOUNT_PATH",
+              "--config", "$env:RCLONE_CONFIG_PATH",
+              "--cmount",
+              "--vfs-cache-mode", "full"
+            ) `
+            -WindowStyle Hidden
+            
+      - name: Gán biến môi trường cho cmd
+        shell: cmd
+        run: |
+          set SCRIPT_PATH=${{ env.SCRIPT_PATH }}
+          set INSTALL_PATH=${{ env.INSTALL_PATH }}
+          set MOUNT_PATH=${{ env.MOUNT_PATH }}
+          set RCLONE_CONFIG_PATH=${{ env.RCLONE_CONFIG_PATH }}
+          set REMOTE_NAME=${{ env.REMOTE_NAME }}
+          set REMOTE_TARGET=${{ env.REMOTE_TARGET }}
+          set vietstar=${{ env.vietstar }}
+          set OK_UPLOAD=${{ env.OK_UPLOAD }}
+          set rclone_flag=${{ env.rclone_flag }}
+          set OLD_LIMIT=${{ env.OLD_LIMIT }}
+          set MODE_PATTERNS=${{ env.MODE_PATTERNS }}
+          set MODE=${{ github.event.inputs.mode }}
+    
+      - name: Chạy script build ISO
+        shell: cmd
+        run: |
+          call "%SCRIPT_PATH%\zzz.Windows-imdisk.cmd" %MODE%
+
+      - name: Xử lý ISO sau khi build
+        shell: cmd
+        run: |
+          call "%SCRIPT_PATH%\loc-iso.cmd" !MODE!
+
+      - name: Tạo README.md ghi thông tin bản build mới
+        shell: cmd
+        run: |
+          echo date: %DATE% > "%SCRIPT_PATH%\README.md"
+          for %%f in ("%vietstar%\*.iso") do (
+            echo Name: %%~nxf >> "%SCRIPT_PATH%\README.md"
+            echo Size: %%~zf bytes >> "%SCRIPT_PATH%\README.md"
+            certutil -hashfile "%%f" MD5 | findstr /v "hash" >> "%SCRIPT_PATH%\README.md"
+            echo. >> "%SCRIPT_PATH%\README.md"
+          )
+
+      - name: Commit README.md vào repo hiện tại
+        run: |
+          cd "%SCRIPT_PATH%"
+          git config --global user.email "ci@vietstar.local"
+          git config --global user.name "vietstar-ci"
+          git add README.md
+          git commit -m "Update README with latest build info"
+          git push
+  
