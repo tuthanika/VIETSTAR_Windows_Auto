@@ -71,7 +71,6 @@ jobs:
 
       - name: Tạo thư mục cần thiết
         run: |
-          mkdir "%SCRIPT_PATH%" 2>nul
           mkdir "%MOUNT_PATH%" 2>nul
           mkdir "%INSTALL_PATH%" 2>nul
           
