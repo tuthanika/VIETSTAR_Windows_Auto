@@ -71,11 +71,11 @@ jobs:
           set MODE=${{ github.event.inputs.mode }}
     
       - name: Tạo thư mục cần thiết
-        shell: cmd
+        shell: cmd   
         run: |
-          mkdir %SCRIPT_PATH% 2>nul
-          mkdir %MOUNT_PATH% 2>nul
-          mkdir %INSTALL_PATH% 2>nul
+          mkdir "%SCRIPT_PATH%" 2>nul
+          mkdir "%MOUNT_PATH%" 2>nul
+          mkdir "%INSTALL_PATH%" 2>nul
           
       - name: Clone script từ repo riêng tư vào SCRIPT_PATH
         run: |
