@@ -71,6 +71,7 @@ jobs:
 
       - name: Tạo thư mục cần thiết
         run: |
+          mkdir "%SCRIPT_PATH%" 2>nul
           mkdir "%MOUNT_PATH%" 2>nul
           mkdir "%INSTALL_PATH%" 2>nul
           
@@ -78,46 +79,11 @@ jobs:
         run: |
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "%SCRIPT_PATH%"
           
-      - name: Cài đặt rclone, 7-Zip và gán PATH
+      - name: Kiểm tra kết quả clone
         shell: pwsh
         run: |
-          # Tải và cài đặt 7-Zip
-          Invoke-WebRequest -Uri "https://www.7-zip.org/a/7z2301-x64.exe" -OutFile "$env:INSTALL_PATH\7z.exe"
-          Start-Process -FilePath "$env:INSTALL_PATH\7z.exe" -ArgumentList "/S" -Wait
-
-          # Tải rclone.zip
-          Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile "$env:INSTALL_PATH\rclone.zip"
-
-          # Giải nén bằng 7-Zip
-          $sevenZip = "C:\Program Files\7-Zip\7z.exe"
-          & $sevenZip x "$env:INSTALL_PATH\rclone.zip" -o"$env:INSTALL_PATH\rclone" -y
-
-          # Tìm thư mục rclone thực tế
-          $rcloneDir = Get-ChildItem "$env:INSTALL_PATH\rclone" | Where-Object { $_.Name -like "rclone-*" } | Select-Object -First 1
-          $rclonePath = "$($rcloneDir.FullName)"
-          Write-Host "Rclone path: $rclonePath"
-          
-          $rcloneExe = Get-ChildItem "$rclonePath" -Recurse -Filter "rclone.exe" | Select-Object -First 1
-          if (-not $rcloneExe) {
-            Write-Error "Không tìm thấy rclone.exe trong $rclonePath"
-            exit 1
-          }
-          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
-          Move-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe"
-
-          # Kiểm tra rclone
-          & "$env:SCRIPT_PATH\rclone.exe" version
-          
-          Invoke-WebRequest -Uri "https://github.com/winfsp/winfsp/releases/download/v1.12.22339/winfsp-1.12.22339.msi" -OutFile "$env:INSTALL_PATH\winfsp.msi"
-          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$env:INSTALL_PATH\winfsp.msi`" /quiet /norestart" -Wait
-
-      - name: Tải rclone.conf trực tiếp từ GitHub
-        shell: cmd
-        run: |
-          if not exist "%SCRIPT_PATH%" mkdir "%SCRIPT_PATH%"
-          curl -H "Authorization: token %GH_PAT%" ^
-               -L -o "%RCLONE_CONFIG_PATH%" ^
-               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
+          Write-Host "📁 Kiểm tra nội dung sau khi clone vào $env:SCRIPT_PATH"
+          Get-ChildItem -Path "$env:SCRIPT_PATH" -Recurse -Force | Format-List FullName, Attributes, Length
 
       - name: Kiểm tra nội dung SCRIPT_PATH sau khi clone
         shell: pwsh
