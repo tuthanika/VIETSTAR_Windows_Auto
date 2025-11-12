@@ -53,13 +53,29 @@ jobs:
     runs-on: windows-latest
 
     steps: 
+            
+      - name: Gán biến môi trường cho cmd
+        shell: cmd
+        run: |
+          set SCRIPT_PATH=${{ env.SCRIPT_PATH }}
+          set INSTALL_PATH=${{ env.INSTALL_PATH }}
+          set MOUNT_PATH=${{ env.MOUNT_PATH }}
+          set RCLONE_CONFIG_PATH=${{ env.RCLONE_CONFIG_PATH }}
+          set REMOTE_NAME=${{ env.REMOTE_NAME }}
+          set REMOTE_TARGET=${{ env.REMOTE_TARGET }}
+          set vietstar=${{ env.vietstar }}
+          set OK_UPLOAD=${{ env.OK_UPLOAD }}
+          set rclone_flag=${{ env.rclone_flag }}
+          set OLD_LIMIT=${{ env.OLD_LIMIT }}
+          set MODE_PATTERNS=${{ env.MODE_PATTERNS }}
+          set MODE=${{ github.event.inputs.mode }}
     
       - name: Tạo thư mục cần thiết
         shell: cmd
         run: |
-          mkdir ${{ env.SCRIPT_PATH }} 2>nul
-          mkdir ${{ env.MOUNT_PATH }} 2>nul
-          mkdir ${{ env.INSTALL_PATH }} 2>nul
+          mkdir %SCRIPT_PATH% 2>nul
+          mkdir %MOUNT_PATH% 2>nul
+          mkdir %INSTALL_PATH% 2>nul
           
       - name: Clone script từ repo riêng tư vào SCRIPT_PATH
         run: |
@@ -101,8 +117,8 @@ jobs:
       - name: Tải rclone.conf trực tiếp từ GitHub
         shell: cmd
         run: |
-          curl -H "Authorization: token ${{ env.GH_PAT }}" ^
-               -L -o "${{ env.RCLONE_CONFIG_PATH }}" ^
+          curl -H "Authorization: token %GH_PAT%" ^
+               -L -o "%RCLONE_CONFIG_PATH%" ^
                https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
       - name: Kiểm tra nội dung SCRIPT_PATH sau khi clone
@@ -124,22 +140,6 @@ jobs:
               "--vfs-cache-mode", "full"
             ) `
             -WindowStyle Hidden
-            
-      - name: Gán biến môi trường cho cmd
-        shell: cmd
-        run: |
-          set SCRIPT_PATH=${{ env.SCRIPT_PATH }}
-          set INSTALL_PATH=${{ env.INSTALL_PATH }}
-          set MOUNT_PATH=${{ env.MOUNT_PATH }}
-          set RCLONE_CONFIG_PATH=${{ env.RCLONE_CONFIG_PATH }}
-          set REMOTE_NAME=${{ env.REMOTE_NAME }}
-          set REMOTE_TARGET=${{ env.REMOTE_TARGET }}
-          set vietstar=${{ env.vietstar }}
-          set OK_UPLOAD=${{ env.OK_UPLOAD }}
-          set rclone_flag=${{ env.rclone_flag }}
-          set OLD_LIMIT=${{ env.OLD_LIMIT }}
-          set MODE_PATTERNS=${{ env.MODE_PATTERNS }}
-          set MODE=${{ github.event.inputs.mode }}
     
       - name: Chạy script build ISO
         shell: cmd
