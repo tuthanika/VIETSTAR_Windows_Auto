@@ -32,6 +32,7 @@ env:
   SCRIPT_PATH: ${{ vars.SCRIPT_PATH || 'C:\\RUN' }}
   INSTALL_PATH: ${{ vars.INSTALL_PATH || 'C:\\TOOLS' }}
   MOUNT_PATH: ${{ vars.MOUNT_PATH || 'C:\\RUN\\mount' }}
+  REPO_PATH: ${{ vars.REPO_PATH || 'C:\\REPO' }}
   vietstar: ${{ vars.VIETSTAR || 'C:\\RUN\\vietstar' }}
   OK_UPLOAD: ${{ vars.OK_UPLOAD || 'C:\\RUN\\mount\\z.VIETSTAR' }}
   silent: ${{ vars.SILENT || 'C:\\RUN\\mount\\Silent\\Apps\\exe' }}
@@ -54,21 +55,11 @@ jobs:
 
     steps: 
     
-      - name: Gán biến môi trường cho cmd
-        shell: cmd
-        run: |
-          set SCRIPT_PATH=${{ env.SCRIPT_PATH }}
-          set INSTALL_PATH=${{ env.INSTALL_PATH }}
-          set MOUNT_PATH=${{ env.MOUNT_PATH }}
-          set RCLONE_CONFIG_PATH=${{ env.RCLONE_CONFIG_PATH }}
-          set REMOTE_NAME=${{ env.REMOTE_NAME }}
-          set REMOTE_TARGET=${{ env.REMOTE_TARGET }}
-          set vietstar=${{ env.vietstar }}
-          set OK_UPLOAD=${{ env.OK_UPLOAD }}
-          set rclone_flag=${{ env.rclone_flag }}
-          set OLD_LIMIT=${{ env.OLD_LIMIT }}
-          set MODE_PATTERNS=${{ env.MODE_PATTERNS }}
-    
+      - name: Checkout repo chính vào 
+        uses: actions/checkout@v4
+        with:
+          path: ${{ env.REPO_PATH }}
+
       - name: Tạo thư mục cần thiết   
         run: |
           mkdir "%SCRIPT_PATH%" 2>nul
@@ -138,7 +129,7 @@ jobs:
               "--vfs-cache-mode", "full"
             ) `
             -WindowStyle Hidden
-    
+
       - name: Chạy script build ISO
         shell: cmd
         run: |
@@ -147,7 +138,7 @@ jobs:
       - name: Xử lý ISO sau khi build
         shell: cmd
         run: |
-          call "%SCRIPT_PATH%\loc-iso.cmd" !MODE!
+          call "%REPO_PATH%\loc-iso.cmd" !MODE!
 
       - name: Tạo README.md ghi thông tin bản build mới
         shell: cmd

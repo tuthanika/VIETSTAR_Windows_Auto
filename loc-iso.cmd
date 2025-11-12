@@ -11,7 +11,7 @@ if not "%MODE_PATTERNS%"=="" (
         set "pattern=%%b"
     )
 ) else (
-    for /f "tokens=1,* delims==" %%a in ('type "%SCRIPT_PATH%\patterns.txt" ^| findstr /i "^%mode%="') do (
+    for /f "tokens=1,* delims==" %%a in ('type "%REPO_PATH%\patterns.txt" ^| findstr /i "^%mode%="') do (
         set "pattern=%%b"
     )
 )
