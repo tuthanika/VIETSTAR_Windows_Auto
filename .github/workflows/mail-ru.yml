@@ -58,11 +58,13 @@ jobs:
           Copy-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe" -Force
           & "$env:SCRIPT_PATH\rclone.exe" version
 
-      - name: Tải rclone.conf từ repo cấu hình
-        shell: pwsh
+      - name: Tải rclone.conf trực tiếp từ GitHub
+        shell: cmd
         run: |
-          $confUrl = "https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf"
-          Invoke-WebRequest -Headers @{ "Authorization" = "token %GH_PAT%" } -Uri $confUrl -OutFile "$env:RCLONE_CONFIG_PATH"
+          curl -H "Authorization: token %GH_PAT%" ^
+               -L -o "%RCLONE_CONFIG_PATH%" ^
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
+
 
       - name: Parse link bằng PHP CLI
         shell: pwsh
