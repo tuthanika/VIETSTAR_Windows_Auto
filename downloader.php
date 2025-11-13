@@ -7,19 +7,26 @@ if (php_sapi_name() === 'cli') {
 }
 if ($i === '') die("Thiếu tham số url");
 
-
-// Tách index
+// Tách index hoặc filename
 $parts = explode('/', rtrim($i, '/'));
 $last = end($parts);
+
+$index = null;
+$filename = null;
+$baseUrl = $i;
+
 if (ctype_digit($last)) {
     $index = intval($last);
     array_pop($parts);
     $baseUrl = implode('/', $parts);
-} else {
-    $index = null;
-    $baseUrl = $i;
+} elseif (strpos($last, '.') !== false) {
+    // Nếu có dấu chấm → coi là filename
+    $filename = $last;
+    array_pop($parts);
+    $baseUrl = implode('/', $parts);
 }
 
+// Lấy danh sách file
 $dwnld_list = GetAllFiles($baseUrl);
 if ($dwnld_list === false || empty($dwnld_list)) die("Không lấy được danh sách file từ $baseUrl");
 
@@ -29,7 +36,7 @@ if ($index !== null) {
         // Hiện menu HTML
         echo "<h3>Danh sách file trong folder:</h3>";
         foreach ($dwnld_list as $idx => $file) {
-            $num = $idx + 1;
+            $num  = $idx + 1;
             $link = htmlspecialchars($_SERVER['PHP_SELF']."?url=".$baseUrl."/".$num);
             echo "<a href=\"$link\">File $num: ".$file->name."</a><br>";
         }
@@ -38,13 +45,27 @@ if ($index !== null) {
         $fileIndex = $index - 1;
         if (!isset($dwnld_list[$fileIndex])) die("File thứ $index không tồn tại");
         $redirect = $dwnld_list[$fileIndex]->download_link;
-        // Redirect trực tiếp tới Cloud Mail.ru
         header("Location: $redirect");
         exit;
     }
 }
 
-// Không có index → xuất plain text danh sách link trực tiếp
+// Nếu có filename
+if ($filename !== null) {
+    $target = null;
+    foreach ($dwnld_list as $f) {
+        if (strcasecmp($f->name, $filename) === 0) { // so khớp không phân biệt hoa/thường
+            $target = $f;
+            break;
+        }
+    }
+    if (!$target) die("Không tìm thấy file tên '$filename'");
+    $redirect = $target->download_link;
+    header("Location: $redirect");
+    exit;
+}
+
+// Không có index/filename → xuất plain text danh sách link trực tiếp
 header('Content-Type: text/plain; charset=utf-8');
 foreach ($dwnld_list as $file) {
     echo $file->download_link."\n";
@@ -147,5 +168,4 @@ function pathcombine() {
     }
     return $result;
 }
-
 ?>
