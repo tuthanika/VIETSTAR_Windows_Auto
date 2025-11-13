@@ -93,7 +93,7 @@ jobs:
           $flags = $env:RCLONE_FLAG -split '\s+'
 
           # Debug lệnh rclone
-          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy $testFile $env:REMOTE_NAME:$env:REMOTE_TARGET --config $env:RCLONE_CONFIG_PATH " + ($flags -join ' ')
+          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy $testFile ${env:REMOTE_NAME}:${env:REMOTE_TARGET} --config $env:RCLONE_CONFIG_PATH " + ($flags -join ' ')
           Write-Host "DEBUG rclone command: $dbgRclone"
 
           # Upload với tiến trình hiển thị (-P)
@@ -119,7 +119,7 @@ jobs:
           }
 
           # Xây dựng remoteDir và log ra để đối chiếu
-          $remoteDir = "$env:REMOTE_NAME:$env:REMOTE_TARGET"
+          $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
           Write-Host "DEBUG remoteDir: $remoteDir"
 
           # Tạo thư mục đích nếu cần
