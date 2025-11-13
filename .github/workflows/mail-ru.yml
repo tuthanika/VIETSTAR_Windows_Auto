@@ -72,7 +72,7 @@ jobs:
           $out = "$env:SCRIPT_PATH\links.final.txt"
           Remove-Item $out -ErrorAction Ignore
           foreach ($link in Get-Content ".\link.txt") {
-            $result = & "$env:SCRIPT_PATH\php.exe" ".\downloader.php" $link
+            $result = & php ".\downloader.php" $link
             $result -split "`n" | ForEach-Object {
               $line = $_.Trim()
               if ($line) { Add-Content -Path $out -Value $line }
