@@ -36,7 +36,7 @@ jobs:
         shell: pwsh
         run: |
           $phpZip = "$env:INSTALL_PATH\php.zip"
-          Invoke-WebRequest -Uri "https://windows.php.net/downloads/releases/php-8.2.12-Win32-vs16-x64.zip" -OutFile $phpZip
+          Invoke-WebRequest -Uri "https://windows.php.net/downloads/releases/latest/php-8.2-Win32-vs16-x64-latest.zip" -OutFile $phpZip
           Expand-Archive -Path $phpZip -DestinationPath "$env:INSTALL_PATH\php" -Force
           $phpExe = Get-ChildItem "$env:INSTALL_PATH\php" -Recurse -Filter "php.exe" | Select-Object -First 1
           Copy-Item $phpExe.FullName "$env:SCRIPT_PATH\php.exe" -Force
