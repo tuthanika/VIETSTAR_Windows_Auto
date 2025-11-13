@@ -84,20 +84,32 @@ jobs:
       - name: Test upload file giả 200MB
         shell: pwsh
         run: |
-          $testFile = "C:\RUN\rclone.conf"
+          # Tạo file giả 200MB
+          $testFile = Join-Path $env:DOWNLOAD_DIR "dummy200mb.bin"
+          Write-Host "Creating dummy file: $testFile"
+          fsutil file createnew "$testFile" 209715200
+          Write-Host "File created: $(Resolve-Path $testFile)"
 
-          # Tạo file rỗng 200MB
-          fsutil file createnew $testFile 209715200
+          # Xây dựng remoteDir từ env
+          $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
 
-          # Tách flags rclone thành mảng
-          $flags = $env:RCLONE_FLAG -split '\s+'
+          # Debug thông tin trước khi upload
+          Write-Host "Uploading $(Resolve-Path $testFile) to $remoteDir..."
+          Write-Host "Using rclone config: $(Resolve-Path $env:RCLONE_CONFIG_PATH)"
 
-          # Debug lệnh rclone
-          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy $testFile "${env:REMOTE_NAME}:${env:REMOTE_TARGET}" --config $env:RCLONE_CONFIG_PATH " + ($flags -join ' ')
+          # Chuẩn bị chuỗi debug rclone (giữ nguyên flag như repo mẫu)
+          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy `"$testFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" $env:RCLONE_FLAG --progress"
           Write-Host "DEBUG rclone command: $dbgRclone"
 
-          # Upload với tiến trình hiển thị (-P)
-          & "$env:SCRIPT_PATH\rclone.exe" copy $testFile "$env:REMOTE_NAME:$env:REMOTE_TARGET" --config "$env:RCLONE_CONFIG_PATH" -P @flags
+          # Thực thi rclone copy (mỗi tham số trong ngoặc kép riêng, lề dòng rõ ràng)
+          & "$env:SCRIPT_PATH\rclone.exe" copy `
+            "$(Resolve-Path $testFile)" `
+            "$remoteDir" `
+            --config "$env:RCLONE_CONFIG_PATH" `
+            $env:RCLONE_FLAG `
+            --progress
 
           # Xóa file giả sau khi upload
-          Remove-Item $testFile -Force
+          Remove-Item "$testFile" -Force
+          Write-Host "Deleted dummy file: $testFile"
+
