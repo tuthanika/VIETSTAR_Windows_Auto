@@ -98,7 +98,7 @@ jobs:
           Write-Host "Using rclone config: $(Resolve-Path $env:RCLONE_CONFIG_PATH)"
 
           # Chuẩn bị chuỗi debug rclone (giữ nguyên flag như repo mẫu)
-          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy `"$testFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" `"$env:RCLONE_FLAG`" --progress"
+          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy `"$testFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" " + ($flags -join ' ')
           Write-Host "DEBUG rclone command: $dbgRclone"
 
           # Thực thi rclone copy (mỗi tham số trong ngoặc kép riêng, lề dòng rõ ràng)
