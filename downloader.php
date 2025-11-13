@@ -1,11 +1,12 @@
 <?php
-// Cho phép chạy từ CLI
+// Cho phép chạy từ CLI hoặc qua web
 if (php_sapi_name() === 'cli') {
     $i = $argv[1] ?? '';
 } else {
     $i = $_GET['url'] ?? '';
 }
 if ($i === '') die("Thiếu tham số url");
+
 
 // Tách index
 $parts = explode('/', rtrim($i, '/'));

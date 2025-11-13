@@ -1,198 +1,112 @@
-name: Mailru download via Selenium + aria2c (Windows)
+name: Aria2 download and rclone upload
 
 on:
   workflow_dispatch:
 
 jobs:
-  download:
+  run-download-upload:
     runs-on: windows-latest
 
+    env:
+      INSTALL_PATH: C:\INSTALL
+      SCRIPT_PATH: C:\RUN
+      DOWNLOAD_DIR: C:\ATP
+
+      RCLONE_CONF_REPO: ${{ vars.RCLONE_CONF_REPO || 'github.com/tuthanika/Rclone-Auto-Refresh-Token' }}
+      RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\RUN\rclone.conf' }}
+      REMOTE_NAME: ${{ vars.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
+      REMOTE_TARGET: ${{ vars.REMOTE_TARGET || 'ISO' }}
+      RCLONE_FLAG: ${{ vars.RCLONE_FLAG || '--fast-list --delete-during --checksum --no-update-modtime --transfers 8 --checkers 8 --contimeout 60s --timeout 300s --retries 3 --low-level-retries 10 --fast-list --onedrive-delta --server-side-across-configs --onedrive-no-versions --onedrive-hard-delete --onedrive-av-override --drive-copy-shortcut-content --drive-acknowledge-abuse --drive-stop-on-upload-limit --drive-stop-on-download-limit --checksum --track-renames --no-update-modtime' }}
+
+      ARIA2_OPTS: "--allow-overwrite=true --continue=true --max-concurrent-downloads=4 --split=8 --min-split-size=10M --retry-wait=10 --max-tries=0 --check-certificate=false"
+
     steps:
-      - name: Prepare workspace
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Tạo thư mục làm việc
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path C:\ATP | Out-Null
-          Write-Host "Workspace prepared at C:\ATP"
+          New-Item -ItemType Directory -Path "$env:INSTALL_PATH" -Force | Out-Null
+          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
+          New-Item -ItemType Directory -Path "$env:DOWNLOAD_DIR" -Force | Out-Null
 
-      - name: Install aria2 (Chocolatey)
+      - name: Cài đặt PHP CLI
         shell: pwsh
         run: |
-          Set-ExecutionPolicy Bypass -Scope Process -Force
-          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-          choco install aria2 -y
-          aria2c --version
+          $phpZip = "$env:INSTALL_PATH\php.zip"
+          Invoke-WebRequest -Uri "https://windows.php.net/downloads/releases/php-8.2.12-Win32-vs16-x64.zip" -OutFile $phpZip
+          Expand-Archive -Path $phpZip -DestinationPath "$env:INSTALL_PATH\php" -Force
+          $phpExe = Get-ChildItem "$env:INSTALL_PATH\php" -Recurse -Filter "php.exe" | Select-Object -First 1
+          Copy-Item $phpExe.FullName "$env:SCRIPT_PATH\php.exe" -Force
+          & "$env:SCRIPT_PATH\php.exe" -v
 
-      - name: Download Chrome for Testing (Stable) and matching Chromedriver
+      - name: Cài đặt aria2
         shell: pwsh
         run: |
-          $api = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
-          $json = Invoke-RestMethod -Uri $api
-          $stable = $json.channels.stable
-          $version = $stable.version
-          Write-Host "Stable version: $version"
+          $ariaZip = "$env:INSTALL_PATH\aria2.zip"
+          Invoke-WebRequest -Uri "https://github.com/aria2/aria2/releases/download/release-1.36.0/aria2-1.36.0-win-64bit-build1.zip" -OutFile $ariaZip
+          Expand-Archive -Path $ariaZip -DestinationPath "$env:INSTALL_PATH\aria2" -Force
+          $ariaExe = Get-ChildItem "$env:INSTALL_PATH\aria2" -Recurse -Filter "aria2c.exe" | Select-Object -First 1
+          Copy-Item $ariaExe.FullName "$env:SCRIPT_PATH\aria2c.exe" -Force
+          & "$env:SCRIPT_PATH\aria2c.exe" -v
 
-          $chromeZipUrl = ($stable.downloads.chrome | Where-Object { $_.platform -eq "win64" }).url
-          $driverZipUrl = ($stable.downloads.chromedriver | Where-Object { $_.platform -eq "win64" }).url
-
-          Write-Host "Chrome zip: $chromeZipUrl"
-          Write-Host "Driver zip: $driverZipUrl"
-
-          $chromeZip = "C:\ATP\chrome-win64.zip"
-          $driverZip = "C:\ATP\chromedriver-win64.zip"
-          Invoke-WebRequest -Uri $chromeZipUrl -OutFile $chromeZip
-          Invoke-WebRequest -Uri $driverZipUrl -OutFile $driverZip
-
-          Expand-Archive -Path $chromeZip -DestinationPath C:\ATP -Force
-          Expand-Archive -Path $driverZip -DestinationPath C:\ATP -Force
-
-          $chromeExe = Get-ChildItem -Path "C:\ATP\chrome-win64\chrome.exe" -ErrorAction Stop
-          $driverExe = Get-ChildItem -Path "C:\ATP\chromedriver-win64\chromedriver.exe" -ErrorAction Stop
-
-          Write-Host "Chrome path: $($chromeExe.FullName)"
-          Write-Host "Driver path: $($driverExe.FullName)"
-
-          # Xuất đường dẫn vào biến môi trường cho bước sau
-          echo "CHROME_PATH=$($chromeExe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "CHROMEDRIVER_PATH=$($driverExe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Install Python and Selenium
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Pip install selenium
+      - name: Cài đặt rclone
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install selenium
+          $zip = "$env:INSTALL_PATH\rclone.zip"
+          Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath "$env:INSTALL_PATH\rclone" -Force
+          $rcloneExe = Get-ChildItem "$env:INSTALL_PATH\rclone" -Recurse -Filter "rclone.exe" | Select-Object -First 1
+          Copy-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe" -Force
+          & "$env:SCRIPT_PATH\rclone.exe" version
 
-      - name: Create Python script to capture Mail.ru final download URL
+      - name: Tải rclone.conf từ repo cấu hình
+        shell: pwsh
+        env:
+          GH_PAT: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $confUrl = "https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf"
+          Invoke-WebRequest -Headers @{ "Authorization" = "token $env:GH_PAT" } -Uri $confUrl -OutFile "$env:RCLONE_CONFIG_PATH"
+
+      - name: Parse link bằng PHP CLI
         shell: pwsh
         run: |
-          $script = @"
-          import json, time, sys
-          from selenium import webdriver
-          from selenium.webdriver.common.by import By
-          from selenium.webdriver.chrome.service import Service
-          from selenium.webdriver.support.ui import WebDriverWait
-          from selenium.webdriver.support import expected_conditions as EC
+          $out = "$env:SCRIPT_PATH\links.final.txt"
+          Remove-Item $out -ErrorAction Ignore
+          foreach ($link in Get-Content ".\link.txt") {
+            $result = & "$env:SCRIPT_PATH\php.exe" ".\downloader.php" $link
+            $result -split "`n" | ForEach-Object {
+              $line = $_.Trim()
+              if ($line) { Add-Content -Path $out -Value $line }
+            }
+          }
+          Write-Host "Danh sách link trực tiếp:"
+          Get-Content $out
 
-          URL = "https://cloud.mail.ru/public/AdY8/ADm5sBtux"
-          CHROME_PATH = r"${env:CHROME_PATH}"
-          DRIVER_PATH = r"${env:CHROMEDRIVER_PATH}"
-          OUT_FILE = r"C:\ATP\download_url.txt"
-
-          def build_driver():
-              options = webdriver.ChromeOptions()
-              options.binary_location = CHROME_PATH
-              # Headless ổn định trên runner
-              options.add_argument("--headless=new")
-              options.add_argument("--no-sandbox")
-              options.add_argument("--disable-dev-shm-usage")
-              options.add_argument("--disable-gpu")
-              options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
-              service = Service(DRIVER_PATH)
-              driver = webdriver.Chrome(service=service, options=options)
-              driver.set_page_load_timeout(120)
-              return driver
-
-          def click_download(driver):
-              wait = WebDriverWait(driver, 30)
-              # Đợi nút tải xuất hiện theo các selector phổ biến
-              selectors = [
-                  "//*[@data-name='download']",
-                  "//button[contains(@title,'Скачать') or contains(.,'Скачать') or contains(.,'Download')]",
-                  "//span[contains(.,'Скачать')]/ancestor::button",
-                  "//div[contains(@class,'toolbar') or contains(@class,'header')]//button[contains(.,'Скачать') or contains(.,'Download')]",
-              ]
-              for xp in selectors:
-                  try:
-                      btn = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
-                      driver.execute_script("arguments[0].scrollIntoView({block:'center'});", btn)
-                      btn.click()
-                      return True
-                  except Exception:
-                      continue
-              # Fallback JS
-              js_selectors = [
-                  "[data-name='download']",
-                  "button[title*='Скачать']",
-                  "button[aria-label*='Скачать']",
-              ]
-              for sel in js_selectors:
-                  try:
-                      el = driver.execute_script("return document.querySelector(arguments[0]);", sel)
-                      if el:
-                          driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
-                          driver.execute_script("arguments[0].click();", el)
-                          return True
-                  except Exception:
-                      pass
-              return False
-
-          def extract_download_url(driver):
-              # chờ request phát sinh
-              time.sleep(6)
-              logs = driver.get_log("performance")
-
-              # Ưu tiên bắt theo pattern datacloudmail.ru/public/get
-              for entry in logs:
-                  msg = json.loads(entry["message"])["message"]
-                  if msg.get("method") == "Network.responseReceived":
-                      url = msg["params"]["response"].get("url","")
-                      if "datacloudmail.ru/public/get" in url:
-                          return url
-
-              # Fallback nhìn cả requestWillBeSent
-              for entry in logs:
-                  msg = json.loads(entry["message"])["message"]
-                  if msg.get("method") in ("Network.requestWillBeSent","Network.responseReceived"):
-                      url = msg.get("params",{}).get("request",{}).get("url") or msg.get("params",{}).get("response",{}).get("url")
-                      if url and "datacloudmail.ru/public/get" in url:
-                          return url
-              return None
-
-          def main():
-              driver = build_driver()
-              try:
-                  driver.get(URL)
-                  ok = click_download(driver)
-                  if not ok:
-                      raise RuntimeError("Không tìm thấy/không click được nút Tải xuống.")
-                  dl = extract_download_url(driver)
-                  if not dl:
-                      raise RuntimeError("Không bắt được link tải trong network logs.")
-                  with open(OUT_FILE, "w", encoding="utf-8") as f:
-                      f.write(dl.strip()+"\n")
-                  print("Captured:", dl)
-              finally:
-                  driver.quit()
-
-          if __name__ == "__main__":
-              main()
-          "@
-
-          Set-Content -Path C:\ATP\capture_mailru.py -Value $script -Encoding UTF8
-          Write-Host "Python script written to C:\ATP\capture_mailru.py"
-
-      - name: Run capture script
+      - name: Tải từng file và upload ngay
         shell: pwsh
         run: |
-          python C:\ATP\capture_mailru.py
-          Write-Host "Captured URL file contents:"
-          Get-Content C:\ATP\download_url.txt
+          $links = Get-Content "$env:SCRIPT_PATH\links.final.txt"
+          foreach ($link in $links) {
+            $fileName = [System.IO.Path]::GetFileName($link)
+            $remotePath = "$env:REMOTE_NAME:`:$env:REMOTE_TARGET/$fileName"
 
-      - name: Download via aria2c to C:\ATP
-        shell: pwsh
-        run: |
-          $url = Get-Content C:\ATP\download_url.txt | Select-Object -First 1
-          if (-not $url) { throw "No URL captured." }
-          Write-Host "Downloading: $url"
-          # Cho phép nhiều kết nối để tăng tốc
-          aria2c -x16 -s16 --dir "C:\ATP" "$url"
+            # Kiểm tra file đã có trên remote
+            $exists = & "$env:SCRIPT_PATH\rclone.exe" lsf $remotePath --config "$env:RCLONE_CONFIG_PATH"
+            if ($exists) {
+              Write-Host "Bỏ qua $fileName (đã có trên remote)"
+              continue
+            }
 
-      - name: List files in C:\ATP
-        shell: pwsh
-        run: |
-          Write-Host "Files in C:\ATP:"
-          Get-ChildItem -Path C:\ATP -Force | Format-Table Name, Length, LastWriteTime
+            # Tải bằng aria2
+            & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileName" $env:ARIA2_OPTS $link
+
+            $localFile = "$env:DOWNLOAD_DIR\$fileName"
+            if (Test-Path $localFile) {
+              # Upload lên remote
+              & "$env:SCRIPT_PATH\rclone.exe" copy $localFile "$env:REMOTE_NAME:`:$env:REMOTE_TARGET" --config "$env:RCLONE_CONFIG_PATH" $env:RCLONE_FLAG
+              # Xóa file local
+              Remove-Item $localFile -Force
+            }
+          }
