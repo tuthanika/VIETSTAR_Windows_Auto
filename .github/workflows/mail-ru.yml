@@ -105,8 +105,6 @@ jobs:
 
             # Tách ARIA2_OPTS thành mảng tham số
             $opts = $env:ARIA2_OPTS -split '\s+'
-
-            # Debug: hiển thị lệnh đầy đủ trước khi chạy
             $cmdLine = "$env:SCRIPT_PATH\aria2c.exe --dir=$env:DOWNLOAD_DIR --out=$fileName " + ($opts -join ' ') + " $link"
             Write-Host "DEBUG aria2c command: $cmdLine"
 
@@ -115,7 +113,15 @@ jobs:
 
             $localFile = "$env:DOWNLOAD_DIR\$fileName"
             if (Test-Path $localFile) {
-              & "$env:SCRIPT_PATH\rclone.exe" copy $localFile $remoteDir --config "$env:RCLONE_CONFIG_PATH" $env:RCLONE_FLAG
+              # Tách RCLONE_FLAG thành mảng tham số
+              $flags = $env:RCLONE_FLAG -split '\s+'
+              $rcloneCmd = "$env:SCRIPT_PATH\rclone.exe copy $localFile $remoteDir --config $env:RCLONE_CONFIG_PATH " + ($flags -join ' ')
+              Write-Host "DEBUG rclone command: $rcloneCmd"
+
+              # Upload lên remote
+              & "$env:SCRIPT_PATH\rclone.exe" copy $localFile $remoteDir --config "$env:RCLONE_CONFIG_PATH" @flags
+
+              # Xóa file local sau khi upload
               Remove-Item $localFile -Force
             } else {
               Write-Error "Tải thất bại: không thấy file $localFile"; exit 1
