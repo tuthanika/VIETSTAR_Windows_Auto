@@ -93,7 +93,7 @@ jobs:
           $flags = $env:RCLONE_FLAG -split '\s+'
 
           # Debug lệnh rclone
-          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy $testFile ${env:REMOTE_NAME}:${env:REMOTE_TARGET} --config $env:RCLONE_CONFIG_PATH " + ($flags -join ' ')
+          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy "$testFile" "${env:REMOTE_NAME}:${env:REMOTE_TARGET}" --config $env:RCLONE_CONFIG_PATH " + ($flags -join ' ')
           Write-Host "DEBUG rclone command: $dbgRclone"
 
           # Upload với tiến trình hiển thị (-P)
