@@ -54,7 +54,12 @@ jobs:
     runs-on: windows-latest
 
     steps: 
-   
+    
+      - name: Cleanup để tăng dung lượng
+        run: |
+          Remove-Item -Recurse -Force "C:\Program Files\Microsoft Visual Studio"
+          Remove-Item -Recurse -Force "C:\Program Files (x86)\Microsoft Visual Studio"
+
       - name: Checkout repo chính vào 
         uses: actions/checkout@v4
 
