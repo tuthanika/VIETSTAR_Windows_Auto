@@ -87,10 +87,10 @@ jobs:
           $links = Get-Content "$env:SCRIPT_PATH\links.final.txt"
           foreach ($link in $links) {
             $fileName = [System.IO.Path]::GetFileName($link)
-            $remotePath = "$env:REMOTE_NAME:/$env:REMOTE_TARGET/$fileName"
+            $remoteDir = "$env:REMOTE_NAME:`:$env:REMOTE_TARGET"
 
             # Kiểm tra file đã có trên remote
-            $exists = & "$env:SCRIPT_PATH\rclone.exe" lsf $remotePath --config "$env:RCLONE_CONFIG_PATH"
+            $exists = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir --config "$env:RCLONE_CONFIG_PATH" | ConvertFrom-Json | Where-Object { $_.Name -eq $fileName }
             if ($exists) {
               Write-Host "Bỏ qua $fileName (đã có trên remote)"
               continue
@@ -102,7 +102,7 @@ jobs:
             $localFile = "$env:DOWNLOAD_DIR\$fileName"
             if (Test-Path $localFile) {
               # Upload lên remote
-              & "$env:SCRIPT_PATH\rclone.exe" copy $localFile "$env:REMOTE_NAME:`:$env:REMOTE_TARGET" --config "$env:RCLONE_CONFIG_PATH" $env:RCLONE_FLAG
+              & "$env:SCRIPT_PATH\rclone.exe" copy $localFile $remoteDir --config "$env:RCLONE_CONFIG_PATH" $env:RCLONE_FLAG
               # Xóa file local
               Remove-Item $localFile -Force
             }
