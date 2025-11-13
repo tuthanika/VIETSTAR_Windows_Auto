@@ -90,26 +90,31 @@ jobs:
           fsutil file createnew "$testFile" 209715200
           Write-Host "File created: $(Resolve-Path $testFile)"
 
-          # Xây dựng remoteDir từ env
+          # RemoteDir
           $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
 
-          # Debug thông tin trước khi upload
+          # Tách flags thành mảng (mỗi cờ là một token riêng cho rclone)
+          $flags = $env:RCLONE_FLAG -split '\s+'
+
+          # Debug
           Write-Host "Uploading $(Resolve-Path $testFile) to $remoteDir..."
           Write-Host "Using rclone config: $(Resolve-Path $env:RCLONE_CONFIG_PATH)"
+          Write-Host "DEBUG flags: $($flags -join ' | ')"
 
-          # Chuẩn bị chuỗi debug rclone (giữ nguyên flag như repo mẫu)
+          # Chuỗi debug lệnh (chỉ để in đẹp)
           $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy `"$testFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" " + ($flags -join ' ')
           Write-Host "DEBUG rclone command: $dbgRclone"
 
-          # Thực thi rclone copy (mỗi tham số trong ngoặc kép riêng, lề dòng rõ ràng)
+          # Thực thi rclone (tham số tách riêng, flags truyền bằng mảng)
           & "$env:SCRIPT_PATH\rclone.exe" copy `
             "$(Resolve-Path $testFile)" `
             "$remoteDir" `
             --config "$env:RCLONE_CONFIG_PATH" `
-            $env:RCLONE_FLAG `
+            @flags `
             --progress
 
-          # Xóa file giả sau khi upload
+          # Xóa file giả
           Remove-Item "$testFile" -Force
           Write-Host "Deleted dummy file: $testFile"
+
 
