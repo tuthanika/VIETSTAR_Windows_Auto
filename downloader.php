@@ -1,67 +1,51 @@
 <?php
 // Cho phép chạy từ CLI hoặc qua web
 if (php_sapi_name() === 'cli') {
-    $input = $argv[1] ?? '';
+    $i = $argv[1] ?? '';
 } else {
-    $input = $_GET['url'] ?? '';
+    $i = $_GET['url'] ?? '';
 }
-if ($input === '') die("Thiếu tham số url");
+if ($i === '') die("Thiếu tham số url");
 
-// Chuẩn hóa và tách phần cuối
-$input = rtrim($input, '/');
-$parts = explode('/', $input);
-$last  = end($parts);
 
-// Xác định selector: index hoặc filename
-$selector = null;
-$baseUrl  = $input;
-
+// Tách index
+$parts = explode('/', rtrim($i, '/'));
+$last = end($parts);
 if (ctype_digit($last)) {
-    $selector = intval($last); // index
+    $index = intval($last);
     array_pop($parts);
     $baseUrl = implode('/', $parts);
-} elseif (strpos($last, '.') !== false) {
-    $selector = $last; // filename
-    array_pop($parts);
-    $baseUrl = implode('/', $parts);
+} else {
+    $index = null;
+    $baseUrl = $i;
 }
 
-// Lấy danh sách file
 $dwnld_list = GetAllFiles($baseUrl);
-if ($dwnld_list === false || empty($dwnld_list)) {
-    http_plain();
-    die("Không lấy được danh sách file từ $baseUrl");
-}
+if ($dwnld_list === false || empty($dwnld_list)) die("Không lấy được danh sách file từ $baseUrl");
 
-// Nếu selector là index
-if (is_int($selector)) {
-    if ($selector === 0) {
-        http_html();
+// Nếu có index
+if ($index !== null) {
+    if ($index === 0) {
+        // Hiện menu HTML
         echo "<h3>Danh sách file trong folder:</h3>";
         foreach ($dwnld_list as $idx => $file) {
-            $num  = $idx + 1;
+            $num = $idx + 1;
             $link = htmlspecialchars($_SERVER['PHP_SELF']."?url=".$baseUrl."/".$num);
-            echo "<a href=\"$link\">File $num: ".htmlspecialchars($file->name)."</a><br>";
+            echo "<a href=\"$link\">File $num: ".$file->name."</a><br>";
         }
         exit;
     } else {
-        $fileIndex = $selector - 1;
-        if (!isset($dwnld_list[$fileIndex])) die("File thứ $selector không tồn tại");
-        header("Location: ".$dwnld_list[$fileIndex]->download_link);
+        $fileIndex = $index - 1;
+        if (!isset($dwnld_list[$fileIndex])) die("File thứ $index không tồn tại");
+        $redirect = $dwnld_list[$fileIndex]->download_link;
+        // Redirect trực tiếp tới Cloud Mail.ru
+        header("Location: $redirect");
         exit;
     }
 }
 
-// Nếu selector là filename
-if (is_string($selector) && $selector !== '') {
-    $target = find_file_by_name($dwnld_list, $selector);
-    if (!$target) die("Không tìm thấy file tên '$selector'");
-    header("Location: ".$target->download_link);
-    exit;
-}
-
-// Không có selector → xuất plain text danh sách link
-http_plain();
+// Không có index → xuất plain text danh sách link trực tiếp
+header('Content-Type: text/plain; charset=utf-8');
 foreach ($dwnld_list as $file) {
     echo $file->download_link."\n";
 }
@@ -164,26 +148,4 @@ function pathcombine() {
     return $result;
 }
 
-function http_plain() {
-    if (php_sapi_name() !== 'cli') {
-        header('Content-Type: text/plain; charset=utf-8');
-    }
-}
-
-function http_html() {
-    if (php_sapi_name() !== 'cli') {
-        header('Content-Type: text/html; charset=utf-8');
-    }
-}
-
-function find_file_by_name(array $list, $name) {
-    foreach ($list as $f) {
-        if ($f->name === $name) return $f;
-    }
-    $lname = mb_strtolower($name, 'UTF-8');
-    foreach ($list as $f) {
-        if (mb_strtolower($f->name, 'UTF-8') === $lname) return $f;
-    }
-    return null;
-}
 ?>
