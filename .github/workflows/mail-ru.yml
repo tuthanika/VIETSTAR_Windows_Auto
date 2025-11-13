@@ -87,7 +87,8 @@ jobs:
           $links = Get-Content "$env:SCRIPT_PATH\links.final.txt"
           foreach ($link in $links) {
             $fileName = [System.IO.Path]::GetFileName($link)
-            $remoteDir = "$env:REMOTE_NAME:`:$env:REMOTE_TARGET"
+            $remoteDir = "$env:REMOTE_NAME:$env:REMOTE_TARGET"
+
 
             # Kiểm tra file đã có trên remote
             $exists = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir --config "$env:RCLONE_CONFIG_PATH" | ConvertFrom-Json | Where-Object { $_.Name -eq $fileName }
@@ -97,7 +98,7 @@ jobs:
             }
 
             # Tải bằng aria2
-            & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileName" $env:ARIA2_OPTS $link
+            & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileName" "$env:ARIA2_OPTS" $link
 
             $localFile = "$env:DOWNLOAD_DIR\$fileName"
             if (Test-Path $localFile) {
