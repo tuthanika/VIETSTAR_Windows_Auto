@@ -81,40 +81,74 @@ jobs:
           Write-Host "Danh sách link trực tiếp:"
           Get-Content $out
 
-      - name: Test upload file giả 200MB
+      - name: Tải từng file và upload ngay
         shell: pwsh
         run: |
-          # Tạo file giả 200MB
-          $testFile = Join-Path $env:DOWNLOAD_DIR "dummy200mb.bin"
-          Write-Host "Creating dummy file: $testFile"
-          fsutil file createnew "$testFile" 209715200
-          Write-Host "File created: $(Resolve-Path $testFile)"
+          # Validate env trước khi làm bất cứ thứ gì
+          if ([string]::IsNullOrWhiteSpace($env:REMOTE_NAME)) { Write-Error "REMOTE_NAME rỗng"; exit 1 }
+          if ([string]::IsNullOrWhiteSpace($env:REMOTE_TARGET)) { Write-Error "REMOTE_TARGET rỗng"; exit 1 }
+          if (-not (Test-Path "$env:RCLONE_CONFIG_PATH")) { Write-Error "Không tìm thấy rclone.conf ở $env:RCLONE_CONFIG_PATH"; exit 1 }
 
-          # RemoteDir
-          $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
+            # Kiểm tra remote có tồn tại trong rclone.conf
+            $remotes = & "$env:SCRIPT_PATH\rclone.exe" listremotes --config "$env:RCLONE_CONFIG_PATH"
+            if (-not ($remotes -match "^$([Regex]::Escape($env:REMOTE_NAME)):$")) {
+              Write-Error "Remote '$env:REMOTE_NAME' không có trong rclone.conf. Remotes hiện có: `n$remotes"
+              exit 1
+            }
 
-          # Tách flags thành mảng (mỗi cờ là một token riêng cho rclone)
-          $flags = $env:RCLONE_FLAG -split '\s+'
+            # Xây dựng remoteDir và log ra để đối chiếu
+            $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
+            Write-Host "DEBUG remoteDir: $remoteDir"
+            Write-Host "Using rclone config: $(Resolve-Path $env:RCLONE_CONFIG_PATH)"
 
-          # Debug
-          Write-Host "Uploading $(Resolve-Path $testFile) to $remoteDir..."
-          Write-Host "Using rclone config: $(Resolve-Path $env:RCLONE_CONFIG_PATH)"
-          Write-Host "DEBUG flags: $($flags -join ' | ')"
+            # Tạo thư mục đích nếu cần
+            & "$env:SCRIPT_PATH\rclone.exe" mkdir "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" | Out-Null
 
-          # Chuỗi debug lệnh (chỉ để in đẹp)
-          $dbgRclone = "$env:SCRIPT_PATH\rclone.exe copy `"$testFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" " + ($flags -join ' ')
-          Write-Host "DEBUG rclone command: $dbgRclone"
+            # Chuẩn bị links
+            $linksFile = "$env:SCRIPT_PATH\links.final.txt"
+            if (-not (Test-Path $linksFile)) { Write-Error "Không tìm thấy $linksFile"; exit 1 }
+            $links = Get-Content $linksFile
 
-          # Thực thi rclone (tham số tách riêng, flags truyền bằng mảng)
-          & "$env:SCRIPT_PATH\rclone.exe" copy `
-            "$(Resolve-Path $testFile)" `
-            "$remoteDir" `
-            --config "$env:RCLONE_CONFIG_PATH" `
-            @flags `
-            --progress
+            foreach ($link in $links) {
+            $fileName = [System.IO.Path]::GetFileName($link)
 
-          # Xóa file giả
-          Remove-Item "$testFile" -Force
-          Write-Host "Deleted dummy file: $testFile"
+            # Kiểm tra file đã có trên remote (chịu lỗi JSON rỗng)
+            $json = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH"
+            $remoteFiles = @()
+            if ($json -and $json.Trim().Length -gt 0) {
+              try { $remoteFiles = $json | ConvertFrom-Json } catch { $remoteFiles = @() }
+            }
+            if ($remoteFiles | Where-Object { $_.Name -eq $fileName }) {
+              Write-Host "Bỏ qua $fileName (đã có trên remote)"
+              continue
+            }
 
+            # Tải bằng aria2
+            $opts = $env:ARIA2_OPTS -split '\s+'
+            $dbgA = "$env:SCRIPT_PATH\aria2c.exe --dir=`"$env:DOWNLOAD_DIR`" --out=`"$fileName`" " + ($opts -join ' ') + " $link"
+            Write-Host "DEBUG aria2c command: $dbgA"
+            & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileName" @opts $link
+
+            # Upload ngay và xóa local
+            $localFile = "$env:DOWNLOAD_DIR\$fileName"
+            if (-not (Test-Path $localFile)) { Write-Error "Tải thất bại: không thấy $localFile"; exit 1 }
+
+            # Split flags rclone, không truyền chuỗi thô
+            $flags = $env:RCLONE_FLAG -split '\s+'
+            Write-Host "Uploading $(Resolve-Path $localFile) to $remoteDir..."
+            Write-Host "DEBUG flags: $($flags -join ' | ')"
+
+            $dbgR = "$env:SCRIPT_PATH\rclone.exe copy `"$localFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" " + ($flags -join ' ') + " --progress"
+            Write-Host "DEBUG rclone command: $dbgR"
+
+            & "$env:SCRIPT_PATH\rclone.exe" copy `
+              "$(Resolve-Path $localFile)" `
+              "$remoteDir" `
+              --config "$env:RCLONE_CONFIG_PATH" `
+              @flags `
+              --progress
+
+            Remove-Item "$localFile" -Force
+            Write-Host "Đã upload và xóa local: $fileName"
+          }
 
