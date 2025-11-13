@@ -1,85 +1,50 @@
 <?php
 
 $i = $_GET['url'] ?? '';
-if ($i === '') {
-    die("Thiếu tham số url");
-}
+if ($i === '') die("Thiếu tham số url");
 
-// Tách index ra khỏi URL
+// Tách index
 $parts = explode('/', rtrim($i, '/'));
 $last = end($parts);
-
 if (ctype_digit($last)) {
     $index = intval($last);
-    array_pop($parts); // bỏ phần index ra khỏi URL
+    array_pop($parts);
     $baseUrl = implode('/', $parts);
 } else {
-    $index = null; // không có index
+    $index = null;
     $baseUrl = $i;
 }
 
-// Lấy danh sách file từ URL gốc (không có index)
 $dwnld_list = GetAllFiles($baseUrl);
-if ($dwnld_list === false || empty($dwnld_list)) {
-    die("Không lấy được danh sách file từ $baseUrl");
-}
+if ($dwnld_list === false || empty($dwnld_list)) die("Không lấy được danh sách file từ $baseUrl");
 
 // Nếu có index
 if ($index !== null) {
     if ($index === 0) {
-        // Nén zip toàn bộ folder
-        $zip = new ZipArchive();
-        $zipname = tempnam(sys_get_temp_dir(), "mailru").".zip";
-        if ($zip->open($zipname, ZipArchive::CREATE) !== TRUE) {
-            die("Không tạo được file zip");
+        // Hiện menu HTML
+        echo "<h3>Danh sách file trong folder:</h3>";
+        foreach ($dwnld_list as $idx => $file) {
+            $num = $idx + 1;
+            $link = htmlspecialchars($_SERVER['PHP_SELF']."?url=".$baseUrl."/".$num);
+            echo "<a href=\"$link\">File $num: ".$file->name."</a><br>";
         }
-        foreach ($dwnld_list as $file) {
-            $content = @file_get_contents($file->download_link);
-            if ($content !== false) {
-                $zip->addFromString($file->name, $content);
-            }
-        }
-        $zip->close();
-
-        if (ob_get_level()) ob_end_clean();
-        header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="folder.zip"');
-        header('Content-Length: ' . filesize($zipname));
-        readfile($zipname);
-        unlink($zipname);
         exit;
     } else {
-        // Tải file theo index (1 = file đầu tiên, 2 = file thứ hai, ...)
         $fileIndex = $index - 1;
-        if (!isset($dwnld_list[$fileIndex])) {
-            die("File thứ $index không tồn tại trong folder");
-        }
+        if (!isset($dwnld_list[$fileIndex])) die("File thứ $index không tồn tại");
         $redirect = $dwnld_list[$fileIndex]->download_link;
-        $headers = @get_headers($redirect);
-
-        $file = $redirect;
-        if (ob_get_level()) ob_end_clean();
-        header('Content-Description: File Transfer');
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename=' . basename(parse_url($file, PHP_URL_PATH)));
-        header('Content-Transfer-Encoding: binary');
-        header('Expires: 0');
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
-        if ($headers && isset($headers[4])) header($headers[4]);
-        readfile($file);
+        // Redirect trực tiếp tới Cloud Mail.ru
+        header("Location: $redirect");
         exit;
     }
 }
 
-// Nếu không có index → liệt kê danh sách link tải
-echo "<h3>Danh sách file trong folder:</h3>";
-foreach ($dwnld_list as $idx => $file) {
-    $num = $idx + 1;
-    $link = htmlspecialchars($_SERVER['PHP_SELF']."?url=".$baseUrl."/".$num);
-    echo "<a href=\"$link\">File $num: ".$file->name."</a><br>";
+// Không có index → xuất plain text danh sách link trực tiếp
+header('Content-Type: text/plain; charset=utf-8');
+foreach ($dwnld_list as $file) {
+    echo $file->download_link."\n";
 }
-echo "<br><a href=\"".htmlspecialchars($_SERVER['PHP_SELF']."?url=".$baseUrl."/0")."\">Tải tất cả (zip)</a>";
+exit;
 
 /* =========================
    Structures and functions
@@ -99,20 +64,25 @@ class CMFile {
 }
 
 function GetAllFiles($link, $folder = "") {
-    global $base_url, $id;
+    static $base_url = null;
+    static $id = null;
+
     $page = http_get(pathcombine($link, $folder));
-    if ($page === false) { return false; }
+    if ($page === false || $page === '') return false;
 
     $mainfolder = GetMainFolder($page);
-    if ($mainfolder === false) { return false; }
+    if ($mainfolder === false || !isset($mainfolder['list']) || !is_array($mainfolder['list'])) return false;
 
-    if (!$base_url) $base_url = GetBaseUrl($page);
-    if (!$id && preg_match('~\/public\/([A-Za-z0-9_\-\/]+)~', $link, $match)) $id = $match[1];
+    if ($base_url === null) $base_url = GetBaseUrl($page);
+    if ($id === null && preg_match('~\/public\/([A-Za-z0-9_\-\/]+)~', $link, $match)) {
+        $id = $match[1];
+    }
 
     $cmfiles = array();
     if (isset($mainfolder["name"]) && $mainfolder["name"] == "/") $mainfolder["name"] = "";
 
     foreach ($mainfolder["list"] as $item) {
+        if (!isset($item["type"], $item["name"])) continue;
         if ($item["type"] == "folder") {
             $files_from_folder = GetAllFiles($link, pathcombine($folder, rawurlencode(basename($item["name"]))));
             if (is_array($files_from_folder)) {
