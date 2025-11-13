@@ -84,27 +84,47 @@ jobs:
       - name: Tải từng file và upload ngay
         shell: pwsh
         run: |
-          $links = Get-Content "$env:SCRIPT_PATH\links.final.txt"
+          $linksFile = "$env:SCRIPT_PATH\links.final.txt"
+          if (-not (Test-Path $linksFile)) {
+            Write-Error "Không tìm thấy $linksFile"; exit 1
+          }
+
+          $remoteDir = "$env:REMOTE_NAME:$env:REMOTE_TARGET"
+
+          # Đảm bảo thư mục remote tồn tại
+          & "$env:SCRIPT_PATH\rclone.exe" mkdir $remoteDir --config "$env:RCLONE_CONFIG_PATH" | Out-Null
+
+          $links = Get-Content $linksFile
           foreach ($link in $links) {
             $fileName = [System.IO.Path]::GetFileName($link)
-            $remoteDir = "$env:REMOTE_NAME:$env:REMOTE_TARGET"
 
+            # Lấy danh sách file trên remote, có thể trả về rỗng
+            $json = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir --config "$env:RCLONE_CONFIG_PATH"
+            $remoteFiles = @()
+            if ($json -and $json.Trim().Length -gt 0) {
+              try {
+                $remoteFiles = $json | ConvertFrom-Json
+              } catch {
+                Write-Warning "lsjson trả về chuỗi không hợp lệ, coi như thư mục trống."
+                $remoteFiles = @()
+              }
+            }
 
-            # Kiểm tra file đã có trên remote
-            $exists = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir --config "$env:RCLONE_CONFIG_PATH" | ConvertFrom-Json | Where-Object { $_.Name -eq $fileName }
+            $exists = $remoteFiles | Where-Object { $_.Name -eq $fileName }
             if ($exists) {
               Write-Host "Bỏ qua $fileName (đã có trên remote)"
               continue
             }
 
-            # Tải bằng aria2
-            & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileName" "$env:ARIA2_OPTS" $link
+            # Tách ARIA2_OPTS thành mảng tham số
+            $opts = $env:ARIA2_OPTS -split '\s+'
+            & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileName" @opts $link
 
             $localFile = "$env:DOWNLOAD_DIR\$fileName"
             if (Test-Path $localFile) {
-              # Upload lên remote
               & "$env:SCRIPT_PATH\rclone.exe" copy $localFile $remoteDir --config "$env:RCLONE_CONFIG_PATH" $env:RCLONE_FLAG
-              # Xóa file local
               Remove-Item $localFile -Force
+            } else {
+              Write-Error "Tải thất bại: không thấy file $localFile"; exit 1
             }
           }
