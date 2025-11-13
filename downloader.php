@@ -7,17 +7,23 @@ if (php_sapi_name() === 'cli') {
 }
 if ($i === '') die("Thiếu tham số url");
 
-
-// Tách index
+// Tách index hoặc filename
 $parts = explode('/', rtrim($i, '/'));
-$last = end($parts);
+$last  = end($parts);
+
+$index    = null;
+$filename = null;
+$baseUrl  = $i;
+
 if (ctype_digit($last)) {
     $index = intval($last);
     array_pop($parts);
     $baseUrl = implode('/', $parts);
-} else {
-    $index = null;
-    $baseUrl = $i;
+} elseif (strpos($last, '.') !== false) {
+    // Nếu có dấu chấm → coi là filename (giữ nguyên logic, chỉ thêm nhánh này)
+    $filename = $last;
+    array_pop($parts);
+    $baseUrl = implode('/', $parts);
 }
 
 $dwnld_list = GetAllFiles($baseUrl);
@@ -29,7 +35,7 @@ if ($index !== null) {
         // Hiện menu HTML
         echo "<h3>Danh sách file trong folder:</h3>";
         foreach ($dwnld_list as $idx => $file) {
-            $num = $idx + 1;
+            $num  = $idx + 1;
             $link = htmlspecialchars($_SERVER['PHP_SELF']."?url=".$baseUrl."/".$num);
             echo "<a href=\"$link\">File $num: ".$file->name."</a><br>";
         }
@@ -38,13 +44,41 @@ if ($index !== null) {
         $fileIndex = $index - 1;
         if (!isset($dwnld_list[$fileIndex])) die("File thứ $index không tồn tại");
         $redirect = $dwnld_list[$fileIndex]->download_link;
-        // Redirect trực tiếp tới Cloud Mail.ru
-        header("Location: $redirect");
+
+        if (php_sapi_name() === 'cli') {
+            // CLI → echo text
+            header('Content-Type: text/plain; charset=utf-8');
+            echo $redirect;
+        } else {
+            // Web → redirect
+            header("Location: $redirect");
+        }
         exit;
     }
 }
 
-// Không có index → xuất plain text danh sách link trực tiếp
+// Nếu có filename
+if ($filename !== null) {
+    $target = null;
+    foreach ($dwnld_list as $f) {
+        if (strcasecmp($f->name, $filename) === 0) {
+            $target = $f;
+            break;
+        }
+    }
+    if (!$target) die("Không tìm thấy file tên '$filename'");
+    $redirect = $target->download_link;
+
+    if (php_sapi_name() === 'cli') {
+        header('Content-Type: text/plain; charset=utf-8');
+        echo $redirect;
+    } else {
+        header("Location: $redirect");
+    }
+    exit;
+}
+
+// Không có index/filename → xuất plain text danh sách link trực tiếp (giữ nguyên)
 header('Content-Type: text/plain; charset=utf-8');
 foreach ($dwnld_list as $file) {
     echo $file->download_link."\n";
@@ -147,5 +181,4 @@ function pathcombine() {
     }
     return $result;
 }
-
 ?>
