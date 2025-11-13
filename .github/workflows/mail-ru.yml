@@ -8,6 +8,7 @@ jobs:
     runs-on: windows-latest
 
     env:
+      GH_PAT: ${{ secrets.GH_PAT }}
       INSTALL_PATH: C:\INSTALL
       SCRIPT_PATH: C:\RUN
       DOWNLOAD_DIR: C:\ATP
@@ -63,11 +64,9 @@ jobs:
 
       - name: Tải rclone.conf từ repo cấu hình
         shell: pwsh
-        env:
-          GH_PAT: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $confUrl = "https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf"
-          Invoke-WebRequest -Headers @{ "Authorization" = "token $env:GH_PAT" } -Uri $confUrl -OutFile "$env:RCLONE_CONFIG_PATH"
+          Invoke-WebRequest -Headers @{ "Authorization" = "token %GH_PAT%" } -Uri $confUrl -OutFile "$env:RCLONE_CONFIG_PATH"
 
       - name: Parse link bằng PHP CLI
         shell: pwsh
