@@ -23,16 +23,16 @@ jobs:
       
       FILE_CODE_RULES: |
         [
-          { "Pattern": "windows*xp",      "Folder": "Windows XP" },
-          { "Pattern": "windows*vista",   "Folder": "Windows Vista" },
-          { "Pattern": "windows*8.1",     "Folder": "Windows 8" },
-          { "Pattern": "windows*8",       "Folder": "Windows 8" },
-          { "Pattern": "windows*10*ltsc", "Folder": "Windows 10 LTSC" },
-          { "Pattern": "windows*10*ltsb", "Folder": "Windows 10 LTSC" },
-          { "Pattern": "windows*11*ltsc", "Folder": "Windows 11 LTSC" },
-          { "Pattern": "windows*11",      "Folder": "Windows 11" },
-          { "Pattern": "windows*10",      "Folder": "Windows 10" },
-          { "Pattern": "windows*7",       "Folder": "Windows 7" }
+          { "Pattern": "*windows*xp",      "Folder": "Windows XP" },
+          { "Pattern": "*windows*vista",   "Folder": "Windows Vista" },
+          { "Pattern": "*windows*8.1",     "Folder": "Windows 8" },
+          { "Pattern": "*windows*8",       "Folder": "Windows 8" },
+          { "Pattern": "*windows*10*ltsc", "Folder": "Windows 10 LTSC" },
+          { "Pattern": "*windows*10*ltsb", "Folder": "Windows 10 LTSC" },
+          { "Pattern": "*windows*11*ltsc", "Folder": "Windows 11 LTSC" },
+          { "Pattern": "*windows*11",      "Folder": "Windows 11" },
+          { "Pattern": "*windows*10",      "Folder": "Windows 10" },
+          { "Pattern": "*windows*7",       "Folder": "Windows 7" }
         ]
 
     steps:
