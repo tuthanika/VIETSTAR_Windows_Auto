@@ -23,12 +23,16 @@ jobs:
       
       FILE_CODE_RULES: |
         [
-          { "Pattern": "windows.*10.*ltsc", "Folder": "Windows 10 LTSC" },
-          { "Pattern": "windows.*10.*ltsb", "Folder": "Windows 10 LTSB" },
-          { "Pattern": "windows.*11",       "Folder": "Windows 11" },
-          { "Pattern": "windows.*10",       "Folder": "Windows 10" },
-          { "Pattern": "windows.*8",        "Folder": "Windows 8" },
-          { "Pattern": "windows.*7",        "Folder": "Windows 7" }
+          { "Pattern": "windows*xp",      "Folder": "Windows XP" },
+          { "Pattern": "windows*vista",   "Folder": "Windows Vista" },
+          { "Pattern": "windows*8.1",     "Folder": "Windows 8" },
+          { "Pattern": "windows*8",       "Folder": "Windows 8" },
+          { "Pattern": "windows*10*ltsc", "Folder": "Windows 10 LTSC" },
+          { "Pattern": "windows*10*ltsb", "Folder": "Windows 10 LTSC" },
+          { "Pattern": "windows*11*ltsc", "Folder": "Windows 11 LTSC" },
+          { "Pattern": "windows*11",      "Folder": "Windows 11" },
+          { "Pattern": "windows*10",      "Folder": "Windows 10" },
+          { "Pattern": "windows*7",       "Folder": "Windows 7" }
         ]
 
     steps:
@@ -99,40 +103,49 @@ jobs:
           foreach ($link in $links) {
             $fileA = [System.IO.Path]::GetFileName($link)
 
-            # Phân loại auto theo key tương đối (key*$extra*$dateA) và nhận kế hoạch xử lý
+            # Gọi loc-iso ở chế độ auto (so sánh tương đối: key*extra*dateA)
             $json = & "$env:REPO_PATH\loc-iso.ps1" -Mode auto -FileNameA $fileA
-            if ([string]::IsNullOrWhiteSpace($json)) { continue }
+            if ([string]::IsNullOrWhiteSpace($json)) {
+              Write-Host "DEBUG: Không phân loại được rule cho '$fileA' → bỏ qua (FILE_CODE_RULES không khớp)"
+              continue
+            }
 
-            $info = $json | ConvertFrom-Json
+            try {
+              $info = $json | ConvertFrom-Json
+            } catch {
+              Write-Host "DEBUG: JSON trả về không hợp lệ cho '$fileA' → bỏ qua"
+              continue
+            }
+
             $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}/$($info.folder)"
             $oldDir = "$remoteDir/old"
 
-            # Nếu filenameB rỗng → trong $remoteDir đã có bản khớp key_a (key*$extra*$dateA) → bỏ qua
+            # Đã có bản khớp key_a trong $remoteDir → bỏ qua
             if (-not $info.filenameB) {
               Write-Host "DEBUG: Bỏ qua $fileA (đã có bản khớp key trong $remoteDir)"
               continue
             }
 
-            # Nếu có danh sách cần xoá (filenameB_delete) → old đã tồn tại, không tạo lại
+            # Nếu có danh sách cần xoá → old đã tồn tại, không mkdir
             if ($info.filenameB_delete) {
               foreach ($del in $info.filenameB_delete -split '\|') {
+                if ([string]::IsNullOrWhiteSpace($del)) { continue }
                 Write-Host "DEBUG: Xóa file cũ '$del' trong $oldDir (giữ mức MAX_FILE)"
                 & "$env:SCRIPT_PATH\rclone.exe" deletefile "$oldDir/$del" --config "$env:RCLONE_CONFIG_PATH"
               }
             }
 
-            # Di chuyển bản hiện tại trong folder vào old nếu có:
-            # - Nếu đã có danh sách xóa → old chắc chắn tồn tại → không mkdir
-            # - Nếu chưa có danh sách xóa nhưng có filenameB → tạo old trước khi moveto
+            # Di chuyển bản hiện tại từ $remoteDir vào $oldDir nếu có
             if ($info.filenameB) {
               if (-not $info.filenameB_delete) {
+                # Chưa chắc old tồn tại → tạo trước khi moveto
                 & "$env:SCRIPT_PATH\rclone.exe" mkdir "$oldDir" --config "$env:RCLONE_CONFIG_PATH" | Out-Null
               }
               Write-Host "DEBUG: Di chuyển bản cũ '$($info.filenameB)' vào $oldDir"
               & "$env:SCRIPT_PATH\rclone.exe" moveto "$remoteDir/$($info.filenameB)" "$oldDir/$($info.filenameB)" --config "$env:RCLONE_CONFIG_PATH"
             }
 
-            # Upload file A (không tạo $remoteDir vì ps1 đã kiểm tra/chuẩn bị logic folder)
+            # Tải bằng aria2 (giữ split cờ + debug)
             $opts = $env:ARIA2_OPTS -split '\s+'
             $dbgA = "$env:SCRIPT_PATH\aria2c.exe --dir=`"$env:DOWNLOAD_DIR`" --out=`"$fileA`" " + ($opts -join ' ') + " $link"
             Write-Host "DEBUG aria2c command: $dbgA"
@@ -142,7 +155,6 @@ jobs:
             $localFile = "$env:DOWNLOAD_DIR\$fileA"
             if (-not (Test-Path $localFile)) { Write-Error "Tải thất bại: không thấy $localFile"; exit 1 }
 
-            # Split flags rclone, không truyền chuỗi thô
             $flags = $env:RCLONE_FLAG -split '\s+'
             Write-Host "Uploading $(Resolve-Path $localFile) to $remoteDir..."
             Write-Host "DEBUG flags: $($flags -join ' | ')"
