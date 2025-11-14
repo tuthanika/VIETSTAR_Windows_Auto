@@ -78,32 +78,38 @@ if ($jsonOld -and $jsonOld.Trim().Length -gt 0) { try { $filesOld = $jsonOld | C
 # Nếu đã có file khớp key_a trong folder → bỏ qua
 $mainMatches = $filesMain | Where-Object { $_.Name.ToLower() -like $key_a.ToLower() }
 if ($mainMatches -and $mainMatches.Count -gt 0) {
-    [pscustomobject]@{ status="exists"; key_date=$dateA; filenameB=$FileNameA; folder=$folderName; filenameB_delete="" } | ConvertTo-Json -Compress
-    return
+    [pscustomobject]@{
+        status     = "exists"
+        key_date   = $dateA
+        filenameB  = $FileNameA
+        folder     = $folderName
+        filenameB_delete = ""
+    } | ConvertTo-Json -Compress
 }
+else {
+    # Không khớp → cần upload
+    $filenameB = ($filesMain | Sort-Object -Property ModTime -Descending | Select-Object -ExpandProperty Name -First 1)
 
-# Không khớp → cần upload
-$filenameB = ($filesMain | Sort-Object -Property ModTime -Descending | Select-Object -ExpandProperty Name -First 1)
-
-# Xác định danh sách cần xóa trong old nếu có MAX_FILE
-$filenameB_delete = ""
-if ($maxFile -gt 0) {
-    $allMatches = @()
-    $allMatches += $filesMain
-    $allMatches += $filesOld
-    $plannedCount = $allMatches.Count + 1
-    $needDelete = [math]::Max(0, $plannedCount - $maxFile)
-    if ($needDelete -gt 0) {
-        $oldCandidates = $filesOld | Sort-Object -Property ModTime -Ascending
-        $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
-        if ($toDel) { $filenameB_delete = ($toDel -join "|") }
+    # Xác định danh sách cần xóa trong old nếu có MAX_FILE
+    $filenameB_delete = ""
+    if ($maxFile -gt 0) {
+        $allMatches = @()
+        $allMatches += $filesMain
+        $allMatches += $filesOld
+        $plannedCount = $allMatches.Count + 1
+        $needDelete = [math]::Max(0, $plannedCount - $maxFile)
+        if ($needDelete -gt 0) {
+            $oldCandidates = $filesOld | Sort-Object -Property ModTime -Ascending
+            $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
+            if ($toDel) { $filenameB_delete = ($toDel -join "|") }
+        }
     }
-}
 
-[pscustomobject]@{
-    status     = "upload"
-    key_date   = $dateA
-    filenameB  = $filenameB
-    folder     = $folderName
-    filenameB_delete = $filenameB_delete
-} | ConvertTo-Json -Compress
+    [pscustomobject]@{
+        status     = "upload"
+        key_date   = $dateA
+        filenameB  = $filenameB
+        folder     = $folderName
+        filenameB_delete = $filenameB_delete
+    } | ConvertTo-Json -Compress
+}
