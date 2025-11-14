@@ -110,6 +110,8 @@ jobs:
             }
 
             $info = $json | ConvertFrom-Json
+            Write-Host "DEBUG: ps1 trả về -> status=$($info.status), filenameB=$($info.filenameB), folder=$($info.folder), delete=$($info.filenameB_delete)"
+
             $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}/$($info.folder)"
             $oldDir = "$remoteDir/old"
 
