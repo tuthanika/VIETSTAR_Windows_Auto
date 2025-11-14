@@ -103,72 +103,67 @@ jobs:
           foreach ($link in $links) {
             $fileA = [System.IO.Path]::GetFileName($link)
 
-            # Gọi loc-iso ở chế độ auto (so sánh tương đối: key*extra*dateA)
             $json = & "$env:REPO_PATH\loc-iso.ps1" -Mode auto -FileNameA $fileA
             if ([string]::IsNullOrWhiteSpace($json)) {
-              Write-Host "DEBUG: Không phân loại được rule cho '$fileA' → bỏ qua (FILE_CODE_RULES không khớp)"
+              Write-Host "DEBUG: Không nhận được JSON cho $fileA"
               continue
             }
 
-            try {
-              $info = $json | ConvertFrom-Json
-            } catch {
-              Write-Host "DEBUG: JSON trả về không hợp lệ cho '$fileA' → bỏ qua"
-              continue
-            }
-
+            $info = $json | ConvertFrom-Json
             $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}/$($info.folder)"
             $oldDir = "$remoteDir/old"
 
-            # Đã có bản khớp key_a trong $remoteDir → bỏ qua
-            if (-not $info.filenameB) {
-              Write-Host "DEBUG: Bỏ qua $fileA (đã có bản khớp key trong $remoteDir)"
-              continue
-            }
+            switch ($info.status) {
+              "no_rule" {
+                Write-Host "DEBUG: Không phân loại được rule cho '$fileA' → bỏ qua"
+                continue
+              }
+              "exists" {
+                Write-Host "DEBUG: Bỏ qua $fileA (đã có bản khớp key trong $remoteDir)"
+                continue
+              }
+              "upload" {
+                # Nếu có danh sách cần xoá
+                if ($info.filenameB_delete) {
+                  foreach ($del in $info.filenameB_delete -split '\|') {
+                    if ([string]::IsNullOrWhiteSpace($del)) { continue }
+                    Write-Host "DEBUG: Xóa file cũ '$del' trong $oldDir (giữ mức MAX_FILE)"
+                    & "$env:SCRIPT_PATH\rclone.exe" deletefile "$oldDir/$del" --config "$env:RCLONE_CONFIG_PATH"
+                  }
+                }
 
-            # Nếu có danh sách cần xoá → old đã tồn tại, không mkdir
-            if ($info.filenameB_delete) {
-              foreach ($del in $info.filenameB_delete -split '\|') {
-                if ([string]::IsNullOrWhiteSpace($del)) { continue }
-                Write-Host "DEBUG: Xóa file cũ '$del' trong $oldDir (giữ mức MAX_FILE)"
-                & "$env:SCRIPT_PATH\rclone.exe" deletefile "$oldDir/$del" --config "$env:RCLONE_CONFIG_PATH"
+                # Di chuyển bản hiện tại nếu có
+                if ($info.filenameB) {
+                  & "$env:SCRIPT_PATH\rclone.exe" mkdir "$oldDir" --config "$env:RCLONE_CONFIG_PATH" | Out-Null
+                  Write-Host "DEBUG: Di chuyển bản cũ '$($info.filenameB)' vào $oldDir"
+                  & "$env:SCRIPT_PATH\rclone.exe" moveto "$remoteDir/$($info.filenameB)" "$oldDir/$($info.filenameB)" --config "$env:RCLONE_CONFIG_PATH"
+                }
+
+                # Upload file A
+                $opts = $env:ARIA2_OPTS -split '\s+'
+                $dbgA = "$env:SCRIPT_PATH\aria2c.exe --dir=`"$env:DOWNLOAD_DIR`" --out=`"$fileA`" " + ($opts -join ' ') + " $link"
+                Write-Host "DEBUG aria2c command: $dbgA"
+                & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileA" @opts $link
+
+                $localFile = "$env:DOWNLOAD_DIR\$fileA"
+                if (-not (Test-Path $localFile)) { Write-Error "Tải thất bại: không thấy $localFile"; exit 1 }
+
+                $flags = $env:RCLONE_FLAG -split '\s+'
+                Write-Host "Uploading $(Resolve-Path $localFile) to $remoteDir..."
+                Write-Host "DEBUG flags: $($flags -join ' | ')"
+
+                $dbgR = "$env:SCRIPT_PATH\rclone.exe copy `"$localFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" " + ($flags -join ' ') + " --progress"
+                Write-Host "DEBUG rclone command: $dbgR"
+
+                & "$env:SCRIPT_PATH\rclone.exe" copy `
+                  "$(Resolve-Path $localFile)" `
+                  "$remoteDir" `
+                  --config "$env:RCLONE_CONFIG_PATH" `
+                  @flags `
+                  --progress
+
+                Remove-Item "$localFile" -Force
+                Write-Host "Đã upload và xóa local: $fileA"
               }
             }
-
-            # Di chuyển bản hiện tại từ $remoteDir vào $oldDir nếu có
-            if ($info.filenameB) {
-              if (-not $info.filenameB_delete) {
-                # Chưa chắc old tồn tại → tạo trước khi moveto
-                & "$env:SCRIPT_PATH\rclone.exe" mkdir "$oldDir" --config "$env:RCLONE_CONFIG_PATH" | Out-Null
-              }
-              Write-Host "DEBUG: Di chuyển bản cũ '$($info.filenameB)' vào $oldDir"
-              & "$env:SCRIPT_PATH\rclone.exe" moveto "$remoteDir/$($info.filenameB)" "$oldDir/$($info.filenameB)" --config "$env:RCLONE_CONFIG_PATH"
-            }
-
-            # Tải bằng aria2 (giữ split cờ + debug)
-            $opts = $env:ARIA2_OPTS -split '\s+'
-            $dbgA = "$env:SCRIPT_PATH\aria2c.exe --dir=`"$env:DOWNLOAD_DIR`" --out=`"$fileA`" " + ($opts -join ' ') + " $link"
-            Write-Host "DEBUG aria2c command: $dbgA"
-            & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileA" @opts $link
-
-            # Upload ngay và xóa local
-            $localFile = "$env:DOWNLOAD_DIR\$fileA"
-            if (-not (Test-Path $localFile)) { Write-Error "Tải thất bại: không thấy $localFile"; exit 1 }
-
-            $flags = $env:RCLONE_FLAG -split '\s+'
-            Write-Host "Uploading $(Resolve-Path $localFile) to $remoteDir..."
-            Write-Host "DEBUG flags: $($flags -join ' | ')"
-
-            $dbgR = "$env:SCRIPT_PATH\rclone.exe copy `"$localFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" " + ($flags -join ' ') + " --progress"
-            Write-Host "DEBUG rclone command: $dbgR"
-
-            & "$env:SCRIPT_PATH\rclone.exe" copy `
-              "$(Resolve-Path $localFile)" `
-              "$remoteDir" `
-              --config "$env:RCLONE_CONFIG_PATH" `
-              @flags `
-              --progress
-
-            Remove-Item "$localFile" -Force
-            Write-Host "Đã upload và xóa local: $fileA"
           }

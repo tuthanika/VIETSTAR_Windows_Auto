@@ -7,10 +7,8 @@ param(
 
 function Get-Architecture {
     param([string]$name)
-
     # Nếu có cặp "x86_64"/"x86-x64"/"86-64"/"x86-64" → kiến trúc rỗng (dual-arch)
-    if ($name -match '(?i)(x86[_\-]?64|86\-64)') { return "" }
-
+    if ($name -match '(?i)(x86[_\-]?64|86\-64)') { return "" } # dual-arch
     if ($name -match '(?i)(x64|amd64|64bit)')     { return "x64" }
     elseif ($name -match '(?i)(x86|32bit)')       { return "x86" }
     elseif ($name -match '(?i)(arm64|aarch64)')   { return "arm64" }
@@ -48,8 +46,26 @@ if ($Mode -eq "manual") {
 else {
     # Auto mode: lấy từ FILE_CODE_RULES
     $raw = [Environment]::GetEnvironmentVariable("FILE_CODE_RULES")
-    if ([string]::IsNullOrWhiteSpace($raw)) { return }
-    try { $rules = $raw | ConvertFrom-Json } catch { return }
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+        [pscustomobject]@{
+            status     = "no_rule"
+            key_date   = $dateA
+            filenameB  = $FileNameA
+            folder     = ""
+            filenameB_delete = ""
+        } | ConvertTo-Json -Compress
+        return
+    }
+    try { $rules = $raw | ConvertFrom-Json } catch {
+        [pscustomobject]@{
+            status     = "no_rule"
+            key_date   = $dateA
+            filenameB  = $FileNameA
+            folder     = ""
+            filenameB_delete = ""
+        } | ConvertTo-Json -Compress
+        return
+    }
 
     $matchedRule = $null
     foreach ($r in $rules) {
@@ -60,7 +76,16 @@ else {
             break
         }
     }
-    if (-not $matchedRule) { return }
+    if (-not $matchedRule) {
+        [pscustomobject]@{
+            status     = "no_rule"
+            key_date   = $dateA
+            filenameB  = $FileNameA
+            folder     = ""
+            filenameB_delete = ""
+        } | ConvertTo-Json -Compress
+        return
+    }
 
     $keyPattern = ToWildcard $matchedRule.Pattern
     $folderName = $matchedRule.Folder
@@ -83,15 +108,15 @@ if ($jsonOld  -and $jsonOld.Trim().Length -gt 0) { try { $filesOld  = $jsonOld  
 
 # Kiểm tra khớp tương đối theo key_a
 $mainMatches = $filesMain | Where-Object { $_.Name.ToLower() -like $key_a.ToLower() }
-$oldMatches  = $filesOld  | Where-Object { $_.Name.ToLower() -like $key_a.ToLower() }
 
 # Nếu đã có file khớp key_a trong folder → bỏ qua (không trả filenameB)
 if ($mainMatches -and $mainMatches.Count -gt 0) {
     [pscustomobject]@{
+        status     = "exists"
         key_date   = $dateA
-        filenameB  = ""               # rỗng: YAML sẽ bỏ qua
+        filenameB  = $FileNameA
         folder     = $folderName
-        filenameB_delete = ""         # không cần xoá
+        filenameB_delete = ""
     } | ConvertTo-Json -Compress
     return
 }
@@ -103,17 +128,16 @@ $filenameB = ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLow
 
 # Xác định danh sách cần xóa trong old nếu có MAX_FILE
 $filenameB_delete = ""
-if ($maxFile -gt 0) {
+
     # Tổng số bản cùng baseKey (không xét date) tính cả folder + old, giả định sẽ thêm file A
+if ($maxFile -gt 0) {
     $allMatches = @()
     $allMatches += ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
     $allMatches += ($filesOld  | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
-
     $plannedCount = $allMatches.Count + 1            # +1 cho file A sẽ upload
     $needDelete = [math]::Max(0, $plannedCount - $maxFile)
-
-    if ($needDelete -gt 0) {
         # Chỉ xoá trong old, chọn các file cũ nhất theo ModTime
+    if ($needDelete -gt 0) {
         $oldCandidates = $filesOld | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() } | Sort-Object -Property ModTime -Ascending
         $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
         if ($toDel) { $filenameB_delete = ($toDel -join "|") }
@@ -122,6 +146,7 @@ if ($maxFile -gt 0) {
 
 # Trả kết quả cho YAML
 [pscustomobject]@{
+    status     = "upload"
     key_date   = $dateA
     filenameB  = $filenameB
     folder     = $folderName
