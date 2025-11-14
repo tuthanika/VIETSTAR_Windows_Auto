@@ -8,7 +8,7 @@ param(
 function Get-Architecture {
     param([string]$name)
     # Nếu có cặp "x86_64"/"x86-x64"/"86-64"/"x86-64" → kiến trúc rỗng (dual-arch)
-    if ($name -match '(?i)(x86[_\-]?64|86\-64)') { return "" } # dual-arch
+    if ($name -match '(?i)(x86[_\-]?64|86\-64)') { return "" }
     if ($name -match '(?i)(x64|amd64|64bit)')     { return "x64" }
     elseif ($name -match '(?i)(x86|32bit)')       { return "x86" }
     elseif ($name -match '(?i)(arm64|aarch64)')   { return "arm64" }
@@ -18,16 +18,8 @@ function Get-Architecture {
 
 function Get-DateTagRaw {
     param([string]$name)
-    # Tìm dạng v25.11.11
     $m = [regex]::Match($name, 'v\d{2}\.\d{2}\.\d{2}')
     if ($m.Success) { return $m.Value } else { return "" }
-}
-
-function ToWildcard {
-    param([string]$s)
-    # Chuẩn hoá pattern sang wildcard đơn giản (lowercase, khoảng trắng -> *)
-    if ([string]::IsNullOrWhiteSpace($s)) { return "" }
-    return ($s.ToLower())
 }
 
 # ENV
@@ -37,14 +29,13 @@ $remoteRoot = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
 # Xác định key/extra/date và folder theo chế độ
 $keyExtra = Get-Architecture $FileNameA
 $dateRaw  = Get-DateTagRaw $FileNameA
-$dateA    = if ($dateRaw) { $dateRaw.TrimStart('v') } else { "" }  # ví dụ "25.11.11"
+$dateA    = if ($dateRaw) { $dateRaw.TrimStart('v') } else { "" }
 
 if ($Mode -eq "manual") {
-    $keyPattern = ToWildcard $Key                        # ví dụ "windows*10"
+    $keyPattern = $Key.ToLower()
     $folderName = $Folder
 }
 else {
-    # Auto mode: lấy từ FILE_CODE_RULES
     $raw = [Environment]::GetEnvironmentVariable("FILE_CODE_RULES")
     if ([string]::IsNullOrWhiteSpace($raw)) {
         [pscustomobject]@{
@@ -69,8 +60,7 @@ else {
 
     $matchedRule = $null
     foreach ($r in $rules) {
-        # Cho phép rule.Pattern là wildcard (ví dụ: "windows*10")
-        $p = ToWildcard $r.Pattern
+        $p = $r.Pattern.ToLower()
         if ($FileNameA.ToLower() -like $p) {
             $matchedRule = $r
             break
@@ -87,14 +77,13 @@ else {
         return
     }
 
-    $keyPattern = ToWildcard $matchedRule.Pattern
+    $keyPattern = $matchedRule.Pattern.ToLower()
     $folderName = $matchedRule.Folder
 }
 
 # Tạo key_a: $key*$key.extra*$key.dateA (extra có thể rỗng)
 $key_a = if ($keyExtra) { "$keyPattern*$keyExtra*$dateA" } else { "$keyPattern*$dateA" }
 
-# Xác định đường dẫn folder trên remote (chỉ từ rule/param), KHÔNG gán date vào tên folder
 $remoteDir = "$remoteRoot/$folderName"
 
 # Lấy danh sách file trong folder và old
@@ -109,7 +98,6 @@ if ($jsonOld  -and $jsonOld.Trim().Length -gt 0) { try { $filesOld  = $jsonOld  
 # Kiểm tra khớp tương đối theo key_a
 $mainMatches = $filesMain | Where-Object { $_.Name.ToLower() -like $key_a.ToLower() }
 
-# Nếu đã có file khớp key_a trong folder → bỏ qua (không trả filenameB)
 if ($mainMatches -and $mainMatches.Count -gt 0) {
     [pscustomobject]@{
         status     = "exists"
@@ -121,22 +109,18 @@ if ($mainMatches -and $mainMatches.Count -gt 0) {
     return
 }
 
-# Không khớp → cần tải/upload.
-# Chọn filenameB để di chuyển (bản hiện tại trong folder cùng key chính, cùng extra nhưng khác date)
+# Không khớp → cần tải/upload
 $baseKey = if ($keyExtra) { "$keyPattern*$keyExtra*" } else { "$keyPattern*" }
 $filenameB = ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() } | Sort-Object -Property ModTime -Descending | Select-Object -ExpandProperty Name -First 1)
 
 # Xác định danh sách cần xóa trong old nếu có MAX_FILE
 $filenameB_delete = ""
-
-    # Tổng số bản cùng baseKey (không xét date) tính cả folder + old, giả định sẽ thêm file A
 if ($maxFile -gt 0) {
     $allMatches = @()
     $allMatches += ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
     $allMatches += ($filesOld  | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
-    $plannedCount = $allMatches.Count + 1            # +1 cho file A sẽ upload
+    $plannedCount = $allMatches.Count + 1
     $needDelete = [math]::Max(0, $plannedCount - $maxFile)
-        # Chỉ xoá trong old, chọn các file cũ nhất theo ModTime
     if ($needDelete -gt 0) {
         $oldCandidates = $filesOld | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() } | Sort-Object -Property ModTime -Ascending
         $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
@@ -144,7 +128,6 @@ if ($maxFile -gt 0) {
     }
 }
 
-# Trả kết quả cho YAML
 [pscustomobject]@{
     status     = "upload"
     key_date   = $dateA
