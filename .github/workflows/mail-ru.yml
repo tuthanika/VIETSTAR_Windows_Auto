@@ -12,7 +12,7 @@ jobs:
       INSTALL_PATH: C:\INSTALL
       SCRIPT_PATH: C:\RUN
       DOWNLOAD_DIR: C:\ATP
-
+      REPO_PATH: ${{ github.workspace }}
       RCLONE_CONF_REPO: ${{ vars.RCLONE_CONF_REPO || 'github.com/tuthanika/Rclone-Auto-Refresh-Token' }}
       RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\RUN\rclone.conf' }}
       REMOTE_NAME: ${{ vars.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
@@ -100,7 +100,7 @@ jobs:
             $fileA = [System.IO.Path]::GetFileName($link)
 
             # Phân loại auto theo key tương đối (key*$extra*$dateA) và nhận kế hoạch xử lý
-            $json = & "$env:SCRIPT_PATH\loc-iso.ps1" -Mode auto -FileNameA $fileA
+            $json = & "$env:REPO_PATH\loc-iso.ps1" -Mode auto -FileNameA $fileA
             if ([string]::IsNullOrWhiteSpace($json)) { continue }
 
             $info = $json | ConvertFrom-Json
