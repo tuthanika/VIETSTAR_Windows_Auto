@@ -7,7 +7,7 @@ param(
 
 function Get-Architecture {
     param([string]$name)
-    # Nếu có cặp "x86_64"/"x86-x64"/"86-64"/"x86-64" → kiến trúc rỗng (dual-arch)
+    # Dual-arch → extra rỗng
     if ($name -match '(?i)(x86[_\-]?64|86\-64)') { return "" }
     if ($name -match '(?i)(x64|amd64|64bit)')     { return "x64" }
     elseif ($name -match '(?i)(x86|32bit)')       { return "x86" }
@@ -18,6 +18,7 @@ function Get-Architecture {
 
 function Get-DateTagRaw {
     param([string]$name)
+    # Giữ nguyên 'v' để khớp chính xác với tên file (ví dụ: v23.05.07)
     $m = [regex]::Match($name, 'v\d{2}\.\d{2}\.\d{2}')
     if ($m.Success) { return $m.Value } else { return "" }
 }
@@ -26,12 +27,13 @@ function Get-DateTagRaw {
 $maxFile    = [int]([Environment]::GetEnvironmentVariable("MAX_FILE") ?? "0")
 $remoteRoot = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
 
+# Extract từ filenameA
 $keyExtra = Get-Architecture $FileNameA
-$dateRaw  = Get-DateTagRaw $FileNameA
-$dateA    = if ($dateRaw) { $dateRaw.TrimStart('v') } else { "" }
+$dateA    = Get-DateTagRaw $FileNameA  # giữ nguyên 'v..'
 
+# Xác định pattern key/folder
 if ($Mode -eq "manual") {
-    $keyPattern = $Key.ToLower()
+    $keyPattern = $Key.ToLower()          # ví dụ: "*windows*xp*"
     $folderName = $Folder
 }
 else {
@@ -47,7 +49,7 @@ else {
 
     $matchedRule = $null
     foreach ($r in $rules) {
-        $p = $r.Pattern.ToLower()
+        $p = $r.Pattern.ToLower()  # wildcard từ ENV, ví dụ "*windows*xp*"
         if ($FileNameA.ToLower() -like $p) { $matchedRule = $r; break }
     }
     if (-not $matchedRule) {
@@ -59,7 +61,7 @@ else {
     $folderName = $matchedRule.Folder
 }
 
-# key_a: luôn gồm key + extra (nếu có) + date
+# Tạo pattern tương đối: key + extra (nếu có) + date
 $key_a = if ($keyExtra) { "$keyPattern*$keyExtra*$dateA" } else { "$keyPattern*$dateA" }
 $remoteDir = "$remoteRoot/$folderName"
 
@@ -75,7 +77,20 @@ try { $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir/old" --confi
 $filesOld = @()
 if ($jsonOld -and $jsonOld.Trim().Length -gt 0) { try { $filesOld = $jsonOld | ConvertFrom-Json } catch {} }
 
-# Nếu đã có file khớp key_a trong folder → bỏ qua
+# 1) Kiểm tra tuyệt đối: nếu chính filename A đã tồn tại trong folder → exists
+$exactExists = $filesMain | Where-Object { $_.Name -eq $FileNameA } | Select-Object -First 1
+if ($exactExists) {
+    [pscustomobject]@{
+        status     = "exists"
+        key_date   = $dateA
+        filenameB  = $FileNameA
+        folder     = $folderName
+        filenameB_delete = ""
+    } | ConvertTo-Json -Compress
+    return
+}
+
+# 2) Kiểm tra tương đối theo key_a: nếu đã có bản khớp → exists
 $mainMatches = $filesMain | Where-Object { $_.Name.ToLower() -like $key_a.ToLower() }
 if ($mainMatches -and $mainMatches.Count -gt 0) {
     [pscustomobject]@{
@@ -85,31 +100,32 @@ if ($mainMatches -and $mainMatches.Count -gt 0) {
         folder     = $folderName
         filenameB_delete = ""
     } | ConvertTo-Json -Compress
+    return
 }
-else {
-    # Không khớp → cần upload
-    $filenameB = ($filesMain | Sort-Object -Property ModTime -Descending | Select-Object -ExpandProperty Name -First 1)
 
-    # Xác định danh sách cần xóa trong old nếu có MAX_FILE
-    $filenameB_delete = ""
-    if ($maxFile -gt 0) {
-        $allMatches = @()
-        $allMatches += $filesMain
-        $allMatches += $filesOld
-        $plannedCount = $allMatches.Count + 1
-        $needDelete = [math]::Max(0, $plannedCount - $maxFile)
-        if ($needDelete -gt 0) {
-            $oldCandidates = $filesOld | Sort-Object -Property ModTime -Ascending
-            $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
-            if ($toDel) { $filenameB_delete = ($toDel -join "|") }
-        }
+# 3) Không khớp → cần upload
+# filenameB: bản hiện hữu để di chuyển (nếu muốn), chọn mới nhất theo ModTime
+$filenameB = ($filesMain | Sort-Object -Property ModTime -Descending | Select-Object -ExpandProperty Name -First 1)
+
+# Xác định danh sách cần xóa trong old nếu có MAX_FILE
+$filenameB_delete = ""
+if ($maxFile -gt 0) {
+    $allMatches = @()
+    $allMatches += $filesMain
+    $allMatches += $filesOld
+    $plannedCount = $allMatches.Count + 1
+    $needDelete = [math]::Max(0, $plannedCount - $maxFile)
+    if ($needDelete -gt 0) {
+        $oldCandidates = $filesOld | Sort-Object -Property ModTime -Ascending
+        $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
+        if ($toDel) { $filenameB_delete = ($toDel -join "|") }
     }
-
-    [pscustomobject]@{
-        status     = "upload"
-        key_date   = $dateA
-        filenameB  = $filenameB
-        folder     = $folderName
-        filenameB_delete = $filenameB_delete
-    } | ConvertTo-Json -Compress
 }
+
+[pscustomobject]@{
+    status     = "upload"
+    key_date   = $dateA
+    filenameB  = $filenameB
+    folder     = $folderName
+    filenameB_delete = $filenameB_delete
+} | ConvertTo-Json -Compress
