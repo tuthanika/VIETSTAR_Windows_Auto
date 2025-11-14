@@ -23,10 +23,9 @@ function Get-DateTagRaw {
 }
 
 # ENV
-$maxFile = [int]([Environment]::GetEnvironmentVariable("MAX_FILE") ?? "0")
+$maxFile    = [int]([Environment]::GetEnvironmentVariable("MAX_FILE") ?? "0")
 $remoteRoot = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
 
-# Xác định key/extra/date và folder theo chế độ
 $keyExtra = Get-Architecture $FileNameA
 $dateRaw  = Get-DateTagRaw $FileNameA
 $dateA    = if ($dateRaw) { $dateRaw.TrimStart('v') } else { "" }
@@ -38,42 +37,21 @@ if ($Mode -eq "manual") {
 else {
     $raw = [Environment]::GetEnvironmentVariable("FILE_CODE_RULES")
     if ([string]::IsNullOrWhiteSpace($raw)) {
-        [pscustomobject]@{
-            status     = "no_rule"
-            key_date   = $dateA
-            filenameB  = $FileNameA
-            folder     = ""
-            filenameB_delete = ""
-        } | ConvertTo-Json -Compress
+        [pscustomobject]@{ status="no_rule"; key_date=$dateA; filenameB=$FileNameA; folder=""; filenameB_delete="" } | ConvertTo-Json -Compress
         return
     }
     try { $rules = $raw | ConvertFrom-Json } catch {
-        [pscustomobject]@{
-            status     = "no_rule"
-            key_date   = $dateA
-            filenameB  = $FileNameA
-            folder     = ""
-            filenameB_delete = ""
-        } | ConvertTo-Json -Compress
+        [pscustomobject]@{ status="no_rule"; key_date=$dateA; filenameB=$FileNameA; folder=""; filenameB_delete="" } | ConvertTo-Json -Compress
         return
     }
 
     $matchedRule = $null
     foreach ($r in $rules) {
         $p = $r.Pattern.ToLower()
-        if ($FileNameA.ToLower() -like $p) {
-            $matchedRule = $r
-            break
-        }
+        if ($FileNameA.ToLower() -like $p) { $matchedRule = $r; break }
     }
     if (-not $matchedRule) {
-        [pscustomobject]@{
-            status     = "no_rule"
-            key_date   = $dateA
-            filenameB  = $FileNameA
-            folder     = ""
-            filenameB_delete = ""
-        } | ConvertTo-Json -Compress
+        [pscustomobject]@{ status="no_rule"; key_date=$dateA; filenameB=$FileNameA; folder=""; filenameB_delete="" } | ConvertTo-Json -Compress
         return
     }
 
@@ -81,48 +59,42 @@ else {
     $folderName = $matchedRule.Folder
 }
 
-# Tạo key_a: $key*$key.extra*$key.dateA (extra có thể rỗng)
+# key_a: luôn gồm key + extra (nếu có) + date
 $key_a = if ($keyExtra) { "$keyPattern*$keyExtra*$dateA" } else { "$keyPattern*$dateA" }
-
 $remoteDir = "$remoteRoot/$folderName"
 
-# Lấy danh sách file trong folder và old
-$jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH"
-$jsonOld  = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir/old" --config "$env:RCLONE_CONFIG_PATH"
-
+# Lấy danh sách file trong folder chính
+$jsonMain = ""
+try { $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" } catch { $jsonMain = "" }
 $filesMain = @()
-$filesOld  = @()
 if ($jsonMain -and $jsonMain.Trim().Length -gt 0) { try { $filesMain = $jsonMain | ConvertFrom-Json } catch {} }
-if ($jsonOld  -and $jsonOld.Trim().Length -gt 0) { try { $filesOld  = $jsonOld  | ConvertFrom-Json } catch {} }
 
-# Kiểm tra khớp tương đối theo key_a
+# Lấy danh sách file trong old (có thể chưa tồn tại → rỗng)
+$jsonOld = ""
+try { $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir/old" --config "$env:RCLONE_CONFIG_PATH" } catch { $jsonOld = "" }
+$filesOld = @()
+if ($jsonOld -and $jsonOld.Trim().Length -gt 0) { try { $filesOld = $jsonOld | ConvertFrom-Json } catch {} }
+
+# Nếu đã có file khớp key_a trong folder → bỏ qua
 $mainMatches = $filesMain | Where-Object { $_.Name.ToLower() -like $key_a.ToLower() }
-
 if ($mainMatches -and $mainMatches.Count -gt 0) {
-    [pscustomobject]@{
-        status     = "exists"
-        key_date   = $dateA
-        filenameB  = $FileNameA
-        folder     = $folderName
-        filenameB_delete = ""
-    } | ConvertTo-Json -Compress
+    [pscustomobject]@{ status="exists"; key_date=$dateA; filenameB=$FileNameA; folder=$folderName; filenameB_delete="" } | ConvertTo-Json -Compress
     return
 }
 
-# Không khớp → cần tải/upload
-$baseKey = if ($keyExtra) { "$keyPattern*$keyExtra*" } else { "$keyPattern*" }
-$filenameB = ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() } | Sort-Object -Property ModTime -Descending | Select-Object -ExpandProperty Name -First 1)
+# Không khớp → cần upload
+$filenameB = ($filesMain | Sort-Object -Property ModTime -Descending | Select-Object -ExpandProperty Name -First 1)
 
 # Xác định danh sách cần xóa trong old nếu có MAX_FILE
 $filenameB_delete = ""
 if ($maxFile -gt 0) {
     $allMatches = @()
-    $allMatches += ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
-    $allMatches += ($filesOld  | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
+    $allMatches += $filesMain
+    $allMatches += $filesOld
     $plannedCount = $allMatches.Count + 1
     $needDelete = [math]::Max(0, $plannedCount - $maxFile)
     if ($needDelete -gt 0) {
-        $oldCandidates = $filesOld | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() } | Sort-Object -Property ModTime -Ascending
+        $oldCandidates = $filesOld | Sort-Object -Property ModTime -Ascending
         $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
         if ($toDel) { $filenameB_delete = ($toDel -join "|") }
     }
