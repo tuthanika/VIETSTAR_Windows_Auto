@@ -149,4 +149,7 @@ foreach ($link in $links) {
   Write-Host "DEBUG: Parsed → status=[$($Info.status)], key_date=[$($Info.key_date)], filenameB=[$($Info.filenameB)], folder=[$($Info.folder)], delete=[$($Info.filenameB_delete)]"
 
   # Pipe: status|realLink|folder|filenameA|filenameB|key_date|filenameB_delete
-  $pipeLine = "$($Info.status)|$realLink|$folder|$filenameA|
+  $pipeLine = "$($Info.status)|$realLink|$folder|$filenameA|$($Info.filenameB)|$($Info.key_date)|$($Info.filenameB_delete)"
+  Add-Content $pipePath $pipeLine
+  Write-Host "DEBUG: Write pipe=[$pipeLine]"
+}
