@@ -21,6 +21,60 @@ function Resolve-Folder {
   return $folder
 }
 
+# Resolve redirect chain with detailed debug
+Add-Type -AssemblyName System.Net.Http
+function Resolve-FinalUrl {
+  param(
+    [Parameter(Mandatory=$true)][string]$StartUrl,
+    [int]$MaxHops = 10,
+    [string]$UserAgent = $ua
+  )
+  $handler = New-Object System.Net.Http.HttpClientHandler
+  $handler.AllowAutoRedirect = $false
+  $client  = New-Object System.Net.Http.HttpClient($handler)
+  $client.DefaultRequestHeaders.Clear()
+  $client.DefaultRequestHeaders.Add("User-Agent", $UserAgent)
+
+  $current = $StartUrl
+  $final   = ""
+
+  Write-Host "DEBUG: redirect-start url=[$current]"
+  for ($i = 1; $i -le $MaxHops; $i++) {
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    Write-Host "DEBUG: hop#$i request=[$current]"
+    try {
+      $resp = $client.GetAsync($current).Result
+      $sw.Stop()
+      $status = [int]$resp.StatusCode
+      Write-Host "DEBUG: hop#$i status=[$status] elapsed=${($sw.ElapsedMilliseconds)}ms"
+      if ($resp.Headers.Location) {
+        $loc = $resp.Headers.Location
+        $locAbs = if ($loc.IsAbsoluteUri) { $loc.AbsoluteUri } else { ([System.Uri]::new($current, $loc.ToString())).AbsoluteUri }
+        Write-Host "DEBUG: hop#$i Location=[$locAbs] (taken from header)"
+        $current = $locAbs
+        continue
+      } else {
+        $final = $current
+        Write-Host "DEBUG: hop#$i no Location → final=[$final]"
+        break
+      }
+    } catch {
+      $sw.Stop()
+      Write-Host "DEBUG: hop#$i exception → $($_.Exception.Message) elapsed=${($sw.ElapsedMilliseconds)}ms"
+      $final = $current
+      Write-Host "DEBUG: hop#$i stop on exception → final=[$final]"
+      break
+    }
+  }
+  if ([string]::IsNullOrWhiteSpace($final)) {
+    $final = $current
+    Write-Host "DEBUG: redirect-end fallback final=[$final]"
+  } else {
+    Write-Host "DEBUG: redirect-end final=[$final]"
+  }
+  return $final
+}
+
 # Pipe
 $pipePath = (Join-Path $env:SCRIPT_PATH "links.final.txt")
 Remove-Item $pipePath -ErrorAction Ignore
@@ -58,23 +112,8 @@ foreach ($link in $links) {
     $goLink = $goMatches[0].Value
     Write-Host "DEBUG: goLink=[$goLink]"
 
-    # Resolve goLink đến URL cuối cùng
-    $shareLink = ""
-    try {
-      $resp = Invoke-WebRequest $goLink -MaximumRedirection 10 -UserAgent $ua -Headers @{ Referer = $threadUrl } -ErrorAction Stop
-      if ($resp.BaseResponse.ResponseUri) {
-        $shareLink = $resp.BaseResponse.ResponseUri.AbsoluteUri
-        Write-Host "DEBUG: auto-redirect final=[$shareLink]"
-      }
-    } catch {
-      $ex = $_.Exception
-      Write-Host "DEBUG: Exception → $($ex.Message)"
-      if ($ex.Response -and $ex.Response.Headers["Location"]) {
-        $shareLink = $ex.Response.Headers["Location"]
-        Write-Host "DEBUG: Location header=[$shareLink]"
-      }
-    }
-
+    # Resolve goLink đến URL cuối cùng (with detailed debug)
+    $shareLink = Resolve-FinalUrl -StartUrl $goLink
     Write-Host "DEBUG: shareLink=[$shareLink]"
     if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
 
@@ -97,23 +136,8 @@ foreach ($link in $links) {
     $goLink = $goMatches[0].Value
     Write-Host "DEBUG: goLink=[$goLink]"
 
-    # Resolve goLink đến URL cuối cùng
-    $shareLink = ""
-    try {
-      $resp = Invoke-WebRequest $goLink -MaximumRedirection 10 -UserAgent $ua -Headers @{ Referer = $threadUrl } -ErrorAction Stop
-      if ($resp.BaseResponse.ResponseUri) {
-        $shareLink = $resp.BaseResponse.ResponseUri.AbsoluteUri
-        Write-Host "DEBUG: auto-redirect final=[$shareLink]"
-      }
-    } catch {
-      $ex = $_.Exception
-      Write-Host "DEBUG: Exception → $($ex.Message)"
-      if ($ex.Response -and $ex.Response.Headers["Location"]) {
-        $shareLink = $ex.Response.Headers["Location"]
-        Write-Host "DEBUG: Location header=[$shareLink]"
-      }
-    }
-
+    # Resolve goLink đến URL cuối cùng (with detailed debug)
+    $shareLink = Resolve-FinalUrl -StartUrl $goLink
     Write-Host "DEBUG: shareLink=[$shareLink]"
     if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
 
