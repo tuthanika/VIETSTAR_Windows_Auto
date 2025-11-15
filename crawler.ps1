@@ -14,11 +14,7 @@ foreach ($link in $shareLinks) {
     if ($link -like "https://forum.rg-adguard.net/*") {
         Write-Host "DEBUG: Forum link detected"
         $html   = Invoke-WebRequest $link -UseBasicParsing -Headers @{ Cookie = $env:FORUM_COOKIE }
-        $thread = $html.Links | Where-Object { $_.innerText -match "
-
-\[En/Ru\]
-
-" } | Select-Object -First 1
+        $thread = $html.Links | Where-Object { $_.innerText -match "\[En/Ru\]" } | Select-Object -First 1
         if (-not $thread) { Write-Host "WARN: No thread found"; continue }
 
         $slugRaw   = ($thread.href -split "/")[2]
