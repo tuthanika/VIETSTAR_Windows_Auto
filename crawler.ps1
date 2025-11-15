@@ -36,7 +36,7 @@ foreach ($rule in $rules) {
   }
   else {
     # Không có forum Link → dùng link.txt
-    $shareLinks = Get-Content "$env:SCRIPT_PATH\link.txt"
+    $shareLinks = Get-Content "$env:REPO_PATH\link.txt"
     foreach ($shareLink in $shareLinks) {
       $filenameA = [System.IO.Path]::GetFileName($shareLink)
       $json = & "$env:SCRIPT_PATH\check-exists.ps1" -FileNameA $filenameA -Folder $folder
