@@ -151,7 +151,6 @@ foreach ($link in $links) {
       if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
       $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
       Write-Host "DEBUG: shareLink=[$shareLink]"
-      if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue
 	        if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
       Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
     }
