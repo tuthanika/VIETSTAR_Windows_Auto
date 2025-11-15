@@ -13,7 +13,7 @@ foreach ($rule in $rules) {
     $slugRaw = ($thread.href -split "/")[2]
     $filenameA = $slugRaw -replace "\.\d+$",""
 
-    $json = & "$env:SCRIPT_PATH\check-exists.ps1" -FileNameA $filenameA -Folder $folder
+    $json = & "$env:REPO_PATH\check-exists.ps1" -FileNameA $filenameA -Folder $folder
     $info = $json | ConvertFrom-Json
     if ($info.status -eq "exists") {
       Add-Content "$env:SCRIPT_PATH\links.final.txt" "exists||$folder|$filenameA|||"
@@ -30,7 +30,7 @@ foreach ($rule in $rules) {
     $shareLink = $resp.Headers["Location"]
 
     # Resolve bằng downloader.php
-    $realLink = & php "$env:SCRIPT_PATH\downloader.php" --url "$shareLink"
+    $realLink = & php "$env:REPO_PATH\downloader.php" --url "$shareLink"
 
     Add-Content "$env:SCRIPT_PATH\links.final.txt" "upload|$realLink|$folder|$filenameA|||"
   }
@@ -39,13 +39,13 @@ foreach ($rule in $rules) {
     $shareLinks = Get-Content "$env:REPO_PATH\link.txt"
     foreach ($shareLink in $shareLinks) {
       $filenameA = [System.IO.Path]::GetFileName($shareLink)
-      $json = & "$env:SCRIPT_PATH\check-exists.ps1" -FileNameA $filenameA -Folder $folder
+      $json = & "$env:REPO_PATH\check-exists.ps1" -FileNameA $filenameA -Folder $folder
       $info = $json | ConvertFrom-Json
       if ($info.status -eq "exists") {
         Add-Content "$env:SCRIPT_PATH\links.final.txt" "exists||$folder|$filenameA|||"
         continue
       }
-      $realLink = & php "$env:SCRIPT_PATH\downloader.php" --url "$shareLink"
+      $realLink = & php "$env:REPO_PATH\downloader.php" --url "$shareLink"
       Add-Content "$env:SCRIPT_PATH\links.final.txt" "upload|$realLink|$folder|$filenameA|||"
     }
   }
