@@ -124,6 +124,8 @@ jobs:
               }
               "exists" {
                 Write-Host "DEBUG: Bỏ qua $fileA (đã có bản khớp key trong $remoteDir)"
+                Write-Host "DEBUG: exit code hiện tại = $LASTEXITCODE"
+                $global:LASTEXITCODE = 0
                 continue
               }
               "upload" {
@@ -148,6 +150,7 @@ jobs:
                 $dbgA = "$env:SCRIPT_PATH\aria2c.exe --dir=`"$env:DOWNLOAD_DIR`" --out=`"$fileA`" " + ($opts -join ' ') + " $link"
                 Write-Host "DEBUG aria2c command: $dbgA"
                 & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileA" @opts $link
+                Write-Host "DEBUG: aria2c exit code = $LASTEXITCODE"
 
                 $localFile = "$env:DOWNLOAD_DIR\$fileA"
                 if (-not (Test-Path $localFile)) { Write-Error "Tải thất bại: không thấy $localFile"; exit 1 }
@@ -165,9 +168,14 @@ jobs:
                   --config "$env:RCLONE_CONFIG_PATH" `
                   @flags `
                   --progress
+                Write-Host "DEBUG: rclone copy exit code = $LASTEXITCODE"
 
                 Remove-Item "$localFile" -Force
                 Write-Host "Đã upload và xóa local: $fileA"
               }
             }
+            Write-Host "DEBUG: Kết thúc xử lý $fileA, exit code = $LASTEXITCODE"
           }
+          Write-Host "DEBUG: Step kết thúc, exit code = $LASTEXITCODE"
+          exit 0
+
