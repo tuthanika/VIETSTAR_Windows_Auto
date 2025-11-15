@@ -47,33 +47,12 @@ foreach ($link in $shareLinks) {
             Write-Host "DEBUG: candidate href=[$($t.href)], text=[$($t.innerText)]"
         }
 
-        # Lọc theo text có 'En/Ru' (bỏ ngoặc vuông), case-insensitive
-        $candidates = $threads | Where-Object { $_.innerText -match "(?i)En/Ru" }
-        Write-Host "DEBUG: candidates with En/Ru count=$($candidates.Count)"
-
-        # Nếu nhiều → lấy mới nhất bằng cách ưu tiên text chứa vYY.MM.DD lớn nhất
-        function Extract-DateTag([string]$text) {
-          if ($text -match "v(\d{2}\.\d{2}\.\d{2})") { return $matches[1] } else { return "" }
-        }
-        $candidates = $candidates | Sort-Object @{Expression={ Extract-DateTag $_.innerText }; Ascending=$false}
-        $thread = $candidates | Select-Object -First 1
-
-        # Fallback: nếu không có En/Ru, chọn thread đầu tiên có từ khóa 'Windows 7' (hoặc dùng rules)
-        if (-not $thread) {
-          $fallback = $threads | Where-Object { $_.innerText -match "(?i)Windows\s*7" } | Select-Object -First 1
-          if ($fallback) {
-            Write-Host "DEBUG: Fallback thread by keyword Windows 7"
-            $thread = $fallback
-          }
-        }
-
+        # Lọc theo href có -en-ru.<id>
+        $thread = $threads | Where-Object { $_.href -match "-en-ru\.\d+/?$" } | Select-Object -First 1
         if (-not $thread) { Write-Host "WARN: No matching thread in section"; continue }
 
-        # Lấy filenameA từ slug thread
-        $slugParts = $thread.href.Trim('/') -split '/'
-        # /threads/<slug>.<id>/
-        $slugRaw   = $slugParts[1]
-        $filenameA = ($slugRaw -replace "\.\d+$","")
+        $slugRaw   = ($thread.href -split "/")[2]
+        $filenameA = $slugRaw -replace "\.\d+$",""
         Write-Host "DEBUG: filenameA from forum section=[$filenameA]"
 
         $threadUrl = "https://forum.rg-adguard.net$($thread.href)"
@@ -96,9 +75,8 @@ foreach ($link in $shareLinks) {
     elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
         Write-Host "DEBUG: Forum thread detected"
         $threadUrl = $link
-        $slugParts = $threadUrl.Trim('/') -split '/'
-        $slugRaw   = $slugParts[2]
-        $filenameA = ($slugRaw -replace "\.\d+$","")
+        $slugRaw   = ($threadUrl -split "/")[2]
+        $filenameA = $slugRaw -replace "\.\d+$",""
         Write-Host "DEBUG: filenameA from forum thread=[$filenameA]"
 
         $page   = Invoke-WebRequest $threadUrl -UseBasicParsing -Headers @{ Cookie = $env:FORUM_COOKIE }
