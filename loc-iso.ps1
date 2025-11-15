@@ -64,34 +64,44 @@ $remoteDir = "$remoteRoot/$folderName"
 
 # Kiểm tra thư mục chính có tồn tại
 $dirExists = $false
-try {
-  $check = & "$env:SCRIPT_PATH\rclone.exe" lsd "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
-  if ($LASTEXITCODE -eq 0) { $dirExists = $true }
-} catch { $dirExists = $false }
+$check = & "$env:SCRIPT_PATH\rclone.exe" lsd "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+if ($LASTEXITCODE -eq 0) {
+    $dirExists = $true
+} else {
+    $dirExists = $false
+    # reset để không làm step fail
+    $global:LASTEXITCODE = 0
+}
 
 $filesMain = @()
 if ($dirExists) {
-  $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
-  if ($jsonMain -and $jsonMain.Trim().Length -gt 0) {
-    try { $filesMain = $jsonMain | ConvertFrom-Json } catch {}
-  }
+    $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+    if ($LASTEXITCODE -ne 0) { $global:LASTEXITCODE = 0 } # reset nếu lsjson lỗi
+    if ($jsonMain -and $jsonMain.Trim().Length -gt 0) {
+        try { $filesMain = $jsonMain | ConvertFrom-Json } catch {}
+    }
 }
 
 # Kiểm tra thư mục old có tồn tại
 $oldDir = "$remoteDir/old"
 $oldExists = $false
-try {
-  $checkOld = & "$env:SCRIPT_PATH\rclone.exe" lsd "$oldDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
-  if ($LASTEXITCODE -eq 0) { $oldExists = $true }
-} catch { $oldExists = $false }
+$checkOld = & "$env:SCRIPT_PATH\rclone.exe" lsd "$oldDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+if ($LASTEXITCODE -eq 0) {
+    $oldExists = $true
+} else {
+    $oldExists = $false
+    $global:LASTEXITCODE = 0
+}
 
 $filesOld = @()
 if ($oldExists) {
-  $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$oldDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
-  if ($jsonOld -and $jsonOld.Trim().Length -gt 0) {
-    try { $filesOld = $jsonOld | ConvertFrom-Json } catch {}
-  }
+    $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$oldDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+    if ($LASTEXITCODE -ne 0) { $global:LASTEXITCODE = 0 }
+    if ($jsonOld -and $jsonOld.Trim().Length -gt 0) {
+        try { $filesOld = $jsonOld | ConvertFrom-Json } catch {}
+    }
 }
+
 
 # 1) Kiểm tra tuyệt đối: nếu chính filename A đã tồn tại trong folder → exists
 $exactExists = $filesMain | Where-Object { $_.Name -eq $FileNameA } | Select-Object -First 1
