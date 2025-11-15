@@ -118,7 +118,8 @@ foreach ($link in $links) {
     $threads = $html.Links | Where-Object { $_.href -like "/threads/*" }
     Write-Host "DEBUG: Found $($threads.Count) threads in section"
 
-    $enruThreads = $threads | Where-Object { $_.href -match '(?i)en-ru' -or $_.innerText -match '(?i)en-ru' }
+    $enruThreads = $threads | Where-Object { $_.href -match '(?i)en-ru' -or $_.innerText -match '(?i)en-ru' 
+	$enruThreads = $threads | Where-Object { $_.href -match '(?i)en-ru' }
 
     # chọn thread mới nhất cho từng pattern theo thứ tự env, bỏ trùng
     $chosen = @{}
@@ -126,7 +127,7 @@ foreach ($link in $links) {
     foreach ($r in $rules) {
       $pattern = $r.Pattern
       $folder  = $r.Folder
-      $matches = $enruThreads | Where-Object { $_.innerText -like $pattern }
+	  $matches = $enruThreads | Where-Object { $_.href -like $pattern -or $_.innerText -like $pattern }
       if ($matches.Count -eq 0) { continue }
       $selected = $matches | Sort-Object @{Expression={Get-ThreadId $_.href};Descending=$true} | Select-Object -First 1
       if (-not $chosen.ContainsKey($selected.href)) {
