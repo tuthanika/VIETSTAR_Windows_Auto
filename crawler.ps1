@@ -58,8 +58,8 @@ foreach ($link in $links) {
     $goLink = $goMatches[0].Value
     Write-Host "DEBUG: goLink=[$goLink]"
 
-    $resp      = Invoke-WebRequest $goLink -MaximumRedirection 0 -ErrorAction SilentlyContinue -UserAgent $ua
-    $shareLink = $resp.Headers["Location"]
+    $resp      = Invoke-WebRequest $goLink -MaximumRedirection 1 -ErrorAction SilentlyContinue -UserAgent $ua
+    $shareLink = $resp.BaseResponse.ResponseUri.AbsoluteUri
     Write-Host "DEBUG: shareLink=[$shareLink]"
     if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
 
@@ -81,8 +81,8 @@ foreach ($link in $links) {
     $goLink = $goMatches[0].Value
     Write-Host "DEBUG: goLink=[$goLink]"
 
-    $resp      = Invoke-WebRequest $goLink -MaximumRedirection 0 -ErrorAction SilentlyContinue -UserAgent $ua
-    $shareLink = $resp.Headers["Location"]
+    $resp      = Invoke-WebRequest $goLink -MaximumRedirection 1 -ErrorAction SilentlyContinue -UserAgent $ua
+    $shareLink = $resp.BaseResponse.ResponseUri.AbsoluteUri
     Write-Host "DEBUG: shareLink=[$shareLink]"
     if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
 
