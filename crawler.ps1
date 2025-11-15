@@ -1,129 +1,61 @@
-# Đọc rules từ env để phân loại folder
-$rulesRaw = [Environment]::GetEnvironmentVariable("FILE_CODE_RULES")
-if ([string]::IsNullOrWhiteSpace($rulesRaw)) {
-  Write-Host "WARN: FILE_CODE_RULES env rỗng"; $rules = @()
-} else {
-  try { $rules = $rulesRaw | ConvertFrom-Json } catch { $rules = @() }
+# Vars
+$ua = [Environment]::GetEnvironmentVariable("FORUM_UA")
+if ([string]::IsNullOrWhiteSpace($ua)) {
+  $ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
 }
-Write-Host "DEBUG: rules count=$($rules.Count)"
+$cookieHeader = [Environment]::GetEnvironmentVariable("FORUM_COOKIE")
 
-# Chuẩn bị pipe
-$pipePath = (Join-Path $env:SCRIPT_PATH "links.final.txt")
-Remove-Item $pipePath -ErrorAction Ignore
-Write-Host "DEBUG: Removed old links.final.txt"
+# Read rules
+$rulesRaw = [Environment]::GetEnvironmentVariable("FILE_CODE_RULES")
+if ([string]::IsNullOrWhiteSpace($rulesRaw)) { $rules = @() } else { try { $rules = $rulesRaw | ConvertFrom-Json } catch { $rules = @() } }
 
-# Đọc link.txt
-$listPath = (Join-Path $env:REPO_PATH "link.txt")
-if (-not (Test-Path $listPath)) { Write-Host "WARN: link.txt không tồn tại"; exit 0 }
-$shareLinks = Get-Content $listPath | Where-Object { $_.Trim().Length -gt 0 }
-Write-Host "DEBUG: link.txt count=$($shareLinks.Count)"
-
-# Helper: chọn folder theo filenameA dựa trên rules
 function Resolve-Folder {
   param([string]$FileNameA)
-  $folder = $null
+  $folder = "Auto"
   foreach ($rule in $rules) {
-    if ($FileNameA -like $rule.Pattern) { $folder = $rule.Folder; break }
+    if ($FileNameA.ToLower() -like $rule.Pattern.ToLower()) { $folder = $rule.Folder; break }
   }
-  if (-not $folder) { $folder = "Auto" }
   Write-Host "DEBUG: matched folder=[$folder] for filenameA=[$FileNameA]"
   return $folder
 }
 
+$pipePath = (Join-Path $env:SCRIPT_PATH "links.final.txt")
+Remove-Item $pipePath -ErrorAction Ignore
+
+$listPath = (Join-Path $env:REPO_PATH "link.txt")
+$shareLinks = Get-Content $listPath | Where-Object { $_.Trim().Length -gt 0 }
+
 foreach ($link in $shareLinks) {
-    Write-Host "DEBUG: Processing link=[$link]"
+  Write-Host "DEBUG: Processing link=[$link]"
+  $realLink  = ""
+  $filenameA = ""
 
-    $realLink  = ""
-    $filenameA = ""
+  if ($link -like "https://forum.rg-adguard.net/threads/*") {
+    $page = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
+    if ($page.Content -match "tuthanika") { Write-Host "DEBUG: Login OK" } else { Write-Host "WARN: Login failed"; continue }
+    $goMatches = [regex]::Matches($page.Content, 'https://go\.rg-adguard\.net/[^\s"<>]+')
+    if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink"; continue }
+    $goLink = $goMatches[0].Value
+    $resp      = Invoke-WebRequest $goLink -MaximumRedirection 0 -ErrorAction SilentlyContinue -UserAgent $ua
+    $shareLink = $resp.Headers["Location"]
+    $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $shareLink | Out-String).Trim()
+    $slugRaw   = ($link.TrimEnd('/') -split '/')[2]
+    $filenameA = ($slugRaw -replace "\.\d+$","") + ".iso"
+  }
+  elseif ($link -like "https://cloud.mail.ru/*") {
+    $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $link | Out-String).Trim()
+    $filenameA = [System.IO.Path]::GetFileName($realLink)
+    if (-not ($filenameA -match '\.iso$')) { $filenameA = "$filenameA.iso" }
+  }
+  else { continue }
 
-    # Forum section
-    if ($link -like "https://forum.rg-adguard.net/forums/*") {
-        Write-Host "DEBUG: Forum section detected"
-        $html = Invoke-WebRequest $link -UseBasicParsing -Headers @{ Cookie = $env:FORUM_COOKIE }
-        $threads = $html.Links | Where-Object { $_.href -like "/threads/*" }
-        Write-Host "DEBUG: Found $($threads.Count) threads in section"
+  if (-not $realLink) { continue }
+  $folder = Resolve-Folder -FileNameA $filenameA
 
-        foreach ($t in $threads) {
-            Write-Host "DEBUG: candidate href=[$($t.href)], text=[$($t.innerText)]"
-        }
-
-        # Lọc theo href có -en-ru.<id>
-        $thread = $threads | Where-Object { $_.href -match "-en-ru\.\d+/?$" } | Select-Object -First 1
-        if (-not $thread) { Write-Host "WARN: No matching thread in section"; continue }
-
-        $slugRaw   = ($thread.href -split "/")[2]
-        $filenameA = $slugRaw -replace "\.\d+$",""
-        Write-Host "DEBUG: filenameA from forum section=[$filenameA]"
-
-        $threadUrl = "https://forum.rg-adguard.net$($thread.href)"
-        Write-Host "DEBUG: threadUrl=[$threadUrl]"
-
-        # Lấy goLink và resolve share
-        $page   = Invoke-WebRequest $threadUrl -UseBasicParsing -Headers @{ Cookie = $env:FORUM_COOKIE }
-        $goLink = ($page.Links | Where-Object { $_.href -like "https://go.rg-adguard.net/*" } | Select-Object -First 1).href
-        if (-not $goLink) { Write-Host "WARN: No goLink"; continue }
-
-        $resp      = Invoke-WebRequest $goLink -MaximumRedirection 0 -ErrorAction SilentlyContinue
-        $shareLink = $resp.Headers["Location"]
-        Write-Host "DEBUG: shareLink=[$shareLink]"
-        if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink trống"; continue }
-
-        $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $shareLink | Out-String).Trim()
-        Write-Host "DEBUG: downloader output=[$realLink]"
-    }
-    # Forum thread trực tiếp
-    elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
-        Write-Host "DEBUG: Forum thread detected"
-        $threadUrl = $link
-        $slugRaw   = ($threadUrl -split "/")[2]
-        $filenameA = $slugRaw -replace "\.\d+$",""
-        Write-Host "DEBUG: filenameA from forum thread=[$filenameA]"
-
-        $page   = Invoke-WebRequest $threadUrl -UseBasicParsing -Headers @{ Cookie = $env:FORUM_COOKIE }
-        $goLink = ($page.Links | Where-Object { $_.href -like "https://go.rg-adguard.net/*" } | Select-Object -First 1).href
-        if (-not $goLink) { Write-Host "WARN: No goLink"; continue }
-
-        $resp      = Invoke-WebRequest $goLink -MaximumRedirection 0 -ErrorAction SilentlyContinue
-        $shareLink = $resp.Headers["Location"]
-        Write-Host "DEBUG: shareLink=[$shareLink]"
-        if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink trống"; continue }
-
-        $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $shareLink | Out-String).Trim()
-        Write-Host "DEBUG: downloader output=[$realLink]"
-    }
-    # Cloud share
-    elseif ($link -like "https://cloud.mail.ru/*") {
-        Write-Host "DEBUG: Cloud link detected"
-        $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $link | Out-String).Trim()
-        Write-Host "DEBUG: downloader output=[$realLink]"
-        $filenameA = [System.IO.Path]::GetFileName($realLink)
-        if (-not ($filenameA -match '\.iso$')) { $filenameA = "$filenameA.iso" }
-        Write-Host "DEBUG: filenameA from cloud=[$filenameA]"
-    }
-    else {
-        Write-Host "WARN: Unknown link type, skip [$link]"
-        continue
-    }
-
-    if (-not $realLink -or -not ($realLink -match '^https?://')) {
-        Write-Host "WARN: realLink invalid [$realLink]"
-        continue
-    }
-
-    # Phân loại folder theo rules
-    $folder = Resolve-Folder -FileNameA $filenameA
-
-    # Check-exists
-    $RawJson = (& (Join-Path $env:REPO_PATH "check-exists.ps1") -FileNameA $filenameA -Folder $folder | Out-String).Trim()
-    Write-Host "DEBUG: check-exists raw=[$RawJson]"
-
-    if ($RawJson.StartsWith("{")) {
-        $Info = $RawJson | ConvertFrom-Json
-        Write-Host "DEBUG: Parsed JSON status=[$($Info.status)], folder=[$folder], baseKey=[$($Info.baseKey)], dateTag=[$($Info.dateTag)], deleteList=[$($Info.deleteList)]"
-        $pipeLine = "$($Info.status)|$realLink|$folder|$filenameA|$($Info.baseKey)|$($Info.dateTag)|$($Info.deleteList)"
-        Write-Host "DEBUG: Write pipe=[$pipeLine]"
-        Add-Content $pipePath $pipeLine
-    } else {
-        Write-Host "WARN: check-exists không trả JSON"
-    }
+  $RawJson = (& (Join-Path $env:REPO_PATH "check-exists.ps1") -FileNameA $filenameA -Folder $folder | Out-String).Trim()
+  if ($RawJson.StartsWith("{")) {
+    $Info = $RawJson | ConvertFrom-Json
+    $pipeLine = "$($Info.status)|$realLink|$folder|$filenameA|$($Info.baseKey)|$($Info.dateTag)|$($Info.deleteList)"
+    Add-Content $pipePath $pipeLine
+  }
 }

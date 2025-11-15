@@ -10,6 +10,7 @@ jobs:
     env:
       GH_PAT: ${{ secrets.GH_PAT }}
       FORUM_COOKIE: ${{ secrets.FORUM_COOKIE }}
+      FORUM_UA: ${{ vars.FORUM_UA }}
       INSTALL_PATH: C:\INSTALL
       SCRIPT_PATH: C:\RUN
       DOWNLOAD_DIR: C:\ATP
