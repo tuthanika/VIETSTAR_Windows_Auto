@@ -15,31 +15,20 @@ if (-not [string]::IsNullOrWhiteSpace($rulesRaw)) {
   Write-Host "ERROR: FILE_CODE_RULES env empty"; exit 1
 }
 
-# Resolve folder strictly via rules; if multiple rules match, pick the most specific (longest pattern)
+# Resolve folder strictly via rules
 function Resolve-Folder {
   param([string]$FileNameA)
 
-  $name = $FileNameA.ToLower()
-  $matched = @()
-
   foreach ($r in $rules) {
-    $pattern = $r.Pattern
-    if ([string]::IsNullOrWhiteSpace($pattern)) { continue }
-    # PowerShell -like is case-insensitive by default, but we normalize for consistency
-    if ($name -like $pattern.ToLower()) {
-      $matched += [pscustomobject]@{ Pattern = $pattern; Folder = $r.Folder; Length = $pattern.Length }
+    if ([string]::IsNullOrWhiteSpace($r.Pattern)) { continue }
+    if ($FileNameA -like $r.Pattern) {
+      Write-Host "DEBUG: matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$($r.Pattern)]"
+      return $r.Folder
     }
   }
 
-  if ($matched.Count -eq 0) {
-    Write-Host "WARN: no folder rule matched for filenameA=[$FileNameA]"
-    return $null
-  }
-
-  # Prefer the most specific rule: longest Pattern length
-  $best = $matched | Sort-Object Length -Descending | Select-Object -First 1
-  Write-Host "DEBUG: matched folder=[$($best.Folder)] for filenameA=[$FileNameA] via pattern=[$($best.Pattern)]"
-  return $best.Folder
+  Write-Host "WARN: no folder rule matched for filenameA=[$FileNameA]"
+  return $null
 }
 
 # Redirect chain debug (manual hops)
@@ -56,12 +45,9 @@ function Resolve-FinalUrl {
   $current = $StartUrl
   Write-Host "DEBUG: redirect-start url=[$current]"
   for ($i=1; $i -le $MaxHops; $i++) {
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    Write-Host "DEBUG: hop#$i request=[$current]"
     $resp = $client.GetAsync($current).Result
-    $sw.Stop()
     $status = [int]$resp.StatusCode
-    Write-Host "DEBUG: hop#$i status=[$status] elapsed=${($sw.ElapsedMilliseconds)}ms"
+    Write-Host "DEBUG: hop#$i status=[$status]"
     if ($resp.Headers.Location) {
       $locAbs = if ($resp.Headers.Location.IsAbsoluteUri) { $resp.Headers.Location.AbsoluteUri } else { ([System.Uri]::new($current,$resp.Headers.Location.ToString())).AbsoluteUri }
       Write-Host "DEBUG: hop#$i Location=[$locAbs]"
@@ -76,35 +62,25 @@ function Resolve-FinalUrl {
   return $current
 }
 
-# Process downloader.php output (handles single file or folder list), strictly rule-based folder
+# Process downloader.php output
 function Process-DownloaderOutput {
   param([string]$SourceUrl,[string]$PipePath)
 
   $dlOutput  = (& php (Join-Path $env:REPO_PATH "downloader.php") $SourceUrl | Out-String)
-  $realLines = $dlOutput.Trim() -split "`n"
+  $realLines = ($dlOutput -replace "`r`n","`n" -replace "`r","`n").Trim() -split "`n"
   Write-Host "DEBUG: downloader lines count=[$($realLines.Count)]"
 
   foreach ($rl in $realLines) {
-    # Reset per-iteration values to avoid leaking previous state
-    $currentLink   = $null
-    $filenameA     = $null
-    $folder        = $null
-    $RawJson       = $null
-    $Info          = $null
-    $pipeLine      = $null
-
     $rl = $rl.Trim()
     if ([string]::IsNullOrWhiteSpace($rl)) { continue }
     if (-not ($rl -match '^https?://')) { Write-Host "WARN: skip non-http line"; continue }
 
-    $currentLink = $rl
-    Write-Host "DEBUG: downloader line=[$currentLink]"
-
-    $filenameA = [System.IO.Path]::GetFileName($currentLink)
-    if ([string]::IsNullOrWhiteSpace($filenameA)) { Write-Host "WARN: empty filenameA for [$currentLink]"; continue }
+    Write-Host "DEBUG: downloader line=[$rl]"
+    $filenameA = [System.IO.Path]::GetFileName($rl)
+    if ([string]::IsNullOrWhiteSpace($filenameA)) { Write-Host "WARN: empty filenameA"; continue }
 
     $folder = Resolve-Folder -FileNameA $filenameA
-    if (-not $folder) { Write-Host "WARN: skip file due to no matching rule: [$filenameA]"; continue }
+    if (-not $folder) { Write-Host "WARN: skip file due to no matching rule"; continue }
 
     $RawJson = (& (Join-Path $env:REPO_PATH "check-exists.ps1") -Mode "auto" -FileNameA $filenameA -Folder $folder | Out-String).Trim()
     Write-Host "DEBUG: check-exists raw=[$RawJson]"
@@ -113,7 +89,7 @@ function Process-DownloaderOutput {
     $Info = $RawJson | ConvertFrom-Json
     Write-Host "DEBUG: Parsed → status=[$($Info.status)], key_date=[$($Info.key_date)], filenameB=[$($Info.filenameB)], folder=[$($Info.folder)], delete=[$($Info.filenameB_delete)]"
 
-    $pipeLine = "$($Info.status)|$currentLink|$folder|$filenameA|$($Info.filenameB)|$($Info.key_date)|$($Info.filenameB_delete)"
+    $pipeLine = "$($Info.status)|$rl|$folder|$filenameA|$($Info.filenameB)|$($Info.key_date)|$($Info.filenameB_delete)"
     Add-Content $PipePath $pipeLine
     Write-Host "DEBUG: Write pipe=[$pipeLine]"
   }
@@ -142,7 +118,6 @@ foreach ($link in $links) {
     $threads = $html.Links | Where-Object { $_.href -like "/threads/*" }
     Write-Host "DEBUG: Found $($threads.Count) threads in section"
 
-    # Only en-ru threads; pick newest by id
     $enruThreads = $threads | Where-Object { $_.href -match '(?i)en-ru' -or $_.innerText -match '(?i)en-ru' }
     $selected = $enruThreads | Sort-Object @{Expression={Get-ThreadId $_.href};Descending=$true} | Select-Object -First 1
     if (-not $selected) { Write-Host "WARN: No en-ru thread found"; continue }
@@ -154,7 +129,6 @@ foreach ($link in $links) {
     if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
 
     $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
-    Write-Host "DEBUG: goLinks found=[$($goMatches.Count)]"
     if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
 
     $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
@@ -168,19 +142,7 @@ foreach ($link in $links) {
     if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
 
     $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
-    Write-Host "DEBUG: goLinks found=[$($goMatches.Count)]"
     if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
 
     $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
-    Write-Host "DEBUG: shareLink=[$shareLink]"
-    if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
-
-    Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
-  }
-  elseif ($link -like "https://cloud.mail.ru/*") {
-    Process-DownloaderOutput -SourceUrl $link -PipePath $pipePath
-  }
-  else {
-    Write-Host "WARN: Unknown link type"
-  }
-}
+    Write-Host "DEBUG
