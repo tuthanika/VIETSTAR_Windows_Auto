@@ -1,27 +1,54 @@
-$raw   = [Environment]::GetEnvironmentVariable("FILE_CODE_RULES")
-$rules = $raw | ConvertFrom-Json
+# crawler.ps1
+
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+
+function Process-Link {
+  param(
+    [string]$ShareLink,
+    [string]$Folder
+  )
+
+  # 1) Resolve share → real direct link
+  $RealLink = (& php (Join-Path $env:REPO_PATH "downloader.php") --url "$ShareLink" | Out-String).Trim()
+  if ([string]::IsNullOrWhiteSpace($RealLink)) { return }
+
+  # 2) Derive filenameA từ real link (ưu tiên), fallback từ share link
+  $fnFromReal  = [System.IO.Path]::GetFileName($RealLink)
+  $fnFromShare = [System.IO.Path]::GetFileName($ShareLink)
+
+  $FileNameA = if (![string]::IsNullOrWhiteSpace($fnFromReal)) { $fnFromReal }
+               elseif (![string]::IsNullOrWhiteSpace($fnFromShare)) { $fnFromShare }
+               else { "unknown.iso" }
+
+  if (-not ($FileNameA -match '\.iso$')) { $FileNameA = "$FileNameA.iso" }
+
+  # 3) Check-exists (JSON)
+  $RawJson = (& (Join-Path $env:REPO_PATH "check-exists.ps1") -FileNameA $FileNameA -Folder $Folder | Out-String).Trim()
+  if (-not $RawJson.StartsWith("{")) { return }
+  $Info = $RawJson | ConvertFrom-Json
+
+  # 4) Ghi pipe đầy đủ
+  $pipePath = (Join-Path $env:SCRIPT_PATH "links.final.txt")
+  Add-Content $pipePath "$($Info.status)|$RealLink|$Folder|$FileNameA|$($Info.baseKey)|$($Info.dateTag)|$($Info.deleteList)"
+}
+
+# --- Main ---
+$rulesRaw = [Environment]::GetEnvironmentVariable("FILE_CODE_RULES")
+if ([string]::IsNullOrWhiteSpace($rulesRaw)) { exit 0 }
+$rules = $rulesRaw | ConvertFrom-Json
+
+Remove-Item (Join-Path $env:SCRIPT_PATH "links.final.txt") -ErrorAction Ignore
 
 foreach ($rule in $rules) {
   $folder = $rule.Folder
 
-  if ($rule.Link) {
-    # Crawl forum
+  if ($rule.PSObject.Properties.Name -contains 'Link' -and -not [string]::IsNullOrWhiteSpace($rule.Link)) {
+    # Forum flow
     $html   = Invoke-WebRequest $rule.Link -UseBasicParsing
     $thread = $html.Links | Where-Object { $_.innerText -match "\[En/Ru\]" } | Select-Object -First 1
     if (-not $thread) { continue }
 
-    $slugRaw   = ($thread.href -split "/")[2]
-    $filenameA = $slugRaw -replace "\.\d+$",""
-
-    # check-exists.ps1 nằm trong REPO_PATH
-    $json = & (Join-Path $env:REPO_PATH "check-exists.ps1") -FileNameA $filenameA -Folder $folder
-    $info = $json | ConvertFrom-Json
-    if ($info.status -eq "exists") {
-      Add-Content (Join-Path $env:SCRIPT_PATH "links.final.txt") "exists||$folder|$filenameA|||"
-      continue
-    }
-
-    # Lấy link share từ thread
     $threadUrl = "https://forum.rg-adguard.net$($thread.href)"
     $page      = Invoke-WebRequest $threadUrl -UseBasicParsing -Headers @{ Cookie = $env:FORUM_COOKIE }
     $goLink    = ($page.Links | Where-Object { $_.href -like "https://go.rg-adguard.net/*" } | Select-Object -First 1).href
@@ -29,25 +56,18 @@ foreach ($rule in $rules) {
 
     $resp      = Invoke-WebRequest $goLink -MaximumRedirection 0 -ErrorAction SilentlyContinue
     $shareLink = $resp.Headers["Location"]
+    if ([string]::IsNullOrWhiteSpace($shareLink)) { continue }
 
-    # Resolve bằng downloader.php trong REPO_PATH
-    $realLink  = & php (Join-Path $env:REPO_PATH "downloader.php") --url "$shareLink"
-
-    Add-Content (Join-Path $env:SCRIPT_PATH "links.final.txt") "upload|$realLink|$folder|$filenameA|||"
+    Process-Link -ShareLink $shareLink -Folder $folder
   }
   else {
-    # Không có forum Link → dùng link.txt trong REPO_PATH
-    $shareLinks = Get-Content (Join-Path $env:REPO_PATH "link.txt")
+    # link.txt flow (mỗi dòng một share link)
+    $listPath = (Join-Path $env:REPO_PATH "link.txt")
+    if (-not (Test-Path $listPath)) { continue }
+    $shareLinks = Get-Content $listPath | Where-Object { $_.Trim().Length -gt 0 }
+
     foreach ($shareLink in $shareLinks) {
-      $filenameA = [System.IO.Path]::GetFileName($shareLink)
-      $json = & (Join-Path $env:REPO_PATH "check-exists.ps1") -FileNameA $filenameA -Folder $folder
-      $info = $json | ConvertFrom-Json
-      if ($info.status -eq "exists") {
-        Add-Content (Join-Path $env:SCRIPT_PATH "links.final.txt") "exists||$folder|$filenameA|||"
-        continue
-      }
-      $realLink = & php (Join-Path $env:REPO_PATH "downloader.php") --url "$shareLink"
-      Add-Content (Join-Path $env:SCRIPT_PATH "links.final.txt") "upload|$realLink|$folder|$filenameA|||"
+      Process-Link -ShareLink $shareLink -Folder $folder
     }
   }
 }
