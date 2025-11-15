@@ -35,13 +35,49 @@ foreach ($link in $links) {
   $realLink  = ""
   $filenameA = ""
 
-  if ($link -like "https://forum.rg-adguard.net/threads/*") {
-    $page = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
-    Write-Host "DEBUG: page length=$($page.Content.Length)"
+  if ($link -like "https://forum.rg-adguard.net/forums/*") {
+    Write-Host "DEBUG: Forum section detected"
+    $html = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
+    Write-Host "DEBUG: section page length=$($html.Content.Length)"
+
+    # Tìm thread trong section
+    $threads = $html.Links | Where-Object { $_.href -like "/threads/*" }
+    Write-Host "DEBUG: Found $($threads.Count) threads in section"
+    $thread = $threads | Where-Object { $_.href -match "\.\d+/?$" } | Select-Object -First 1
+    if (-not $thread) { Write-Host "WARN: No thread in section"; continue }
+
+    $threadUrl = "https://forum.rg-adguard.net$($thread.href)"
+    Write-Host "DEBUG: threadUrl=[$threadUrl]"
+
+    $page = Invoke-WebRequest $threadUrl -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
+    Write-Host "DEBUG: thread page length=$($page.Content.Length)"
     if ($page.Content -match "tuthanika") { Write-Host "DEBUG: Login OK" } else { Write-Host "WARN: Login failed"; continue }
 
     $goMatches = [regex]::Matches($page.Content, 'https://go\.rg-adguard\.net/[^\s"<>]+')
-    if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink"; continue }
+    if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
+    $goLink = $goMatches[0].Value
+    Write-Host "DEBUG: goLink=[$goLink]"
+
+    $resp      = Invoke-WebRequest $goLink -MaximumRedirection 0 -ErrorAction SilentlyContinue -UserAgent $ua
+    $shareLink = $resp.Headers["Location"]
+    Write-Host "DEBUG: shareLink=[$shareLink]"
+    if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
+
+    $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $shareLink | Out-String).Trim()
+    Write-Host "DEBUG: downloader output=[$realLink]"
+
+    # filenameA từ slug thread
+    $slugRaw   = ($thread.href.TrimEnd('/') -split '/')[2]
+    $filenameA = ($slugRaw -replace "\.\d+$","") + ".iso"
+  }
+  elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
+    Write-Host "DEBUG: Forum thread detected"
+    $page = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
+    Write-Host "DEBUG: thread page length=$($page.Content.Length)"
+    if ($page.Content -match "tuthanika") { Write-Host "DEBUG: Login OK" } else { Write-Host "WARN: Login failed"; continue }
+
+    $goMatches = [regex]::Matches($page.Content, 'https://go\.rg-adguard\.net/[^\s"<>]+')
+    if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
     $goLink = $goMatches[0].Value
     Write-Host "DEBUG: goLink=[$goLink]"
 
@@ -63,7 +99,9 @@ foreach ($link in $links) {
     $filenameA = [System.IO.Path]::GetFileName($realLink)
     if (-not ($filenameA -match '\.iso$')) { $filenameA = "$filenameA.iso" }
   }
-  else { Write-Host "WARN: Unknown link type"; continue }
+  else {
+    Write-Host "WARN: Unknown link type"; continue
+  }
 
   if (-not $realLink -or -not ($realLink -match '^https?://')) {
     Write-Host "WARN: realLink invalid [$realLink]"; continue
@@ -71,6 +109,7 @@ foreach ($link in $links) {
 
   $folder = Resolve-Folder -FileNameA $filenameA
 
+  # Gọi check-exists theo schema cũ
   $RawJson = (& (Join-Path $env:REPO_PATH "check-exists.ps1") -Mode "auto" -FileNameA $filenameA -Folder $folder | Out-String).Trim()
   Write-Host "DEBUG: check-exists raw=[$RawJson]"
   if (-not ($RawJson.StartsWith("{"))) { Write-Host "WARN: check-exists no JSON"; continue }
@@ -78,7 +117,7 @@ foreach ($link in $links) {
   $Info = $RawJson | ConvertFrom-Json
   Write-Host "DEBUG: Parsed → status=[$($Info.status)], key_date=[$($Info.key_date)], filenameB=[$($Info.filenameB)], folder=[$($Info.folder)], delete=[$($Info.filenameB_delete)]"
 
-  # Format pipe: status|realLink|folder|filenameA|filenameB|key_date|filenameB_delete
+  # Pipe: status|realLink|folder|filenameA|filenameB|key_date|filenameB_delete
   $pipeLine = "$($Info.status)|$realLink|$folder|$filenameA|$($Info.filenameB)|$($Info.key_date)|$($Info.filenameB_delete)"
   Add-Content $pipePath $pipeLine
   Write-Host "DEBUG: Write pipe=[$pipeLine]"
