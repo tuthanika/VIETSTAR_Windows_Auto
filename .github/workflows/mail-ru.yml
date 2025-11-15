@@ -33,7 +33,7 @@ jobs:
           { "Pattern": "*windows*11*ltsc*", "Folder": "Windows 11 LTSC" },
           { "Pattern": "*windows*11*",      "Folder": "Windows 11" },
           { "Pattern": "*windows*10*",      "Folder": "Windows 10" },
-          { "Pattern": "*windows*7*",       "Folder": "Windows 7", "Link": "https://forum.rg-adguard.net/forums/windows-7.72/" }
+          { "Pattern": "*windows*7*",       "Folder": "Windows 7"}
         ]
 
       MAX_FILE: 1
