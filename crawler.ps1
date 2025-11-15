@@ -20,24 +20,19 @@ function Resolve-Folder {
   param([string]$FileNameA)
 
   foreach ($r in $rules) {
-    if ($null -eq $r.Patterns) { continue }
-
     foreach ($pat in $r.Patterns) {
-        if ([string]::IsNullOrWhiteSpace($pat)) { continue }
-        $p = $pat.ToLower()
-
-        if ($FileNameA.ToLower() -like $p) {
-            Write-Host "DEBUG: check-exists matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$p]"
-            $folder = $r.Folder
-            break
-        }
+      if ([string]::IsNullOrWhiteSpace($pat)) { continue }
+      if ($FileNameA -like $pat) {
+        Write-Host "DEBUG: check-exists matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$pat]"
+        return $r.Folder   # <-- return ngay, không duyệt tiếp
+      }
     }
-}
-
+  }
 
   Write-Host "WARN: no folder rule matched for filenameA=[$FileNameA]"
   return $null
 }
+
 
 # Redirect chain debug (manual hops)
 Add-Type -AssemblyName System.Net.Http
