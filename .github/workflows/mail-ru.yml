@@ -37,7 +37,6 @@ jobs:
         ]
 
       MAX_FILE: 1
-      FORUM_COOKIE: ${{ secrets.FORUM_COOKIE }}
 
     steps:
       - name: Checkout repo
