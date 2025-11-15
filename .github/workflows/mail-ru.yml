@@ -31,7 +31,7 @@ jobs:
           { "Patterns": ["*windows_8.1*", "*windows-8.1*", "*windows 8.1*"], "Folder": "Windows 8.1" },
           { "Patterns": ["*windows_8*", "*windows-8*", "*windows 8*"], "Folder": "Windows 8" },
           { "Patterns": ["*windows_10*ltsc*", "*windows-10*ltsc*", "*windows 10*ltsc*"], "Folder": "Windows 10 LTSC" },
-          { "Patterns": ["*windows_10*ltsb*", "*windows-10*ltsb*", "*windows 10*ltsb*"], "Folder": "Windows 10 LTSB" },
+          { "Patterns": ["*windows_10*ltsb*", "*windows-10*ltsb*", "*windows 10*ltsb*"], "Folder": "Windows 10 LTSC" },
           { "Patterns": ["*windows_10*", "*windows-10*", "*windows 10*"], "Folder": "Windows 10" },
           { "Patterns": ["*windows_11*ltsc*", "*windows-11*ltsc*", "*windows 11*ltsc*"], "Folder": "Windows 11 LTSC" },
           { "Patterns": ["*windows_11*", "*windows-11*", "*windows 11*"], "Folder": "Windows 11" }
