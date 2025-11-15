@@ -28,7 +28,7 @@ $remoteRoot = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}"
 $keyExtra = Get-Architecture $FileNameA
 $dateA    = Get-DateTagRaw $FileNameA  # giữ nguyên 'v..'
 
-# Xác định pattern key và folder theo rule (giữ nguyên cách cũ, đơn giản)
+# Xác định pattern key và folder theo rule
 if ($Mode -eq "manual") {
     $keyPattern = $Key.ToLower()
     $folderName = $Folder
@@ -46,15 +46,18 @@ else {
 
     $matchedRule = $null
     foreach ($r in $rules) {
-        $p = $r.Pattern.ToLower()
-        if ($FileNameA.ToLower() -like $p) { $matchedRule = $r; break }
+        if ($null -eq $r.Patterns) { continue }
+        foreach ($pat in $r.Patterns) {
+            if ($FileNameA.ToLower() -like $pat.ToLower()) { $matchedRule = $r; break }
+        }
+        if ($matchedRule) { break }
     }
     if (-not $matchedRule) {
         [pscustomobject]@{ status="no_rule"; key_date=$dateA; filenameB=$FileNameA; folder=""; filenameB_delete="" } | ConvertTo-Json -Compress
         return
     }
 
-    $keyPattern = $matchedRule.Pattern.ToLower()
+    $keyPattern = ($matchedRule.Patterns[0]).ToLower()
     $folderName = $matchedRule.Folder
 }
 
@@ -122,7 +125,6 @@ if ($maxFile -gt 0) {
     $needDelete   = [math]::Max(0, $plannedCount - $maxFile)
 
     if ($needDelete -gt 0) {
-        # Xóa trong old: lấy các bản cũ nhất ở old
         $oldCandidates = $matchesOld | Sort-Object -Property ModTime  # tăng dần: cũ trước
         $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
         if ($toDel) { $filenameB_delete = ($toDel -join "|") }
