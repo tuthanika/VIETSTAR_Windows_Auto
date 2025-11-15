@@ -10,7 +10,8 @@ function Process-Link {
   )
 
   # 1) Resolve share → real direct link
-  $RealLink = (& php (Join-Path $env:REPO_PATH "downloader.php") --url "$ShareLink" | Out-String).Trim()
+  $RealLink = (& php (Join-Path $env:REPO_PATH "downloader.php") $ShareLink | Out-String).Trim()
+  Write-Host "DEBUG downloader output: [$RealLink]"
   if ([string]::IsNullOrWhiteSpace($RealLink)) { return }
 
   # 2) Derive filenameA từ real link (ưu tiên), fallback từ share link
