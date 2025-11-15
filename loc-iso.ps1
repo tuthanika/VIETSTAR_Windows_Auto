@@ -64,13 +64,19 @@ $remoteDir = "$remoteRoot/$folderName"
 
 # Lấy danh sách file trong folder chính
 $jsonMain = ""
-try { $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null } catch { $jsonMain = "" }
+try {
+  $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+  $LASTEXITCODE = 0
+} catch { $jsonMain = "" }
 $filesMain = @()
 if ($jsonMain -and $jsonMain.Trim().Length -gt 0) { try { $filesMain = $jsonMain | ConvertFrom-Json } catch {} }
 
 # Lấy danh sách file trong old (có thể chưa tồn tại → rỗng)
 $jsonOld = ""
-try { $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir/old" --config "$env:RCLONE_CONFIG_PATH" 2>$null } catch { $jsonOld = "" }
+try {
+  $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir/old" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+  $LASTEXITCODE = 0
+} catch { $jsonOld = "" }
 $filesOld = @()
 if ($jsonOld -and $jsonOld.Trim().Length -gt 0) { try { $filesOld = $jsonOld | ConvertFrom-Json } catch {} }
 
