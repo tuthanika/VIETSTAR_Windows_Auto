@@ -1,6 +1,14 @@
+$pipePath = (Join-Path $env:SCRIPT_PATH "links.final.txt")
+$lines = Get-Content $pipePath -ErrorAction SilentlyContinue
+Write-Host "DEBUG: links.final.txt count=$($lines.Count)"
+
+if (-not $lines -or $lines.Count -eq 0) { Write-Host "No new links. Done."; exit 0 }
+
 foreach ($line in $lines) {
   Write-Host "DEBUG: uploader line=[$line]"
   $parts = $line -split '\|'
+  if ($parts.Count -lt 7) { Write-Host "WARN: line sai định dạng, skip"; continue }
+
   $status     = $parts[0]
   $realLink   = $parts[1]
   $folder     = $parts[2]
@@ -8,6 +16,8 @@ foreach ($line in $lines) {
   $baseKey    = $parts[4]
   $dateTag    = $parts[5]
   $deleteList = $parts[6]
+
+  Write-Host "DEBUG: Parsed → status=[$status], realLink=[$realLink], folder=[$folder], filenameA=[$filenameA], baseKey=[$baseKey], dateTag=[$dateTag], deleteList=[$deleteList]"
 
   $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}/$folder"
   $oldDir    = "$remoteDir/old"
@@ -32,15 +42,16 @@ foreach ($line in $lines) {
     $localFile = "$env:DOWNLOAD_DIR\$filenameA"
     if (-not (Test-Path $localFile)) { Write-Error "File not found after download: $filenameA"; exit 1 }
 
-    # Tạo thư mục old nếu chưa có
+    # Tạo thư mục old
     & "$env:SCRIPT_PATH\rclone.exe" mkdir "$oldDir" --config "$env:RCLONE_CONFIG_PATH" | Out-Null
 
-    # Xử lý deleteList: move hoặc delete file cũ
+    # Move file cũ theo deleteList
     if ($deleteList) {
       foreach ($del in $deleteList -split '\|') {
         if ([string]::IsNullOrWhiteSpace($del)) { continue }
         Write-Host "DEBUG: Moving old file to oldDir: $del"
         & "$env:SCRIPT_PATH\rclone.exe" move "$remoteDir/$del" "$oldDir" --config "$env:RCLONE_CONFIG_PATH" --ignore-existing
+        Write-Host "DEBUG: rclone move exit=$LASTEXITCODE"
       }
     }
 
@@ -54,5 +65,8 @@ foreach ($line in $lines) {
     # Xoá file tạm
     Remove-Item "$localFile" -Force
     Write-Host "Done: $filenameA"
+  }
+  else {
+    Write-Host "WARN: status không hỗ trợ [$status]"
   }
 }
