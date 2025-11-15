@@ -15,14 +15,41 @@ if (-not [string]::IsNullOrWhiteSpace($rulesRaw)) {
   Write-Host "ERROR: FILE_CODE_RULES env empty"; exit 1
 }
 
-# Resolve folder strictly via rules
+# Optional: validate rule consistency (log-only, no modification)
+function Validate-Rules {
+  param([array]$rules)
+  $i = 0
+  foreach ($r in $rules) {
+    $i++
+    $p = "$($r.Pattern)"
+    $f = "$($r.Folder)"
+    if ([string]::IsNullOrWhiteSpace($p) -or [string]::IsNullOrWhiteSpace($f)) {
+      Write-Host "WARN: Rule#$i missing Pattern or Folder"
+      continue
+    }
+    # Heuristic: warn if obvious mismatch (e.g., pattern contains "xp" but folder doesn't)
+    if ($p -match 'xp' -and ($f -notmatch 'xp')) { Write-Host "WARN: Rule#$i pattern=[xp] but folder=[$f]" }
+    if ($p -match 'vista' -and ($f -notmatch 'vista')) { Write-Host "WARN: Rule#$i pattern=[vista] but folder=[$f]" }
+    if ($p -match '8\.1' -and ($f -notmatch '8')) { Write-Host "WARN: Rule#$i pattern=[8.1] but folder=[$f]" }
+    if ($p -match 'windows\s*7|windows[_-]7|windows7' -and ($f -notmatch '7')) { Write-Host "WARN: Rule#$i pattern=[7] but folder=[$f]" }
+    if ($p -match 'windows\s*8|windows[_-]8|windows8' -and ($f -notmatch '8')) { Write-Host "WARN: Rule#$i pattern=[8] but folder=[$f]" }
+    if ($p -match 'windows\s*10|windows[_-]10|windows10' -and ($f -notmatch '10')) { Write-Host "WARN: Rule#$i pattern=[10] but folder=[$f]" }
+    if ($p -match 'windows\s*11|windows[_-]11|windows11' -and ($f -notmatch '11')) { Write-Host "WARN: Rule#$i pattern=[11] but folder=[$f]" }
+    Write-Host "DEBUG: Rule#$i Pattern=[$p] → Folder=[$f]"
+  }
+}
+Validate-Rules -rules $rules
+
+# Resolve folder strictly via rules in the given order (first match wins)
 function Resolve-Folder {
   param([string]$FileNameA)
 
+  $index = 0
   foreach ($r in $rules) {
+    $index++
     if ([string]::IsNullOrWhiteSpace($r.Pattern)) { continue }
     if ($FileNameA -like $r.Pattern) {
-      Write-Host "DEBUG: matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$($r.Pattern)]"
+      Write-Host "DEBUG: matched Rule#$index → folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$($r.Pattern)]"
       return $r.Folder
     }
   }
@@ -45,6 +72,7 @@ function Resolve-FinalUrl {
   $current = $StartUrl
   Write-Host "DEBUG: redirect-start url=[$current]"
   for ($i=1; $i -le $MaxHops; $i++) {
+    Write-Host "DEBUG: hop#$i request=[$current]"
     $resp = $client.GetAsync($current).Result
     $status = [int]$resp.StatusCode
     Write-Host "DEBUG: hop#$i status=[$status]"
@@ -71,6 +99,7 @@ function Process-DownloaderOutput {
   Write-Host "DEBUG: downloader lines count=[$($realLines.Count)]"
 
   foreach ($rl in $realLines) {
+    # reset per-iteration state
     $rl = $rl.Trim()
     if ([string]::IsNullOrWhiteSpace($rl)) { continue }
     if (-not ($rl -match '^https?://')) { Write-Host "WARN: skip non-http line"; continue }
@@ -118,6 +147,7 @@ foreach ($link in $links) {
     $threads = $html.Links | Where-Object { $_.href -like "/threads/*" }
     Write-Host "DEBUG: Found $($threads.Count) threads in section"
 
+    # en-ru only; pick newest by id
     $enruThreads = $threads | Where-Object { $_.href -match '(?i)en-ru' -or $_.innerText -match '(?i)en-ru' }
     $selected = $enruThreads | Sort-Object @{Expression={Get-ThreadId $_.href};Descending=$true} | Select-Object -First 1
     if (-not $selected) { Write-Host "WARN: No en-ru thread found"; continue }
