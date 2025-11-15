@@ -15,21 +15,31 @@ if (-not [string]::IsNullOrWhiteSpace($rulesRaw)) {
   Write-Host "ERROR: FILE_CODE_RULES env empty"; exit 1
 }
 
-# Resolve folder strictly via rules (no hard-coded default)
+# Resolve folder strictly via rules; if multiple rules match, pick the most specific (longest pattern)
 function Resolve-Folder {
   param([string]$FileNameA)
 
   $name = $FileNameA.ToLower()
+  $matched = @()
+
   foreach ($r in $rules) {
-    $pattern = $r.Pattern.ToLower()
-    if ($name -like $pattern) {
-      Write-Host "DEBUG: matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$($r.Pattern)]"
-      return $r.Folder
+    $pattern = $r.Pattern
+    if ([string]::IsNullOrWhiteSpace($pattern)) { continue }
+    # PowerShell -like is case-insensitive by default, but we normalize for consistency
+    if ($name -like $pattern.ToLower()) {
+      $matched += [pscustomobject]@{ Pattern = $pattern; Folder = $r.Folder; Length = $pattern.Length }
     }
   }
 
-  Write-Host "WARN: no folder rule matched for filenameA=[$FileNameA]"
-  return $null
+  if ($matched.Count -eq 0) {
+    Write-Host "WARN: no folder rule matched for filenameA=[$FileNameA]"
+    return $null
+  }
+
+  # Prefer the most specific rule: longest Pattern length
+  $best = $matched | Sort-Object Length -Descending | Select-Object -First 1
+  Write-Host "DEBUG: matched folder=[$($best.Folder)] for filenameA=[$FileNameA] via pattern=[$($best.Pattern)]"
+  return $best.Folder
 }
 
 # Redirect chain debug (manual hops)
@@ -75,12 +85,23 @@ function Process-DownloaderOutput {
   Write-Host "DEBUG: downloader lines count=[$($realLines.Count)]"
 
   foreach ($rl in $realLines) {
+    # Reset per-iteration values to avoid leaking previous state
+    $currentLink   = $null
+    $filenameA     = $null
+    $folder        = $null
+    $RawJson       = $null
+    $Info          = $null
+    $pipeLine      = $null
+
     $rl = $rl.Trim()
     if ([string]::IsNullOrWhiteSpace($rl)) { continue }
     if (-not ($rl -match '^https?://')) { Write-Host "WARN: skip non-http line"; continue }
 
-    Write-Host "DEBUG: downloader line=[$rl]"
-    $filenameA = [System.IO.Path]::GetFileName($rl)
+    $currentLink = $rl
+    Write-Host "DEBUG: downloader line=[$currentLink]"
+
+    $filenameA = [System.IO.Path]::GetFileName($currentLink)
+    if ([string]::IsNullOrWhiteSpace($filenameA)) { Write-Host "WARN: empty filenameA for [$currentLink]"; continue }
 
     $folder = Resolve-Folder -FileNameA $filenameA
     if (-not $folder) { Write-Host "WARN: skip file due to no matching rule: [$filenameA]"; continue }
@@ -92,7 +113,7 @@ function Process-DownloaderOutput {
     $Info = $RawJson | ConvertFrom-Json
     Write-Host "DEBUG: Parsed → status=[$($Info.status)], key_date=[$($Info.key_date)], filenameB=[$($Info.filenameB)], folder=[$($Info.folder)], delete=[$($Info.filenameB_delete)]"
 
-    $pipeLine = "$($Info.status)|$rl|$folder|$filenameA|$($Info.filenameB)|$($Info.key_date)|$($Info.filenameB_delete)"
+    $pipeLine = "$($Info.status)|$currentLink|$folder|$filenameA|$($Info.filenameB)|$($Info.key_date)|$($Info.filenameB_delete)"
     Add-Content $PipePath $pipeLine
     Write-Host "DEBUG: Write pipe=[$pipeLine]"
   }
