@@ -16,23 +16,27 @@ if (-not [string]::IsNullOrWhiteSpace($rulesRaw)) {
 }
 
 # Resolve folder strictly via rules (cho file ISO)
+# check-exists.ps1 (đoạn resolve folder)
 function Resolve-Folder {
-  param([string]$FileNameA)
+    param([string]$FileNameA)
 
-  foreach ($r in $rules) {
-    foreach ($pat in $r.Patterns) {
-      if ([string]::IsNullOrWhiteSpace($pat)) { continue }
-      if ($FileNameA -like $pat) {
-        Write-Host "DEBUG: check-exists matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$pat]"
-        return $r.Folder   # <-- return ngay, không duyệt tiếp
-      }
+    foreach ($r in $rules) {
+        if ($null -eq $r.Patterns) { continue }
+
+        foreach ($pat in $r.Patterns) {
+            if ([string]::IsNullOrWhiteSpace($pat)) { continue }
+            $p = $pat.ToLower()
+
+            if ($FileNameA.ToLower() -like $p) {
+                Write-Host "DEBUG: check-exists matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$pat]"
+                return $r.Folder   # trả về ngay, không duyệt tiếp để tránh conflict
+            }
+        }
     }
-  }
 
-  Write-Host "WARN: no folder rule matched for filenameA=[$FileNameA]"
-  return $null
+    Write-Host "WARN: no folder rule matched for filenameA=[$FileNameA]"
+    return $null
 }
-
 
 # Redirect chain debug (manual hops)
 Add-Type -AssemblyName System.Net.Http
