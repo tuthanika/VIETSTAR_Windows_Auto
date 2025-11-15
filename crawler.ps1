@@ -81,8 +81,83 @@ foreach ($link in $links) {
     $goLink = $goMatches[0].Value
     Write-Host "DEBUG: goLink=[$goLink]"
 
-    $resp      = Invoke-WebRequest $goLink -MaximumRedirection 1 -ErrorAction SilentlyContinue -UserAgent $ua
-    $shareLink = $resp.BaseResponse.ResponseUri.AbsoluteUri
+    # Resolve goLink đến URL cuối cùng (theo dõi redirect nhiều bước)
+    $shareLink = ""
+    $resp = $null
+
+    # Cách 1: Cho phép redirect tự động (tối đa 10 lần)
+    try {
+      $resp = Invoke-WebRequest $goLink -MaximumRedirection 10 -UserAgent $ua -Headers @{ Referer = $threadUrl } -ErrorAction Stop
+      if ($resp -and $resp.BaseResponse -and $resp.BaseResponse.ResponseUri) {
+        $shareLink = $resp.BaseResponse.ResponseUri.AbsoluteUri
+        Write-Host "DEBUG: auto-redirect final=[$shareLink]"
+      } else {
+        Write-Host "DEBUG: auto-redirect no final uri, will fallback"
+      }
+    } catch {
+      Write-Host "DEBUG: auto-redirect exception → $($_.Exception.Message), will fallback"
+    }
+
+    # Cách 2: Fallback — theo dõi redirect thủ công qua header Location
+    if ([string]::IsNullOrWhiteSpace($shareLink)) {
+      $current = $goLink
+      $threadRef = $threadUrl
+      $maxHops = 10
+      for ($i = 1; $i -le $maxHops; $i++) {
+        Write-Host "DEBUG: hop#$i request=[$current]"
+        try {
+          $r = Invoke-WebRequest $current -MaximumRedirection 0 -UserAgent $ua -Headers @{ Referer = $threadRef } -ErrorAction Stop
+          # Nếu không có redirect, lấy chính URL đã phản hồi (nếu có)
+          if ($r -and $r.BaseResponse -and $r.BaseResponse.ResponseUri) {
+            $final = $r.BaseResponse.ResponseUri.AbsoluteUri
+            Write-Host "DEBUG: hop#$i status=[$($r.StatusCode)] final=[$final]"
+            $shareLink = $final
+            break
+          } else {
+            Write-Host "DEBUG: hop#$i status=[$($r.StatusCode)] no ResponseUri"
+            $loc = $r.Headers["Location"]
+            if ([string]::IsNullOrWhiteSpace($loc)) {
+              Write-Host "DEBUG: hop#$i no Location header → stop"
+              break
+            }
+            Write-Host "DEBUG: hop#$i Location=[$loc]"
+            if ([System.Uri]::IsWellFormedUriString($loc, [System.UriKind]::Absolute)) {
+              $current = $loc
+            } else {
+              $current = ([System.Uri]::new($current, $loc)).AbsoluteUri
+            }
+            # Cập nhật referer theo chặng mới
+            $threadRef = $current
+            continue
+          }
+        } catch {
+          $ex = $_.Exception
+          $respEx = $ex.Response
+          Write-Host "DEBUG: hop#$i exception → $($ex.Message)"
+          if ($respEx -and $respEx.Headers["Location"]) {
+            $loc = $respEx.Headers["Location"]
+            Write-Host "DEBUG: hop#$i Location(ex)=[$loc]"
+            if ([System.Uri]::IsWellFormedUriString($loc, [System.UriKind]::Absolute)) {
+              $current = $loc
+            } else {
+              $current = ([System.Uri]::new($current, $loc)).AbsoluteUri
+            }
+            $threadRef = $current
+            continue
+          } else {
+            Write-Host "DEBUG: hop#$i no Location in exception → stop"
+            break
+          }
+        }
+      }
+
+      if ([string]::IsNullOrWhiteSpace($shareLink)) {
+        # Nếu vẫn chưa có final, dùng URL ở chặng cuối cùng
+        $shareLink = $current
+        Write-Host "DEBUG: fallback final=[$shareLink]"
+      }
+    }
+
     Write-Host "DEBUG: shareLink=[$shareLink]"
     if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
 
