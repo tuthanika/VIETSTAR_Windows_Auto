@@ -15,15 +15,17 @@ if (-not [string]::IsNullOrWhiteSpace($rulesRaw)) {
   Write-Host "ERROR: FILE_CODE_RULES env empty"; exit 1
 }
 
-# Resolve folder strictly via rules
+# Resolve folder strictly via rules (cho file ISO)
 function Resolve-Folder {
   param([string]$FileNameA)
 
   foreach ($r in $rules) {
-    if ([string]::IsNullOrWhiteSpace($r.Pattern)) { continue }
-    if ($FileNameA -like $r.Pattern) {
-      Write-Host "DEBUG: matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$($r.Pattern)]"
-      return $r.Folder
+    foreach ($pat in $r.Patterns) {
+      if ([string]::IsNullOrWhiteSpace($pat)) { continue }
+      if ($FileNameA -like $pat) {
+        Write-Host "DEBUG: matched folder=[$($r.Folder)] for filenameA=[$FileNameA] via pattern=[$pat]"
+        return $r.Folder
+      }
     }
   }
 
@@ -122,22 +124,31 @@ foreach ($link in $links) {
     Write-Host "DEBUG: enruThreads count=$($enruThreads.Count)"
     foreach ($t in $enruThreads) { Write-Host "DEBUG: enruThread href=[$($t.href)] text=[$($t.innerText)]" }
 
-    # chọn thread mới nhất cho từng pattern theo thứ tự env, bỏ trùng
+    # chọn thread mới nhất cho từng rule theo thứ tự env, bỏ trùng
     $chosen = @{}
     $results = @()
     foreach ($r in $rules) {
-      $pattern = $r.Pattern
-      $folder  = $r.Folder
-      $matches = $enruThreads | Where-Object { $_.href -like $pattern -or $_.innerText -like $pattern }
-      Write-Host "DEBUG: Pattern [$pattern] matched $($matches.Count) threads"
+      $folder   = $r.Folder
+      $matches  = @()
+
+      foreach ($pat in $r.Patterns) {
+        $tmp = $enruThreads | Where-Object { $_.href -like $pat -or $_.innerText -like $pat }
+        if ($tmp.Count -gt 0) {
+          $matches += $tmp
+        }
+      }
+
+      Write-Host "DEBUG: Rule [$folder] matched $($matches.Count) threads"
       if ($matches.Count -eq 0) { continue }
+
       $selected = $matches | Sort-Object @{Expression={Get-ThreadId $_.href};Descending=$true} | Select-Object -First 1
-      Write-Host "DEBUG: Pattern [$pattern] selected thread href=[$($selected.href)]"
+      Write-Host "DEBUG: Rule [$folder] selected thread href=[$($selected.href)]"
+
       if (-not $chosen.ContainsKey($selected.href)) {
         $chosen[$selected.href] = $true
         $results += @{ Folder=$folder; Href=$selected.href }
       } else {
-        Write-Host "DEBUG: Pattern [$pattern] skipped because thread [$($selected.href)] already taken"
+        Write-Host "DEBUG: Rule [$folder] skipped because thread [$($selected.href)] already taken"
       }
     }
 
@@ -151,22 +162,19 @@ foreach ($link in $links) {
       if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
       $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
       Write-Host "DEBUG: shareLink=[$shareLink]"
-	        if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
+      if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
       Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
     }
   }
   elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
     $page = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
     if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
-
     $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
     Write-Host "DEBUG: goLinks found=$($goMatches.Count)"
     if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
-
     $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
     Write-Host "DEBUG: shareLink=[$shareLink]"
     if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
-
     Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
   }
   elseif ($link -like "https://cloud.mail.ru/*") {
