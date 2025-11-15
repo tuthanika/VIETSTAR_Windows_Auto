@@ -1,7 +1,7 @@
 # ENV
 $ua = [Environment]::GetEnvironmentVariable("FORUM_UA")
 if ([string]::IsNullOrWhiteSpace($ua)) {
-  $ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+  $ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 $cookieHeader = [Environment]::GetEnvironmentVariable("FORUM_COOKIE")
 if ([string]::IsNullOrWhiteSpace($cookieHeader)) { Write-Host "ERROR: FORUM_COOKIE env empty"; exit 1 }
@@ -24,55 +24,55 @@ function Resolve-Folder {
 # Resolve redirect chain with detailed debug
 Add-Type -AssemblyName System.Net.Http
 function Resolve-FinalUrl {
-  param(
-    [Parameter(Mandatory=$true)][string]$StartUrl,
-    [int]$MaxHops = 10,
-    [string]$UserAgent = $ua
-  )
+  param([string]$StartUrl,[int]$MaxHops=10,[string]$UserAgent=$ua)
   $handler = New-Object System.Net.Http.HttpClientHandler
   $handler.AllowAutoRedirect = $false
   $client  = New-Object System.Net.Http.HttpClient($handler)
   $client.DefaultRequestHeaders.Clear()
-  $client.DefaultRequestHeaders.Add("User-Agent", $UserAgent)
+  $client.DefaultRequestHeaders.Add("User-Agent",$UserAgent)
 
   $current = $StartUrl
-  $final   = ""
-
   Write-Host "DEBUG: redirect-start url=[$current]"
-  for ($i = 1; $i -le $MaxHops; $i++) {
+  for ($i=1; $i -le $MaxHops; $i++) {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     Write-Host "DEBUG: hop#$i request=[$current]"
-    try {
-      $resp = $client.GetAsync($current).Result
-      $sw.Stop()
-      $status = [int]$resp.StatusCode
-      Write-Host "DEBUG: hop#$i status=[$status] elapsed=${($sw.ElapsedMilliseconds)}ms"
-      if ($resp.Headers.Location) {
-        $loc = $resp.Headers.Location
-        $locAbs = if ($loc.IsAbsoluteUri) { $loc.AbsoluteUri } else { ([System.Uri]::new($current, $loc.ToString())).AbsoluteUri }
-        Write-Host "DEBUG: hop#$i Location=[$locAbs] (taken from header)"
-        $current = $locAbs
-        continue
-      } else {
-        $final = $current
-        Write-Host "DEBUG: hop#$i no Location → final=[$final]"
-        break
-      }
-    } catch {
-      $sw.Stop()
-      Write-Host "DEBUG: hop#$i exception → $($_.Exception.Message) elapsed=${($sw.ElapsedMilliseconds)}ms"
-      $final = $current
-      Write-Host "DEBUG: hop#$i stop on exception → final=[$final]"
-      break
+    $resp = $client.GetAsync($current).Result
+    $sw.Stop()
+    $status = [int]$resp.StatusCode
+    Write-Host "DEBUG: hop#$i status=[$status] elapsed=${($sw.ElapsedMilliseconds)}ms"
+    if ($resp.Headers.Location) {
+      $locAbs = if ($resp.Headers.Location.IsAbsoluteUri) { $resp.Headers.Location.AbsoluteUri } else { ([System.Uri]::new($current,$resp.Headers.Location.ToString())).AbsoluteUri }
+      Write-Host "DEBUG: hop#$i Location=[$locAbs]"
+      $current = $locAbs
+      continue
+    } else {
+      Write-Host "DEBUG: hop#$i no Location → final=[$current]"
+      return $current
     }
   }
-  if ([string]::IsNullOrWhiteSpace($final)) {
-    $final = $current
-    Write-Host "DEBUG: redirect-end fallback final=[$final]"
-  } else {
-    Write-Host "DEBUG: redirect-end final=[$final]"
+  Write-Host "DEBUG: redirect-end final=[$current]"
+  return $current
+}
+
+# Process downloader.php output
+function Process-DownloaderOutput {
+  param([string]$SourceUrl,[string]$PipePath)
+  $dlOutput = (& php (Join-Path $env:REPO_PATH "downloader.php") $SourceUrl | Out-String)
+  $realLines = $dlOutput.Trim() -split "`n"
+  Write-Host "DEBUG: downloader lines count=[$($realLines.Count)]"
+  foreach ($rl in $realLines) {
+    $rl = $rl.Trim()
+    if (-not ($rl -match '^https?://')) { continue }
+    Write-Host "DEBUG: downloader line=[$rl]"
+    $filenameA = [System.IO.Path]::GetFileName($rl)
+    $folder = Resolve-Folder -FileNameA $filenameA
+    $RawJson = (& (Join-Path $env:REPO_PATH "check-exists.ps1") -Mode "auto" -FileNameA $filenameA -Folder $folder | Out-String).Trim()
+    if (-not ($RawJson.StartsWith("{"))) { continue }
+    $Info = $RawJson | ConvertFrom-Json
+    $pipeLine = "$($Info.status)|$rl|$folder|$filenameA|$($Info.filenameB)|$($Info.key_date)|$($Info.filenameB_delete)"
+    Add-Content $PipePath $pipeLine
+    Write-Host "DEBUG: Write pipe=[$pipeLine]"
   }
-  return $final
 }
 
 # Pipe
@@ -84,96 +84,48 @@ $listPath = (Join-Path $env:REPO_PATH "link.txt")
 if (-not (Test-Path $listPath)) { Write-Host "WARN: link.txt not found"; exit 0 }
 $links = Get-Content $listPath | Where-Object { $_.Trim().Length -gt 0 }
 
+# Hàm lấy threadId từ href
+function Get-ThreadId([string]$href) {
+  $m = [regex]::Match($href,'\.(\d+)/?$')
+  if ($m.Success) { return [int]$m.Groups[1].Value } else { return 0 }
+}
+
 foreach ($link in $links) {
   Write-Host "DEBUG: Processing link=[$link]"
-  $realLink  = ""
-  $filenameA = ""
 
   if ($link -like "https://forum.rg-adguard.net/forums/*") {
-    Write-Host "DEBUG: Forum section detected"
     $html = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
-    Write-Host "DEBUG: section page length=$($html.Content.Length)"
-
-    # Tìm thread trong section
     $threads = $html.Links | Where-Object { $_.href -like "/threads/*" }
     Write-Host "DEBUG: Found $($threads.Count) threads in section"
-    $thread = $threads | Where-Object { $_.href -match "\.\d+/?$" } | Select-Object -First 1
-    if (-not $thread) { Write-Host "WARN: No thread in section"; continue }
 
-    $threadUrl = "https://forum.rg-adguard.net$($thread.href)"
+    # Chỉ lấy thread en-ru, ưu tiên mới nhất
+    $enruThreads = $threads | Where-Object { $_.href -match '(?i)en-ru' -or $_.innerText -match '(?i)en-ru' }
+    $selected = $enruThreads | Sort-Object @{Expression={Get-ThreadId $_.href};Descending=$true} | Select-Object -First 1
+    if (-not $selected) { Write-Host "WARN: No en-ru thread found"; continue }
+
+    $threadUrl = "https://forum.rg-adguard.net$($selected.href)"
     Write-Host "DEBUG: threadUrl=[$threadUrl]"
 
     $page = Invoke-WebRequest $threadUrl -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
-    Write-Host "DEBUG: thread page length=$($page.Content.Length)"
-    if ($page.Content -match "tuthanika") { Write-Host "DEBUG: Login OK" } else { Write-Host "WARN: Login failed"; continue }
+    if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
 
-    $goMatches = [regex]::Matches($page.Content, 'https://go\.rg-adguard\.net/[^\s"<>]+')
+    $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
     if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
-    $goLink = $goMatches[0].Value
-    Write-Host "DEBUG: goLink=[$goLink]"
-
-    # Resolve goLink đến URL cuối cùng (with detailed debug)
-    $shareLink = Resolve-FinalUrl -StartUrl $goLink
-    Write-Host "DEBUG: shareLink=[$shareLink]"
-    if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
-
-    $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $shareLink | Out-String).Trim()
-    Write-Host "DEBUG: downloader output=[$realLink]"
-
-    # filenameA từ slug thread
-    $slugRaw   = ($thread.href.TrimEnd('/') -split '/')[2]
-    $filenameA = ($slugRaw -replace "\.\d+$","") + ".iso"
+    $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
+    Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
   }
   elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
-    Write-Host "DEBUG: Forum thread detected"
-    $threadUrl = $link
-    $page = Invoke-WebRequest $threadUrl -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
-    Write-Host "DEBUG: thread page length=$($page.Content.Length)"
-    if ($page.Content -match "tuthanika") { Write-Host "DEBUG: Login OK" } else { Write-Host "WARN: Login failed"; continue }
-
-    $goMatches = [regex]::Matches($page.Content, 'https://go\.rg-adguard\.net/[^\s"<>]+')
+    $page = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
+    if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
+    $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
     if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
-    $goLink = $goMatches[0].Value
-    Write-Host "DEBUG: goLink=[$goLink]"
-
-    # Resolve goLink đến URL cuối cùng (with detailed debug)
-    $shareLink = Resolve-FinalUrl -StartUrl $goLink
-    Write-Host "DEBUG: shareLink=[$shareLink]"
-    if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
-
-    $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $shareLink | Out-String).Trim()
-    Write-Host "DEBUG: downloader output=[$realLink]"
-
-    $slugRaw   = ($link.TrimEnd('/') -split '/')[2]
-    $filenameA = ($slugRaw -replace "\.\d+$","") + ".iso"
+    $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
+    Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
   }
   elseif ($link -like "https://cloud.mail.ru/*") {
-    Write-Host "DEBUG: Cloud link"
-    $realLink  = (& php (Join-Path $env:REPO_PATH "downloader.php") $link | Out-String).Trim()
-    Write-Host "DEBUG: downloader output=[$realLink]"
-    $filenameA = [System.IO.Path]::GetFileName($realLink)
-    if (-not ($filenameA -match '\.iso$')) { $filenameA = "$filenameA.iso" }
+    Process-DownloaderOutput -SourceUrl $link -PipePath $pipePath
   }
   else {
-    Write-Host "WARN: Unknown link type"; continue
+    Write-Host "WARN: Unknown link type"
   }
-
-  if (-not $realLink -or -not ($realLink -match '^https?://')) {
-    Write-Host "WARN: realLink invalid [$realLink]"; continue
-  }
-
-  $folder = Resolve-Folder -FileNameA $filenameA
-
-  # Gọi check-exists theo schema cũ
-  $RawJson = (& (Join-Path $env:REPO_PATH "check-exists.ps1") -Mode "auto" -FileNameA $filenameA -Folder $folder | Out-String).Trim()
-  Write-Host "DEBUG: check-exists raw=[$RawJson]"
-  if (-not ($RawJson.StartsWith("{"))) { Write-Host "WARN: check-exists no JSON"; continue }
-
-  $Info = $RawJson | ConvertFrom-Json
-  Write-Host "DEBUG: Parsed → status=[$($Info.status)], key_date=[$($Info.key_date)], filenameB=[$($Info.filenameB)], folder=[$($Info.folder)], delete=[$($Info.filenameB_delete)]"
-
-  # Pipe: status|realLink|folder|filenameA|filenameB|key_date|filenameB_delete
-  $pipeLine = "$($Info.status)|$realLink|$folder|$filenameA|$($Info.filenameB)|$($Info.key_date)|$($Info.filenameB_delete)"
-  Add-Content $pipePath $pipeLine
-  Write-Host "DEBUG: Write pipe=[$pipeLine]"
 }
