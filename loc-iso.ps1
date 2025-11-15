@@ -62,23 +62,36 @@ $key_a   = if ($keyExtra) { "$keyPattern*$keyExtra*$dateA" } else { "$keyPattern
 $baseKey = if ($keyExtra) { "$keyPattern*$keyExtra*" } else { "$keyPattern*" }
 $remoteDir = "$remoteRoot/$folderName"
 
-# Lấy danh sách file trong folder chính
-$jsonMain = ""
+# Kiểm tra thư mục chính có tồn tại
+$dirExists = $false
 try {
-  $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
-  $LASTEXITCODE = 0
-} catch { $jsonMain = "" }
-$filesMain = @()
-if ($jsonMain -and $jsonMain.Trim().Length -gt 0) { try { $filesMain = $jsonMain | ConvertFrom-Json } catch {} }
+  $check = & "$env:SCRIPT_PATH\rclone.exe" lsd "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+  if ($LASTEXITCODE -eq 0) { $dirExists = $true }
+} catch { $dirExists = $false }
 
-# Lấy danh sách file trong old (có thể chưa tồn tại → rỗng)
-$jsonOld = ""
+$filesMain = @()
+if ($dirExists) {
+  $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+  if ($jsonMain -and $jsonMain.Trim().Length -gt 0) {
+    try { $filesMain = $jsonMain | ConvertFrom-Json } catch {}
+  }
+}
+
+# Kiểm tra thư mục old có tồn tại
+$oldDir = "$remoteDir/old"
+$oldExists = $false
 try {
-  $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$remoteDir/old" --config "$env:RCLONE_CONFIG_PATH" 2>$null
-  $LASTEXITCODE = 0
-} catch { $jsonOld = "" }
+  $checkOld = & "$env:SCRIPT_PATH\rclone.exe" lsd "$oldDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+  if ($LASTEXITCODE -eq 0) { $oldExists = $true }
+} catch { $oldExists = $false }
+
 $filesOld = @()
-if ($jsonOld -and $jsonOld.Trim().Length -gt 0) { try { $filesOld = $jsonOld | ConvertFrom-Json } catch {} }
+if ($oldExists) {
+  $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson "$oldDir" --config "$env:RCLONE_CONFIG_PATH" 2>$null
+  if ($jsonOld -and $jsonOld.Trim().Length -gt 0) {
+    try { $filesOld = $jsonOld | ConvertFrom-Json } catch {}
+  }
+}
 
 # 1) Kiểm tra tuyệt đối: nếu chính filename A đã tồn tại trong folder → exists
 $exactExists = $filesMain | Where-Object { $_.Name -eq $FileNameA } | Select-Object -First 1
