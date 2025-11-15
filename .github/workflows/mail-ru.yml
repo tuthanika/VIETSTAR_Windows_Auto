@@ -32,10 +32,11 @@ jobs:
           { "Pattern": "*windows*11*ltsc*", "Folder": "Windows 11 LTSC" },
           { "Pattern": "*windows*11*",      "Folder": "Windows 11" },
           { "Pattern": "*windows*10*",      "Folder": "Windows 10" },
-          { "Pattern": "*windows*7*",       "Folder": "Windows 7" }
+          { "Pattern": "*windows*7*",       "Folder": "Windows 7", "Link": "https://forum.rg-adguard.net/forums/windows-7.72/" }
         ]
 
       MAX_FILE: 1
+      FORUM_COOKIE: ${{ secrets.FORUM_COOKIE }}
 
     steps:
       - name: Checkout repo
@@ -81,93 +82,13 @@ jobs:
                -L -o "%RCLONE_CONFIG_PATH%" ^
                https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
-
-      - name: Parse link bằng PHP CLI
+      - name: Crawl forum và parse link
         shell: pwsh
         run: |
-          $out = "$env:SCRIPT_PATH\links.final.txt"
-          Remove-Item $out -ErrorAction Ignore
-          foreach ($link in Get-Content ".\link.txt") {
-            $result = & php ".\downloader.php" $link
-            $result -split "`n" | ForEach-Object {
-              $line = $_.Trim()
-              if ($line) { Add-Content -Path $out -Value $line }
-            }
-          }
-          Write-Host "Danh sách link trực tiếp:"
-          Get-Content $out
+          Remove-Item "$env:SCRIPT_PATH\links.final.txt" -ErrorAction Ignore
+          & "$env:REPO_PATH\crawler.ps1"
 
       - name: Phân loại và xử lý ISO
         shell: pwsh
         run: |
-          $links = Get-Content "$env:SCRIPT_PATH\links.final.txt"
-
-          foreach ($link in $links) {
-            $fileA = [System.IO.Path]::GetFileName($link)
-
-            $json = & "$env:REPO_PATH\loc-iso.ps1" -Mode auto -FileNameA $fileA
-            if ([string]::IsNullOrWhiteSpace($json)) {
-              Write-Host "DEBUG: Không nhận được JSON cho $fileA"
-              continue
-            }
-
-            $info = $json | ConvertFrom-Json
-            Write-Host "DEBUG: ps1 trả về -> status=$($info.status), filenameB=$($info.filenameB), folder=$($info.folder), delete=$($info.filenameB_delete)"
-
-            $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}/$($info.folder)"
-            $oldDir = "$remoteDir/old"
-
-            switch ($info.status) {
-              "no_rule" {
-                Write-Host "DEBUG: Không phân loại được rule cho '$fileA' → bỏ qua"
-                continue
-              }
-              "exists" {
-                Write-Host "DEBUG: Bỏ qua $fileA (đã có bản khớp key trong $remoteDir)"
-                continue
-              }
-              "upload" {
-                # Nếu có danh sách cần xoá
-                if ($info.filenameB_delete) {
-                  foreach ($del in $info.filenameB_delete -split '\|') {
-                    if ([string]::IsNullOrWhiteSpace($del)) { continue }
-                    Write-Host "DEBUG: Xóa file cũ '$del' trong $oldDir (giữ mức MAX_FILE)"
-                    & "$env:SCRIPT_PATH\rclone.exe" deletefile "$oldDir/$del" --config "$env:RCLONE_CONFIG_PATH"
-                  }
-                }
-
-                # Di chuyển bản hiện tại nếu có
-                if ($info.filenameB) {
-                  & "$env:SCRIPT_PATH\rclone.exe" mkdir "$oldDir" --config "$env:RCLONE_CONFIG_PATH" | Out-Null
-                  Write-Host "DEBUG: Di chuyển bản cũ '$($info.filenameB)' vào $oldDir"
-                  & "$env:SCRIPT_PATH\rclone.exe" moveto "$remoteDir/$($info.filenameB)" "$oldDir/$($info.filenameB)" --config "$env:RCLONE_CONFIG_PATH"
-                }
-
-                # Upload file A
-                $opts = $env:ARIA2_OPTS -split '\s+'
-                $dbgA = "$env:SCRIPT_PATH\aria2c.exe --dir=`"$env:DOWNLOAD_DIR`" --out=`"$fileA`" " + ($opts -join ' ') + " $link"
-                Write-Host "DEBUG aria2c command: $dbgA"
-                & "$env:SCRIPT_PATH\aria2c.exe" --dir="$env:DOWNLOAD_DIR" --out="$fileA" @opts $link
-
-                $localFile = "$env:DOWNLOAD_DIR\$fileA"
-                if (-not (Test-Path $localFile)) { Write-Error "Tải thất bại: không thấy $localFile"; exit 1 }
-
-                $flags = $env:RCLONE_FLAG -split '\s+'
-                Write-Host "Uploading $(Resolve-Path $localFile) to $remoteDir..."
-                Write-Host "DEBUG flags: $($flags -join ' | ')"
-
-                $dbgR = "$env:SCRIPT_PATH\rclone.exe copy `"$localFile`" `"$remoteDir`" --config `"$env:RCLONE_CONFIG_PATH`" " + ($flags -join ' ') + " --progress"
-                Write-Host "DEBUG rclone command: $dbgR"
-
-                & "$env:SCRIPT_PATH\rclone.exe" copy `
-                  "$(Resolve-Path $localFile)" `
-                  "$remoteDir" `
-                  --config "$env:RCLONE_CONFIG_PATH" `
-                  @flags `
-                  --progress
-
-                Remove-Item "$localFile" -Force
-                Write-Host "Đã upload và xóa local: $fileA"
-              }
-            }
-          }
+          & "$env:REPO_PATH\uploader.ps1"
