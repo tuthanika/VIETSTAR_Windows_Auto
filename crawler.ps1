@@ -119,6 +119,8 @@ foreach ($link in $links) {
     Write-Host "DEBUG: Found $($threads.Count) threads in section"
 
     $enruThreads = $threads | Where-Object { $_.href -match '(?i)en-ru' -or $_.innerText -match '(?i)en-ru' }
+    Write-Host "DEBUG: enruThreads count=$($enruThreads.Count)"
+    foreach ($t in $enruThreads) { Write-Host "DEBUG: enruThread href=[$($t.href)] text=[$($t.innerText)]" }
 
     # chọn thread mới nhất cho từng pattern theo thứ tự env, bỏ trùng
     $chosen = @{}
@@ -126,9 +128,11 @@ foreach ($link in $links) {
     foreach ($r in $rules) {
       $pattern = $r.Pattern
       $folder  = $r.Folder
-	  $matches = $enruThreads | Where-Object { $_.href -like $pattern -or $_.innerText -like $pattern }
+      $matches = $enruThreads | Where-Object { $_.href -like $pattern -or $_.innerText -like $pattern }
+      Write-Host "DEBUG: Pattern [$pattern] matched $($matches.Count) threads"
       if ($matches.Count -eq 0) { continue }
       $selected = $matches | Sort-Object @{Expression={Get-ThreadId $_.href};Descending=$true} | Select-Object -First 1
+      Write-Host "DEBUG: Pattern [$pattern] selected thread href=[$($selected.href)]"
       if (-not $chosen.ContainsKey($selected.href)) {
         $chosen[$selected.href] = $true
         $results += @{ Folder=$folder; Href=$selected.href }
@@ -143,21 +147,21 @@ foreach ($link in $links) {
       $page = Invoke-WebRequest $threadUrl -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
       if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
       $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
+      Write-Host "DEBUG: goLinks found=$($goMatches.Count)"
       if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
       $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
       Write-Host "DEBUG: shareLink=[$shareLink]"
-      if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
+      if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue
+	        if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
       Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
     }
-  }
-  elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
-    $page = Invoke-WebRequest $link
   }
   elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
     $page = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
     if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
 
     $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
+    Write-Host "DEBUG: goLinks found=$($goMatches.Count)"
     if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
 
     $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
@@ -171,5 +175,16 @@ foreach ($link in $links) {
   }
   else {
     Write-Host "WARN: Unknown link type"
+  }
+}
+
+# Sau khi xử lý xong toàn bộ links, có thể in thống kê
+if (Test-Path $pipePath) {
+  $count = (Get-Content $pipePath | Measure-Object).Count
+  Write-Host "DEBUG: links.final.txt count=$count"
+  if ($count -eq 0) {
+    Write-Host "No new links. Done."
+  } else {
+    Write-Host "Processing finished, $count links written."
   }
 }
