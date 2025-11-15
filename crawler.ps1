@@ -119,23 +119,39 @@ foreach ($link in $links) {
     Write-Host "DEBUG: Found $($threads.Count) threads in section"
 
     $enruThreads = $threads | Where-Object { $_.href -match '(?i)en-ru' -or $_.innerText -match '(?i)en-ru' }
-    $selected = $enruThreads | Sort-Object @{Expression={Get-ThreadId $_.href};Descending=$true} | Select-Object -First 1
-    if (-not $selected) { Write-Host "WARN: No en-ru thread found"; continue }
 
-    $threadUrl = "https://forum.rg-adguard.net$($selected.href)"
-    Write-Host "DEBUG: threadUrl=[$threadUrl]"
+    # chọn thread mới nhất cho từng pattern theo thứ tự env, bỏ trùng
+    $chosen = @{}
+    $results = @()
+    foreach ($r in $rules) {
+      $pattern = $r.Pattern
+      $folder  = $r.Folder
+      $matches = $enruThreads | Where-Object { $_.innerText -like $pattern }
+      if ($matches.Count -eq 0) { continue }
+      $selected = $matches | Sort-Object @{Expression={Get-ThreadId $_.href};Descending=$true} | Select-Object -First 1
+      if (-not $chosen.ContainsKey($selected.href)) {
+        $chosen[$selected.href] = $true
+        $results += @{ Folder=$folder; Href=$selected.href }
+      } else {
+        Write-Host "DEBUG: Pattern [$pattern] skipped because thread [$($selected.href)] already taken"
+      }
+    }
 
-    $page = Invoke-WebRequest $threadUrl -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
-    if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
-
-    $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
-    if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
-
-    $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
-    Write-Host "DEBUG: shareLink=[$shareLink]"
-    if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
-
-    Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
+    foreach ($res in $results) {
+      $threadUrl = "https://forum.rg-adguard.net$($res.Href)"
+      Write-Host "DEBUG: threadUrl=[$threadUrl] for folder=[$($res.Folder)]"
+      $page = Invoke-WebRequest $threadUrl -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
+      if ($page.Content -notmatch "tuthanika") { Write-Host "WARN: Login failed"; continue }
+      $goMatches = [regex]::Matches($page.Content,'https://go\.rg-adguard\.net/[^\s"<>]+')
+      if ($goMatches.Count -lt 1) { Write-Host "WARN: No goLink found"; continue }
+      $shareLink = Resolve-FinalUrl -StartUrl $goMatches[0].Value
+      Write-Host "DEBUG: shareLink=[$shareLink]"
+      if ([string]::IsNullOrWhiteSpace($shareLink)) { Write-Host "WARN: shareLink empty"; continue }
+      Process-DownloaderOutput -SourceUrl $shareLink -PipePath $pipePath
+    }
+  }
+  elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
+    $page = Invoke-WebRequest $link
   }
   elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
     $page = Invoke-WebRequest $link -Headers @{ Cookie = $cookieHeader } -UserAgent $ua
