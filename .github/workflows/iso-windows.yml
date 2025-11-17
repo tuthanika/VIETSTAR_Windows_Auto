@@ -1,0 +1,92 @@
+name: Tự động tải và upload ISO Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-download-upload:
+    runs-on: windows-latest
+
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+      FORUM_COOKIE: ${{ secrets.FORUM_COOKIE }}
+      FORUM_UA: ${{ vars.FORUM_UA }}
+      INSTALL_PATH: C:\INSTALL
+      SCRIPT_PATH: C:\RUN
+      DOWNLOAD_DIR: C:\ATP
+      REPO_PATH: ${{ github.workspace }}
+      RCLONE_CONF_REPO: ${{ vars.RCLONE_CONF_REPO || 'github.com/tuthanika/Rclone-Auto-Refresh-Token' }}
+      RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\RUN\rclone.conf' }}
+      REMOTE_NAME: ${{ vars.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
+      REMOTE_TARGET: ${{ vars.REMOTE_TARGET || 'z.ISO' }}
+      RCLONE_FLAG: ${{ vars.RCLONE_FLAG || '--fast-list --delete-during --checksum --no-update-modtime --transfers 8 --checkers 8 --contimeout 60s --timeout 300s --retries 3 --low-level-retries 10 --fast-list --onedrive-delta --server-side-across-configs --onedrive-no-versions --onedrive-hard-delete --onedrive-av-override --drive-copy-shortcut-content --drive-acknowledge-abuse --drive-stop-on-upload-limit --drive-stop-on-download-limit --checksum --track-renames --no-update-modtime' }}
+      ARIA2_OPTS: "--allow-overwrite=true --continue=true --max-concurrent-downloads=4 --split=16 --min-split-size=10M --retry-wait=10 --max-tries=0 --check-certificate=false --file-allocation=none"
+      FILE_CODE_RULES: |
+        [
+          { "Patterns": ["*windows_xp*"], "Folder": "Windows XP" },
+          { "Patterns": ["*windows_vista*"], "Folder": "Windows Vista" },
+          { "Patterns": ["*windows_7*", "*windows-7*", "*windows 7*"], "Folder": "Windows 7" },
+          { "Patterns": ["*windows_8.1*", "*windows-8.1*", "*windows 8.1*", "*windows-8-1*"], "Folder": "Windows 8.1" },
+          { "Patterns": ["*windows_8*", "*windows-8*", "*windows 8*"], "Folder": "Windows 8" },
+          { "Patterns": ["*windows_10*ltsc*", "*windows-10*ltsc*", "*windows 10*ltsc*"], "Folder": "Windows 10 LTSC" },
+          { "Patterns": ["*windows_10*ltsb*", "*windows-10*ltsb*", "*windows 10*ltsb*"], "Folder": "Windows 10 LTSC" },
+          { "Patterns": ["*windows_10*", "*windows-10*", "*windows 10*"], "Folder": "Windows 10" },
+          { "Patterns": ["*windows_11*ltsc*", "*windows-11*ltsc*", "*windows 11*ltsc*"], "Folder": "Windows 11 LTSC" },
+          { "Patterns": ["*windows_11*", "*windows-11*", "*windows 11*"], "Folder": "Windows 11" }
+        ]
+      MAX_FILE: 1
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Prepare working directories
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "$env:INSTALL_PATH" -Force | Out-Null
+          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
+          New-Item -ItemType Directory -Path "$env:DOWNLOAD_DIR" -Force | Out-Null
+          Remove-Item "$env:SCRIPT_PATH\links.final.txt" -ErrorAction Ignore
+
+      - name: Install PHP CLI
+        shell: pwsh
+        run: |
+          choco install php --version=8.2.13 -y
+          php -v
+
+      - name: Install aria2
+        shell: pwsh
+        run: |
+          $ariaZip = "$env:INSTALL_PATH\aria2.zip"
+          Invoke-WebRequest -Uri "https://github.com/aria2/aria2/releases/download/release-1.36.0/aria2-1.36.0-win-64bit-build1.zip" -OutFile $ariaZip
+          Expand-Archive -Path $ariaZip -DestinationPath "$env:INSTALL_PATH\aria2" -Force
+          $ariaExe = Get-ChildItem "$env:INSTALL_PATH\aria2" -Recurse -Filter "aria2c.exe" | Select-Object -First 1
+          Copy-Item $ariaExe.FullName "$env:SCRIPT_PATH\aria2c.exe" -Force
+          & "$env:SCRIPT_PATH\aria2c.exe" -v
+
+      - name: Install rclone
+        shell: pwsh
+        run: |
+          $zip = "$env:INSTALL_PATH\rclone.zip"
+          Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath "$env:INSTALL_PATH\rclone" -Force
+          $rcloneExe = Get-ChildItem "$env:INSTALL_PATH\rclone" -Recurse -Filter "rclone.exe" | Select-Object -First 1
+          Copy-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe" -Force
+          & "$env:SCRIPT_PATH\rclone.exe" version
+
+      - name: Fetch rclone.conf from GitHub
+        shell: cmd
+        run: |
+          curl -H "Authorization: token %GH_PAT%" ^
+               -L -o "%RCLONE_CONFIG_PATH%" ^
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
+
+      - name: Build download list (orchestrator)
+        shell: pwsh
+        run: |
+          & "${{ github.workspace }}\scripts\build-list.ps1"
+
+      - name: Run uploader
+        shell: pwsh
+        run: |
+          & "$env:REPO_PATH\scripts\uploader.ps1" -PipePath "$env:SCRIPT_PATH\links.final.txt"
