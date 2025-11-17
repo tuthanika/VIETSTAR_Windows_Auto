@@ -23,8 +23,8 @@ jobs:
       ARIA2_OPTS: "--allow-overwrite=true --continue=true --max-concurrent-downloads=4 --split=16 --min-split-size=10M --retry-wait=10 --max-tries=0 --check-certificate=false --file-allocation=none"
       FILE_CODE_RULES: |
         [
-          { "Patterns": ["*windows_xp*"], "Folder": "Windows XP" },
-          { "Patterns": ["*windows_vista*"], "Folder": "Windows Vista" },
+          { "Patterns": ["*windows_xp*", "*windows-xp*", "*windows xp*"], "Folder": "Windows XP" },
+          { "Patterns": ["*windows_vista*", "*windows-vista*", "*windows vista*"], "Folder": "Windows Vista" },
           { "Patterns": ["*windows_7*", "*windows-7*", "*windows 7*"], "Folder": "Windows 7" },
           { "Patterns": ["*windows_8.1*", "*windows-8.1*", "*windows 8.1*", "*windows-8-1*"], "Folder": "Windows 8.1" },
           { "Patterns": ["*windows_8*", "*windows-8*", "*windows 8*"], "Folder": "Windows 8" },
