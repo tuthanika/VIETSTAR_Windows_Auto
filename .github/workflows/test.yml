@@ -53,4 +53,4 @@ jobs:
             -ArgumentList @("cmount", "OD_APP-C03-vietstar:", "R:", "--config", "$confPath") `
             -NoNewWindow
           timeout /t 10
-          dir R:\ || echo "Mount failed"
+          dir R: || echo "Mount failed"
