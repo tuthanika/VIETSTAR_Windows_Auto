@@ -4,11 +4,11 @@ setlocal enabledelayedexpansion
 set "MODE=%~1"
 set "RC=%SCRIPT_PATH%\rclone.exe --config %SCRIPT_PATH%\rclone.conf %rclone_flag%"
 
-:: Lấy folder upload theo rule
+:: Lay folder upload theo rule
 echo %FILE_CODE_RULES% > "%TEMP%\rules.json"
 for /f "usebackq tokens=*" %%F in (`powershell -NoProfile -Command ^
-  "$rules = Get-Content '%TEMP%\rules.json' | ConvertFrom-Json; ^
-   ($rules | Where-Object { $_.Mode -eq '%MODE%' }).Folder"`) do set "targetFolder=%%F"
+  "$rules = Get-Content '%TEMP%\rules.json' ^| ConvertFrom-Json; ^
+   ($rules ^| Where-Object { $_.Mode -eq '%MODE%' }).Folder"`) do set "targetFolder=%%F"
 
 if "%targetFolder%"=="" (
   echo [ERROR] Không tìm thấy Folder cho MODE=%MODE%

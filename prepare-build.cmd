@@ -16,26 +16,26 @@ for %%D in ("%SCRIPT_PATH%\%iso%" "%SCRIPT_PATH%\%driver%" "%SCRIPT_PATH%\%boot7
 powershell -NoProfile -Command "Set-Content -Path $env:TEMP\rules.json -Value $env:FILE_CODE_RULES"
 
 for /f "usebackq tokens=*" %%R in (`powershell -NoProfile -Command ^
-  "$rules = Get-Content $env:TEMP\rules.json | ConvertFrom-Json; ^
-   ($rules | Where-Object { $_.Mode -eq '%MODE%' }) | ConvertTo-Json -Compress"`) do set "rule=%%R"
+  "$rules = Get-Content $env:TEMP\rules.json ^| ConvertFrom-Json; ^
+   ($rules ^| Where-Object { $_.Mode -eq '%MODE%' }) ^| ConvertTo-Json -Compress"`) do set "rule=%%R"
 
 :: Lấy các key, nếu không có thì sẽ rỗng
 for /f "usebackq tokens=*" %%P in (`powershell -NoProfile -Command ^
-  "$r = %rule% | ConvertFrom-Json; if($r.Patterns){$r.Patterns -join ';'}"`) do set "patterns=%%P"
+  "$r = %rule% ^| ConvertFrom-Json; if($r.Patterns){$r.Patterns -join ';'}"`) do set "patterns=%%P"
 for /f "usebackq tokens=*" %%F in (`powershell -NoProfile -Command ^
-  "$r = %rule% | ConvertFrom-Json; if($r.Folder){$r.Folder}"`) do set "folder=%%F"
+  "$r = %rule% ^| ConvertFrom-Json; if($r.Folder){$r.Folder}"`) do set "folder=%%F"
 for /f "usebackq tokens=*" %%DP in (`powershell -NoProfile -Command ^
-  "$r = %rule% | ConvertFrom-Json; if($r.DriverPatterns){$r.DriverPatterns -join ';'}"`) do set "drvPatterns=%%DP"
+  "$r = %rule% ^| ConvertFrom-Json; if($r.DriverPatterns){$r.DriverPatterns -join ';'}"`) do set "drvPatterns=%%DP"
 for /f "usebackq tokens=*" %%DF in (`powershell -NoProfile -Command ^
-  "$r = %rule% | ConvertFrom-Json; if($r.DriverFolder){$r.DriverFolder}"`) do set "drvFolder=%%DF"
+  "$r = %rule% ^| ConvertFrom-Json; if($r.DriverFolder){$r.DriverFolder}"`) do set "drvFolder=%%DF"
 for /f "usebackq tokens=*" %%BP in (`powershell -NoProfile -Command ^
-  "$r = %rule% | ConvertFrom-Json; if($r.BootPatterns){$r.BootPatterns -join ';'}"`) do set "bootPatterns=%%BP"
+  "$r = %rule% ^| ConvertFrom-Json; if($r.BootPatterns){$r.BootPatterns -join ';'}"`) do set "bootPatterns=%%BP"
 for /f "usebackq tokens=*" %%BF in (`powershell -NoProfile -Command ^
-  "$r = %rule% | ConvertFrom-Json; if($r.BootFolder){$r.BootFolder}"`) do set "bootFolder=%%BF"
+  "$r = %rule% ^| ConvertFrom-Json; if($r.BootFolder){$r.BootFolder}"`) do set "bootFolder=%%BF"
 for /f "usebackq tokens=*" %%SP in (`powershell -NoProfile -Command ^
-  "$r = %rule% | ConvertFrom-Json; if($r.SilentPatterns){$r.SilentPatterns -join ';'}"`) do set "silentPatterns=%%SP"
+  "$r = %rule% ^| ConvertFrom-Json; if($r.SilentPatterns){$r.SilentPatterns -join ';'}"`) do set "silentPatterns=%%SP"
 for /f "usebackq tokens=*" %%SF in (`powershell -NoProfile -Command ^
-  "$r = %rule% | ConvertFrom-Json; if($r.SilentFolder){$r.SilentFolder}"`) do set "silentFolder=%%SF"
+  "$r = %rule% ^| ConvertFrom-Json; if($r.SilentFolder){$r.SilentFolder}"`) do set "silentFolder=%%SF"
 
 :: Hàm download có điều kiện
 :download_if_needed
