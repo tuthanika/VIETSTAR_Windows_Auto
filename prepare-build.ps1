@@ -4,8 +4,8 @@ Write-Host "=== DEBUG: prepare-build.ps1 started ==="
 Write-Host "[DEBUG] MODE arg: $Mode"
 Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 Write-Host "[DEBUG] RCLONE_PATH=$env:RCLONE_PATH"
-Write-Host "[DEBUG] ALIST_PATH=$env:ALIST_PATH"
-Write-Host "[DEBUG] ALIST_TOKEN=$env:ALIST_TOKEN"
+Write-Host "[DEBUG] ALIST_HOST=$env:ALIST_HOST"
+Write-Host "[DEBUG] ALIST_TOKEN present? " -NoNewline; Write-Host ([string]::IsNullOrEmpty($env:ALIST_TOKEN) ? "NO" : "YES")
 Write-Host "[DEBUG] RCLONE_CONFIG_PATH=$env:RCLONE_CONFIG_PATH"
 
 # Tạo thư mục local
@@ -25,8 +25,11 @@ if (-not (Test-Path $ruleFile)) { Write-Error "[ERROR] rule.env not found"; exit
 
 $ruleMap = @{}
 Get-Content $ruleFile | ForEach-Object {
-    $parts = $_ -split '=',2
-    if ($parts.Length -eq 2) { $ruleMap[$parts[0]] = $parts[1] }
+    $line = $_.Trim()
+    if ($line -and $line -notmatch '^\s*#') {
+        $parts = $line -split '=',2
+        if ($parts.Length -eq 2) { $ruleMap[$parts[0]] = $parts[1] }
+    }
 }
 Write-Host "[DEBUG] folder=$($ruleMap['folder'])"
 Write-Host "[DEBUG] patterns=$($ruleMap['patterns'])"
@@ -53,27 +56,49 @@ if ($ruleMap['patterns']) {
             Write-Host "[DEBUG] fileA=$($lastFile.Name)"
 
             if ($lastFile) {
+                # Chuẩn bị gọi API Alist để lấy raw_url
                 $alistPath = "/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
-                Write-Host "[DEBUG] Alist API path=$alistPath"
-
-                # Gọi API để lấy link download
+                $apiUrl = "$($env:ALIST_HOST.TrimEnd('/'))/api/fs/get"
                 $body = @{ path = $alistPath } | ConvertTo-Json -Compress
-                Write-Host "[DEBUG] POST to $env:ALIST_PATH/api/fs/get with token"
 
-                $response = Invoke-RestMethod -Uri "$env:ALIST_PATH/api/fs/get" `
-                    -Method Post `
-                    -Headers @{ Authorization = $env:ALIST_TOKEN } `
-                    -Body $body `
-                    -ContentType "application/json"
+                Write-Host "[DEBUG] Alist API url=$apiUrl"
+                Write-Host "[DEBUG] Alist API path=$alistPath"
+                Write-Host "[DEBUG] POST with Authorization header"
 
-                Write-Host "=== DEBUG: Alist API response ==="
-                $response | ConvertTo-Json -Depth 5
+                $response = $null
+                try {
+                    $response = Invoke-RestMethod -Uri $apiUrl `
+                        -Method Post `
+                        -Headers @{ Authorization = $env:ALIST_TOKEN } `
+                        -Body $body `
+                        -ContentType "application/json" `
+                        -ErrorAction Stop
+                } catch {
+                    Write-Warning "[WARN] Alist API request failed: $($_.Exception.Message)"
+                }
+
+                if ($response -is [string]) {
+                    # Trường hợp trả về HTML (sai endpoint)
+                    Write-Host "=== DEBUG: Alist API raw string response (HTML detected) ==="
+                    Write-Host ($response.Substring(0, [Math]::Min(500, $response.Length)))
+                    Write-Error "[ERROR] Alist API returned HTML, check ALIST_HOST or token."
+                    exit 1
+                }
+
+                Write-Host "=== DEBUG: Alist API response JSON ==="
+                $response | ConvertTo-Json -Depth 6 | Write-Host
 
                 $downloadUrl = $response.data.raw_url
-                Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
+                if ([string]::IsNullOrWhiteSpace($downloadUrl)) {
+                    Write-Error "[ERROR] raw_url not found in API response. Verify path and token."
+                    exit 1
+                }
 
-                # Tải bằng aria2c
-                $ariaOut = & aria2c -d "$env:SCRIPT_PATH\$env:iso" $downloadUrl 2>&1
+                Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
+                $localDir = "$env:SCRIPT_PATH\$env:iso"
+
+                # Tải bằng aria2c (không cần header, vì raw_url là link trực tiếp)
+                $ariaOut = & aria2c -d $localDir $downloadUrl 2>&1
                 Write-Host "=== DEBUG: aria2c output ==="
                 Write-Host $ariaOut
             }
