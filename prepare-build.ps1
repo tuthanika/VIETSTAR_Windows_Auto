@@ -39,7 +39,7 @@ if ($ruleMap['patterns']) {
     try {
         $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
             --config "$env:RCLONE_CONFIG_PATH" `
-            --include "$($ruleMap['patterns'])"
+            --include "$($ruleMap['patterns'])" 2>&1
 
         Write-Host "=== DEBUG: rclone raw output ==="
         Write-Host $jsonMain
@@ -53,12 +53,27 @@ if ($ruleMap['patterns']) {
             Write-Host "[DEBUG] fileA=$($lastFile.Name)"
 
             if ($lastFile) {
-                $localDir = "$env:SCRIPT_PATH\$env:iso"
-                $alistUrl = "$env:ALIST_PATH/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
-                Write-Host "[PREPARE] Download $($lastFile.Name) from $alistUrl"
+                $alistPath = "/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                Write-Host "[DEBUG] Alist API path=$alistPath"
 
-                # Dùng aria2c với Authorization header
-                $ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir $alistUrl
+                # Gọi API để lấy link download
+                $body = @{ path = $alistPath } | ConvertTo-Json -Compress
+                Write-Host "[DEBUG] POST to $env:ALIST_PATH/api/fs/get with token"
+
+                $response = Invoke-RestMethod -Uri "$env:ALIST_PATH/api/fs/get" `
+                    -Method Post `
+                    -Headers @{ Authorization = $env:ALIST_TOKEN } `
+                    -Body $body `
+                    -ContentType "application/json"
+
+                Write-Host "=== DEBUG: Alist API response ==="
+                $response | ConvertTo-Json -Depth 5
+
+                $downloadUrl = $response.data.raw_url
+                Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
+
+                # Tải bằng aria2c
+                $ariaOut = & aria2c -d "$env:SCRIPT_PATH\$env:iso" $downloadUrl 2>&1
                 Write-Host "=== DEBUG: aria2c output ==="
                 Write-Host $ariaOut
             }
