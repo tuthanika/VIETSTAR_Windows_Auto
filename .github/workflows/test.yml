@@ -85,7 +85,7 @@ jobs:
 
       - name: Clone SCRIPT_REPO
         run: |
-          if not exist "${{ env.SCRIPT_PATH }}" mkdir "${{ env.SCRIPT_PATH }}"
+          if (-not (Test-Path "C:\RUN")) { New-Item -ItemType Directory -Path "C:\RUN" }
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
 
       - name: Setup rclone & aria2
