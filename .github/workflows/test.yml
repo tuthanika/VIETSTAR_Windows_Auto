@@ -114,7 +114,7 @@ jobs:
         shell: cmd
         run: |
           curl -H "Authorization: token %GH_PAT%" ^
-               -L -o "%SCRIPT_PATH%" ^
+               -L -o "%SCRIPT_PATH%\rclone.conf" ^
                https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
       - name: Copy helper scripts
