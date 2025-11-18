@@ -41,24 +41,26 @@ if ($ruleMap['patterns']) {
     Write-Host "[DEBUG] rclone lsjson $remoteDir --include $($ruleMap['patterns'])"
 
     try {
-        $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
-            --config "$env:RCLONE_CONFIG_PATH" `
-            --include "$($ruleMap['patterns'])" 2>$null
-        if ($jsonMain) {
-            $files = $jsonMain | ConvertFrom-Json
-            $lastFile = $files | Select-Object -Last 1
-            Write-Host "[DEBUG] fileA=$($lastFile.Name)"
-            if ($lastFile) {
-                $localDir = "$env:SCRIPT_PATH\$env:iso"
-                $alistUrl = "$env:ALIST_PATH/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
-                Write-Host "[PREPARE] Download $($lastFile.Name)"
-                aria2c -q -d $localDir $alistUrl
-            }
+    $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
+        --config "$env:RCLONE_CONFIG_PATH" `
+        --include "$($ruleMap['patterns'])" 2>$null
+    if ($jsonMain) {
+        $files = $jsonMain | ConvertFrom-Json
+        $lastFile = $files | Select-Object -Last 1
+        Write-Host "[DEBUG] fileA=$($lastFile.Name)"
+        if ($lastFile) {
+            $localDir = "$env:SCRIPT_PATH\$env:iso"
+            $alistUrl = "$env:ALIST_PATH/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+            Write-Host "[PREPARE] Download $($lastFile.Name)"
+            aria2c -q -d $localDir $alistUrl
         }
-    } catch {
-        Write-Error "[ERROR] rclone lsjson failed"
-        exit 1
+    } else {
+        Write-Host "[DEBUG] No files matched pattern"
     }
+} catch {
+    Write-Warning "[WARN] rclone lsjson failed: $_"
+    # không exit 1 ở đây, để script vẫn tiếp tục
 }
 
 Write-Host "[PREPARE] Env OK"
+exit 0
