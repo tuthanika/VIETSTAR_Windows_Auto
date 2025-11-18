@@ -46,11 +46,10 @@ jobs:
                https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
       - name: Try mount remote
+        shell: cmd
         run: |
           # giả sử bạn đã cấu hình remote tên testremote:
           # mount vào ổ R: và chạy trong nền
-          Start-Process -FilePath "rclone.exe" `
-          -ArgumentList @("cmount", "OD_APP-C03-vietstar:", "R:", "--config", $env:RCLONE_CONFIG_PATH) `
-          -NoNewWindow
+          rclone cmount OD_APP-C03-vietstar: R: --config "$env:RCLONE_CONFIG_PATH)"
           timeout /t 10
           dir R:\ || echo "Mount failed"
