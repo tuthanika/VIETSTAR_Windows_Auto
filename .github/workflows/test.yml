@@ -25,7 +25,6 @@ jobs:
       - name: Install WinFsp
         run: |
           choco install winfsp -y
-          fsptool volume-info || echo "WinFsp not working"
 
       - name: Install rclone
         run: choco install rclone -y
