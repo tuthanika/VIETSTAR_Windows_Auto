@@ -41,10 +41,7 @@ Add-Content $buildMd ""
 $remoteDir = "$($env:RCLONE_PATH)$($env:vietstar)/$folder"
 Write-Host "[UPLOAD] To $remoteDir"
 
-& "$env:SCRIPT_PATH\rclone.exe" `
-    copy "$env:SCRIPT_PATH\$env:vietstar" "$($env:RCLONE_PATH)$($env:vietstar)/$folder" `
-    --config "$env:RCLONE_CONFIG_PATH" `
-    --include "*.iso"
+& "$env:SCRIPT_PATH\rclone.exe" copy "$env:SCRIPT_PATH\$env:vietstar" $($env:RCLONE_PATH)$($env:vietstar)/$folder --config "$env:RCLONE_CONFIG_PATH" --include "*.iso"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "[ERROR] Upload failed (rclone copy exit=$LASTEXITCODE)"
