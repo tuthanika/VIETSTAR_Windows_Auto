@@ -85,7 +85,7 @@ jobs:
 
       - name: Clone SCRIPT_REPO
         run: |
-          if (-not (Test-Path "C:\RUN")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
+          if (-not (Test-Path "${{ env.SCRIPT_PATH }}")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
 
       - name: Setup rclone & aria2
@@ -106,27 +106,25 @@ jobs:
           copy upload-build.cmd "${{ env.SCRIPT_PATH }}"
 
       - name: Run build
-        shell: cmd
         run: |
-          cd "${{ env.SCRIPT_PATH }}"
-          if "${{ github.event.inputs.mode }}"=="auto" (
-            powershell -NoProfile -Command ^
-              "$rules = $env:FILE_CODE_RULES | ConvertFrom-Json; ^
-               foreach($r in $rules){ ^
-                 cmd /c prepare-build.cmd $r.Mode; ^
-                 if (Test-Path (Join-Path $env:SCRIPT_PATH (\"_skip_\" + $r.Mode + \".flag\"))) { ^
-                   Write-Host \"[SKIP] Mode $($r.Mode) skipped\"; ^
-                 } else { ^
-                   cmd /c zzz.Windows-imdisk.cmd $r.Mode; ^
-                   cmd /c upload-build.cmd $r.Mode; ^
-                 } ^
-               }"
-          ) else (
-            call prepare-build.cmd "${{ github.event.inputs.mode }}"
-            if exist "_skip_${{ github.event.inputs.mode }}.flag" (
-              echo [SKIP] Mode ${{ github.event.inputs.mode }} skipped
-            ) else (
-              call zzz.Windows-imdisk.cmd "${{ github.event.inputs.mode }}"
-              call upload-build.cmd "${{ github.event.inputs.mode }}"
-            )
-          )
+          Set-Location "${{ env.SCRIPT_PATH }}"
+          if ("${{ github.event.inputs.mode }}" -eq "auto") {
+            $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
+            foreach ($r in $rules) {
+              cmd /c prepare-build.cmd $r.Mode
+              if (Test-Path (Join-Path $env:SCRIPT_PATH "_skip_$($r.Mode).flag")) {
+                Write-Host "[SKIP] Mode $($r.Mode) skipped"
+              } else {
+                cmd /c zzz.Windows-imdisk.cmd $r.Mode
+                cmd /c upload-build.cmd $r.Mode
+              }
+            }
+          } else {
+            cmd /c prepare-build.cmd "${{ github.event.inputs.mode }}"
+            if (Test-Path "_skip_${{ github.event.inputs.mode }}.flag") {
+              Write-Host "[SKIP] Mode ${{ github.event.inputs.mode }} skipped"
+            } else {
+              cmd /c zzz.Windows-imdisk.cmd "${{ github.event.inputs.mode }}"
+              cmd /c upload-build.cmd "${{ github.event.inputs.mode }}"
+            }
+          }
