@@ -1,0 +1,48 @@
+name: Test WinFsp and Rclone Mount
+
+on:
+  workflow_dispatch:
+  
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+      RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\RUN\rclone.conf' }}
+      REMOTE_NAME: ${{ vars.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Chocolatey
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+      - name: Install WinFsp
+        run: |
+          choco install winfsp -y
+          fsptool volume-info || echo "WinFsp not working"
+
+      - name: Install rclone
+        run: choco install rclone -y
+
+      - name: Show rclone version
+        run: rclone version
+        
+      - name: Fetch rclone.conf from GitHub
+        shell: cmd
+        run: |
+          curl -H "Authorization: token %GH_PAT%" ^
+               -L -o "%RCLONE_CONFIG_PATH%" ^
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
+
+      - name: Try mount remote
+        run: |
+          # giả sử bạn đã cấu hình remote tên testremote:
+          # mount vào ổ R: và chạy trong nền
+          Start-Process -FilePath "rclone.exe" -ArgumentList "mount testremote: R: --config "$env:RCLONE_CONFIG_PATH"" -NoNewWindow
+          timeout /t 10
+          dir R:\ || echo "Mount failed"
