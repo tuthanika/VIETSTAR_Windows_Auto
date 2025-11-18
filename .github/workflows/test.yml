@@ -21,7 +21,7 @@ jobs:
       RCLONE_CONF_REPO: github.com/tuthanika/Rclone-Auto-Refresh-Token
       RCLONE_CONFIG_PATH: C:\RUN\rclone.conf
 
-      RCLONE_PATH: 'OD_APP-C03-vietstar:'
+      RCLONE_PATH: "OD_APP-C03-vietstar:"
 
       ALIST_PATH: https://cloud.vietstarhp.com/od-app/C03.vietstar@vietstarhp.onmicrosoft.com
 
@@ -91,17 +91,26 @@ jobs:
           if (-not (Test-Path "${{ env.SCRIPT_PATH }}")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
 
-      - name: Setup rclone & aria2
+      - name: Install aria2
         run: |
           choco install aria2 -y
-          curl -L https://downloads.rclone.org/rclone-current-windows-amd64.zip -o rclone.zip
-          tar -xf rclone.zip
-          copy rclone-*-windows-amd64\rclone.exe "${{ env.SCRIPT_PATH }}\rclone.exe"
 
-      - name: Download rclone.conf
+      - name: Install rclone
+        shell: pwsh
         run: |
-          git clone https://${{ env.GH_PAT }}@${{ env.RCLONE_CONF_REPO }} confrepo
-          copy confrepo\rclone.conf "${{ env.SCRIPT_PATH }}\rclone.conf"
+          $zip = "$env:INSTALL_PATH\rclone.zip"
+          Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath "$env:INSTALL_PATH\rclone" -Force
+          $rcloneExe = Get-ChildItem "$env:INSTALL_PATH\rclone" -Recurse -Filter "rclone.exe" | Select-Object -First 1
+          Copy-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe" -Force
+          & "$env:SCRIPT_PATH\rclone.exe" version
+
+      - name: Fetch rclone.conf from GitHub
+        shell: cmd
+        run: |
+          curl -H "Authorization: token %GH_PAT%" ^
+               -L -o "%SCRIPT_PATH%" ^
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
       - name: Copy helper scripts
         run: |
