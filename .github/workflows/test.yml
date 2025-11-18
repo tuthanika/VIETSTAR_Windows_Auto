@@ -162,8 +162,8 @@ jobs:
         shell: cmd
         run: |
           cd /d "%SCRIPT_PATH%"
-          call zzz.Windows-imdisk.cmd %mode% > build-%mode%.log 2>&1
-          type build-%mode%.log
+          call zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }} > build-${{ github.event.inputs.mode }}.log 2>&1
+          type build-${{ github.event.inputs.mode }}.log
 
       - name: Upload build
         shell: pwsh
