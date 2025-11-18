@@ -116,12 +116,9 @@ jobs:
           } else {
             $modes = @("${{ github.event.inputs.mode }}")
           }
-          # Ghi danh sách mode
           Set-Content -Path "$env:SCRIPT_PATH\modes.txt" -Value ($modes -join "`n")
-          # Tạo rule.env cho từng mode
           foreach ($m in $modes) {
             $r = $rules | Where-Object { $_.Mode -eq $m }
-            if (-not $r) { throw "Mode $m not found in FILE_CODE_RULES" }
             $kv = @()
             $kv += "mode=$($r.Mode)"
             $kv += "folder=$($r.Folder)"
@@ -135,18 +132,24 @@ jobs:
             Set-Content -Path "$env:SCRIPT_PATH\rule.$m.env" -Value ($kv -join "`n")
           }
 
-      - name: Prepare, build, upload per mode
+      - name: Prepare, build, upload per mode (with debug logs)
         shell: cmd
         run: |
           cd /d "${{ env.SCRIPT_PATH }}"
           for /f %%M in (modes.txt) do (
             echo [RUN] Mode %%M
             copy /y "rule.%%M.env" "rule.env" >nul
-            call prepare-build.cmd %%M
+            call prepare-build.cmd %%M > prepare-%%M.log 2>&1
+            echo -------- prepare-%%M.log --------
+            type prepare-%%M.log
             if exist "_skip_%%M.flag" (
               echo [SKIP] Mode %%M skipped
             ) else (
-              call zzz.Windows-imdisk.cmd %%M
-              call upload-build.cmd %%M
+              call zzz.Windows-imdisk.cmd %%M > build-%%M.log 2>&1
+              echo -------- build-%%M.log --------
+              type build-%%M.log
+              call upload-build.cmd %%M > upload-%%M.log 2>&1
+              echo -------- upload-%%M.log --------
+              type upload-%%M.log
             )
           )
