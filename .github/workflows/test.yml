@@ -118,13 +118,18 @@ jobs:
         run: |
           copy prepare-build.ps1 "${{ env.SCRIPT_PATH }}"
           copy upload-build.ps1 "${{ env.SCRIPT_PATH }}"
-
+          
       - name: Resolve modes and write rule envs
         shell: pwsh
         run: |
           Set-Location $env:SCRIPT_PATH
           $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-          $modes = if ($env:mode -eq "auto") { $rules.Mode } else { @($env:mode) }
+          $inputMode = "${{ github.event.inputs.mode }}"
+          if ($inputMode -eq "auto") {
+            $modes = $rules.Mode
+          } else {
+            $modes = @($inputMode)
+          }
           Set-Content -Path "$env:SCRIPT_PATH\modes.txt" -Value ($modes -join "`n")
           foreach ($m in $modes) {
             $r = $rules | Where-Object { $_.Mode -eq $m }
@@ -137,7 +142,7 @@ jobs:
             if ($r.SilentPatterns) { $kv += "silentPatterns=$([string]::Join(';',$r.SilentPatterns))" }
             Set-Content -Path "$env:SCRIPT_PATH\rule.$m.env" -Value ($kv -join "`n")
           }
-          
+   
       - name: Select rule for mode
         shell: pwsh
         run: |
