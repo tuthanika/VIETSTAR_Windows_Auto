@@ -59,7 +59,7 @@ if ($ruleMap['patterns']) {
             Write-Host "[DEBUG] fileA=$($lastFile.Name)"
 
             if ($lastFile) {
-                $alistPathRel = "/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                $alistPathRel = "/$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
                 $apiUrl = "$($env:ALIST_HOST.TrimEnd('/'))/api/fs/get"
                 $body = @{ path = $alistPathRel } | ConvertTo-Json -Compress
 
@@ -85,7 +85,7 @@ if ($ruleMap['patterns']) {
 
                 if ([string]::IsNullOrWhiteSpace($downloadUrl)) {
                     Write-Warning "[WARN] raw_url not found, fallback to direct URL"
-                    $downloadUrl = "$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                    $downloadUrl = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
                 }
 
                 Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"

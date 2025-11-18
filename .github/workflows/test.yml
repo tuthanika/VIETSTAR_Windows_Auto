@@ -24,7 +24,7 @@ jobs:
 
       RCLONE_PATH: "OD_APP-C03-vietstar:"
       ALIST_HOST: https://cloud.vietstarhp.com
-      ALIST_PATH: https://cloud.vietstarhp.com/od-app/C03.vietstar@vietstarhp.onmicrosoft.com
+      ALIST_PATH: od-app/C03.vietstar@vietstarhp.onmicrosoft.com
 
       vietstar: z.VIETSTAR
       silent: z.Silent
