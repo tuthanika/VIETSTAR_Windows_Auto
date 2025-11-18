@@ -2,9 +2,7 @@
 setlocal enabledelayedexpansion
 
 set "MODE=%~1"
-set "rclone_exe=%SCRIPT_PATH%\rclone.exe"
-set "rclone_conf=%SCRIPT_PATH%\rclone.conf"
-set "RC=%rclone_exe% --config %rclone_conf% %rclone_flag%"
+set "RC=%SCRIPT_PATH%\rclone.exe --config %SCRIPT_PATH%\rclone.conf %rclone_flag%"
 
 :: Lấy folder upload theo rule
 echo %FILE_CODE_RULES% > "%TEMP%\rules.json"
