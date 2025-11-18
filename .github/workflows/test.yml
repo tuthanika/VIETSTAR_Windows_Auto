@@ -115,8 +115,8 @@ jobs:
 
       - name: Copy helper scripts
         run: |
-          copy prepare-build.cmd "${{ env.SCRIPT_PATH }}"
-          copy upload-build.cmd "${{ env.SCRIPT_PATH }}"
+          copy prepare-build.ps1 "${{ env.SCRIPT_PATH }}"
+          copy upload-build.ps1 "${{ env.SCRIPT_PATH }}"
 
       - name: Resolve modes and write rule envs
         shell: pwsh
