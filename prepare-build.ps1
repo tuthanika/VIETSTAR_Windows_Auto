@@ -2,8 +2,10 @@ param([string]$Mode)
 
 Write-Host "=== DEBUG: prepare-build.ps1 started ==="
 Write-Host "[DEBUG] MODE arg: $Mode"
+Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 Write-Host "[DEBUG] RCLONE_PATH=$env:RCLONE_PATH"
 Write-Host "[DEBUG] ALIST_PATH=$env:ALIST_PATH"
+Write-Host "[DEBUG] ALIST_TOKEN=$env:ALIST_TOKEN"
 Write-Host "[DEBUG] RCLONE_CONFIG_PATH=$env:RCLONE_CONFIG_PATH"
 
 # Tạo thư mục local
@@ -31,7 +33,7 @@ Write-Host "[DEBUG] patterns=$($ruleMap['patterns'])"
 
 # Lấy danh sách file bằng rclone lsjson
 if ($ruleMap['patterns']) {
-    $remoteDir = "$($env:RCLONE_PATH):$($env:iso)/$($ruleMap['folder'])"
+    $remoteDir = "$($env:RCLONE_PATH)$($env:iso)/$($ruleMap['folder'])"
     Write-Host "[DEBUG] rclone lsjson $remoteDir --include $($ruleMap['patterns'])"
 
     try {
@@ -54,7 +56,9 @@ if ($ruleMap['patterns']) {
                 $localDir = "$env:SCRIPT_PATH\$env:iso"
                 $alistUrl = "$env:ALIST_PATH/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
                 Write-Host "[PREPARE] Download $($lastFile.Name) from $alistUrl"
-                $ariaOut = & aria2c -q -d $localDir $alistUrl 2>&1
+
+                # Dùng aria2c với Authorization header
+                $ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir $alistUrl 2>&1
                 Write-Host "=== DEBUG: aria2c output ==="
                 Write-Host $ariaOut
             }
