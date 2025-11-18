@@ -12,9 +12,11 @@ for %%D in ("%SCRIPT_PATH%\%iso%" "%SCRIPT_PATH%\%driver%" "%SCRIPT_PATH%\%boot7
 )
 
 :: Đọc rule theo MODE
-echo %FILE_CODE_RULES% > "%TEMP%\rules.json"
+:: Đọc rule theo MODE
+powershell -NoProfile -Command "Set-Content -Path $env:TEMP\rules.json -Value $env:FILE_CODE_RULES"
+
 for /f "usebackq tokens=*" %%R in (`powershell -NoProfile -Command ^
-  "$rules = Get-Content '%TEMP%\rules.json' | ConvertFrom-Json; ^
+  "$rules = Get-Content $env:TEMP\rules.json | ConvertFrom-Json; ^
    ($rules | Where-Object { $_.Mode -eq '%MODE%' }) | ConvertTo-Json -Compress"`) do set "rule=%%R"
 
 :: Lấy các key, nếu không có thì sẽ rỗng
