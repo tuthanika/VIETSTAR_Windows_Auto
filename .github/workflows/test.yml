@@ -48,6 +48,6 @@ jobs:
       - name: Try mount remote
         shell: cmd
         run: |
-          start /b rclone cmount OD_APP-C03-vietstar: R: --config "%RCLONE_CONFIG_PATH%"
+          rclone cmount OD_APP-C03-vietstar: R: --config "%RCLONE_CONFIG_PATH%" --daemon
           timeout /t 10
           dir R:\ || echo "Mount failed"
