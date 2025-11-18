@@ -109,9 +109,10 @@ jobs:
         shell: pwsh
         run: |
           $confUrl = "https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf"
-          $confPath = "$env:SCRIPT_PATH\rclone.conf"
-          Invoke-WebRequest -Uri $confUrl -OutFile $confPath
-          Get-Content $confPath | Write-Host
+          $headers = @{ Authorization = "token $env:GH_PAT"; "User-Agent" = "pwsh" }
+          $response = Invoke-RestMethod -Uri $confUrl -Headers $headers
+          [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($response.content)) |
+          Set-Content -Path $env:RCLONE_CONFIG_PATH
 
       - name: Copy helper scripts
         run: |
