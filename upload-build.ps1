@@ -43,7 +43,7 @@ Write-Host "[DEBUG] rclone copy command:"
 Write-Host "$env:SCRIPT_PATH\rclone.exe copy $env:SCRIPT_PATH\$env:vietstar $remoteDir --config $env:RCLONE_CONFIG_PATH --include *.iso"
 
 & "$env:SCRIPT_PATH\rclone.exe" `
-    copy "$env:SCRIPT_PATH\$env:vietstar" $remoteDir `
+    copy "$env:SCRIPT_PATH\$env:vietstar" "$remoteDir" `
     --config "$env:RCLONE_CONFIG_PATH" `
     --include "*.iso"
 
