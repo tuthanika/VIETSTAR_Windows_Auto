@@ -38,18 +38,17 @@ Write-Host "[DEBUG] patterns=$($ruleMap['patterns'])"
 
 # Chọn file iso
 if ($ruleMap['patterns']) {
-    $remote = "$($env:RCLONE_PATH)$($env:iso)/$($ruleMap['folder'])"
-    Write-Host "[DEBUG] rclone ls $remote --include $($ruleMap['patterns'])"
+	$remote = "$($env:RCLONE_PATH)$($env:iso)/$($ruleMap['folder'])"
+	Write-Host "[DEBUG] rclone ls $remote --include $($ruleMap['patterns'])"
 
-    $list = & $env:SCRIPT_PATH\rclone.exe `
-        --config $env:RCLONE_CONFIG_PATH `
-        $env:rclone_flag `
-        ls "$remote" --include "$($ruleMap['patterns'])"
+	$list = & $env:SCRIPT_PATH\rclone.exe `
+	    --config $env:RCLONE_CONFIG_PATH `
+	    ls $remote --include "$($ruleMap['patterns'])"
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "[ERROR] rclone ls failed (exit=$LASTEXITCODE)"
-        exit 1
-    }
+	if ($LASTEXITCODE -ne 0) {
+	    Write-Error "[ERROR] rclone ls failed (exit=$LASTEXITCODE)"
+	    exit 1
+	}
 
     $lastFile = ($list | ForEach-Object { ($_ -split '\s+',2)[1] }) | Select-Object -Last 1
     Write-Host "[DEBUG] fileA=$lastFile"

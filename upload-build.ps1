@@ -39,8 +39,7 @@ Write-Host "[UPLOAD] To $remote"
 
 & $env:SCRIPT_PATH\rclone.exe `
     --config $env:RCLONE_CONFIG_PATH `
-    $env:rclone_flag `
-    copy "$env:SCRIPT_PATH\$env:vietstar" "$remote" --include "*.iso"
+    copy "$env:SCRIPT_PATH\$env:vietstar" $remote --include "*.iso"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "[ERROR] Upload failed (rclone copy exit=$LASTEXITCODE)"
