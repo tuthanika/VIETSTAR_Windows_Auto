@@ -11,6 +11,7 @@ jobs:
       GH_PAT: ${{ secrets.GH_PAT }}
       RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\RUN\rclone.conf' }}
       REMOTE_NAME: ${{ vars.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
+      SCRIPT_PATH: C:\RUN
 
     steps:
       - name: Checkout repo
