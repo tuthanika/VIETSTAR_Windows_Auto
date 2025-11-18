@@ -79,6 +79,8 @@ jobs:
           }
         ]
 
+      MAX_FILE: 1
+
     steps:
       - name: Checkout Auto repo
         uses: actions/checkout@v4
@@ -105,28 +107,46 @@ jobs:
           copy prepare-build.cmd "${{ env.SCRIPT_PATH }}"
           copy upload-build.cmd "${{ env.SCRIPT_PATH }}"
 
-      - name: Prepare build
-        shell: cmd
+      - name: Resolve modes and write rule envs
         run: |
-          cd /d "${{ env.SCRIPT_PATH }}"
-          call prepare-build.cmd "${{ github.event.inputs.mode }}"
+          Set-Location "${{ env.SCRIPT_PATH }}"
+          $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
+          if ("${{ github.event.inputs.mode }}" -eq "auto") {
+            $modes = $rules.Mode
+          } else {
+            $modes = @("${{ github.event.inputs.mode }}")
+          }
+          # Ghi danh sách mode
+          Set-Content -Path "$env:SCRIPT_PATH\modes.txt" -Value ($modes -join "`n")
+          # Tạo rule.env cho từng mode
+          foreach ($m in $modes) {
+            $r = $rules | Where-Object { $_.Mode -eq $m }
+            if (-not $r) { throw "Mode $m not found in FILE_CODE_RULES" }
+            $kv = @()
+            $kv += "mode=$($r.Mode)"
+            $kv += "folder=$($r.Folder)"
+            $kv += "patterns=$([string]::Join(';',$r.Patterns))"
+            if ($r.DriverFolder)   { $kv += "drvFolder=$($r.DriverFolder)" }
+            if ($r.DriverPatterns) { $kv += "drvPatterns=$([string]::Join(';',$r.DriverPatterns))" }
+            if ($r.BootFolder)     { $kv += "bootFolder=$($r.BootFolder)" }
+            if ($r.BootPatterns)   { $kv += "bootPatterns=$([string]::Join(';',$r.BootPatterns))" }
+            if ($r.SilentFolder)   { $kv += "silentFolder=$($r.SilentFolder)" }
+            if ($r.SilentPatterns) { $kv += "silentPatterns=$([string]::Join(';',$r.SilentPatterns))" }
+            Set-Content -Path "$env:SCRIPT_PATH\rule.$m.env" -Value ($kv -join "`n")
+          }
 
-      - name: Run build
+      - name: Prepare, build, upload per mode
         shell: cmd
         run: |
           cd /d "${{ env.SCRIPT_PATH }}"
-          if exist "_skip_${{ github.event.inputs.mode }}.flag" (
-            echo [SKIP] Mode ${{ github.event.inputs.mode }} skipped
-          ) else (
-            call zzz.Windows-imdisk.cmd "${{ github.event.inputs.mode }}"
-          )
-
-      - name: Upload build
-        shell: cmd
-        run: |
-          cd /d "${{ env.SCRIPT_PATH }}"
-          if exist "_skip_${{ github.event.inputs.mode }}.flag" (
-            echo [SKIP] Upload skipped
-          ) else (
-            call upload-build.cmd "${{ github.event.inputs.mode }}"
+          for /f %%M in (modes.txt) do (
+            echo [RUN] Mode %%M
+            copy /y "rule.%%M.env" "rule.env" >nul
+            call prepare-build.cmd %%M
+            if exist "_skip_%%M.flag" (
+              echo [SKIP] Mode %%M skipped
+            ) else (
+              call zzz.Windows-imdisk.cmd %%M
+              call upload-build.cmd %%M
+            )
           )
