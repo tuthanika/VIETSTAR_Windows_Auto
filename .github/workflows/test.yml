@@ -86,6 +86,11 @@ jobs:
       - name: Checkout Auto repo
         uses: actions/checkout@v4
 
+      - name: Prepare working directories
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
+
       - name: Clone SCRIPT_REPO
         run: |
           if (-not (Test-Path "${{ env.SCRIPT_PATH }}")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
