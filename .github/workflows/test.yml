@@ -81,7 +81,7 @@ jobs:
         ]
 
       MAX_FILE: 1
-
+      
     steps:
       - name: Checkout Auto repo
         uses: actions/checkout@v4
@@ -89,35 +89,25 @@ jobs:
       - name: Prepare working directories
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
-          New-Item -ItemType Directory -Path "$env:INSTALL_PATH" -Force | Out-Null
-
-      - name: Clone SCRIPT_REPO
-        run: |
-          if (-not (Test-Path "${{ env.SCRIPT_PATH }}")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
-          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
-
-      - name: Install aria2
-        run: |
-          choco install aria2 -y
+          New-Item -ItemType Directory -Path $env:SCRIPT_PATH -Force | Out-Null
 
       - name: Install rclone
         shell: pwsh
         run: |
-          $zip = "$env:INSTALL_PATH\rclone.zip"
+          $zip = "$env:SCRIPT_PATH\rclone.zip"
           Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile $zip
-          Expand-Archive -Path $zip -DestinationPath "$env:INSTALL_PATH\rclone" -Force
-          $rcloneExe = Get-ChildItem "$env:INSTALL_PATH\rclone" -Recurse -Filter "rclone.exe" | Select-Object -First 1
-          Copy-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe" -Force
-          & "$env:SCRIPT_PATH\rclone.exe" version        
-          & Get-ChildItem $env:SCRIPT_PATH\rclone.exe
+          Expand-Archive -Path $zip -DestinationPath "$env:SCRIPT_PATH\rclone" -Force
+          $exe = Get-ChildItem "$env:SCRIPT_PATH\rclone" -Recurse -Filter "rclone.exe" | Select-Object -First 1
+          Copy-Item $exe.FullName "$env:SCRIPT_PATH\rclone.exe" -Force
+          & "$env:SCRIPT_PATH\rclone.exe" version
 
-      - name: Fetch rclone.conf from GitHub
-        shell: cmd
+      - name: Fetch rclone.conf
+        shell: pwsh
         run: |
-          curl -H "Authorization: token %GH_PAT%" ^
-               -L -o "%RCLONE_CONFIG_PATH%" ^
-               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
+          $confUrl = "https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf"
+          $confPath = "$env:SCRIPT_PATH\rclone.conf"
+          Invoke-WebRequest -Uri $confUrl -OutFile $confPath
+          Get-Content $confPath | Write-Host
 
       - name: Copy helper scripts
         run: |
@@ -125,21 +115,15 @@ jobs:
           copy upload-build.cmd "${{ env.SCRIPT_PATH }}"
 
       - name: Resolve modes and write rule envs
+        shell: pwsh
         run: |
-          Set-Location "${{ env.SCRIPT_PATH }}"
+          Set-Location $env:SCRIPT_PATH
           $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-          if ("${{ github.event.inputs.mode }}" -eq "auto") {
-            $modes = $rules.Mode
-          } else {
-            $modes = @("${{ github.event.inputs.mode }}")
-          }
+          $modes = if ($env:mode -eq "auto") { $rules.Mode } else { @($env:mode) }
           Set-Content -Path "$env:SCRIPT_PATH\modes.txt" -Value ($modes -join "`n")
           foreach ($m in $modes) {
             $r = $rules | Where-Object { $_.Mode -eq $m }
-            $kv = @()
-            $kv += "mode=$($r.Mode)"
-            $kv += "folder=$($r.Folder)"
-            $kv += "patterns=$([string]::Join(';',$r.Patterns))"
+            $kv = @("mode=$($r.Mode)", "folder=$($r.Folder)", "patterns=$([string]::Join(';',$r.Patterns))")
             if ($r.DriverFolder)   { $kv += "drvFolder=$($r.DriverFolder)" }
             if ($r.DriverPatterns) { $kv += "drvPatterns=$([string]::Join(';',$r.DriverPatterns))" }
             if ($r.BootFolder)     { $kv += "bootFolder=$($r.BootFolder)" }
@@ -149,25 +133,19 @@ jobs:
             Set-Content -Path "$env:SCRIPT_PATH\rule.$m.env" -Value ($kv -join "`n")
           }
 
-      - name: Prepare, build, upload per mode (with debug logs)
+      - name: Prepare build
+        shell: pwsh
+        run: |
+          & "${{ env.SCRIPT_PATH }}\prepare-build.ps1" "${{ github.event.inputs.mode }}"
+
+      - name: Build per mode (cmd)
         shell: cmd
         run: |
-          dir /b C:\RUN\rclone.exe 
-          cd /d "${{ env.SCRIPT_PATH }}"
-          for /f %%M in (modes.txt) do (
-            echo [RUN] Mode %%M
-            copy /y "rule.%%M.env" "rule.env" >nul
-            call prepare-build.cmd %%M > prepare-%%M.log 2>&1
-            echo -------- prepare-%%M.log --------
-            type prepare-%%M.log
-            if exist "_skip_%%M.flag" (
-              echo [SKIP] Mode %%M skipped
-            ) else (
-              call zzz.Windows-imdisk.cmd %%M > build-%%M.log 2>&1
-              echo -------- build-%%M.log --------
-              type build-%%M.log
-              call upload-build.cmd %%M > upload-%%M.log 2>&1
-              echo -------- upload-%%M.log --------
-              type upload-%%M.log
-            )
-          )
+          cd /d "%SCRIPT_PATH%"
+          call zzz.Windows-imdisk.cmd %mode% > build-%mode%.log 2>&1
+          type build-%mode%.log
+
+      - name: Upload build
+        shell: pwsh
+        run: |
+          & "${{ env.SCRIPT_PATH }}\upload-build.ps1" "${{ github.event.inputs.mode }}"
