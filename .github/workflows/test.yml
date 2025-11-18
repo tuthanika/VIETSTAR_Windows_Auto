@@ -156,8 +156,7 @@ jobs:
       - name: Build per mode (cmd)
         shell: cmd
         run: |
-          cd /d "%SCRIPT_PATH%"
-          call zzz.Windows-imdisk.cmd %mode% > build-%mode%.log 2>&1
+          call %SCRIPT_PATH%\zzz.Windows-imdisk.cmd %mode% > build-%mode%.log 2>&1
           type build-%mode%.log
 
       - name: Upload build
