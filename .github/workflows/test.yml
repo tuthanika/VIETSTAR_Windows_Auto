@@ -17,7 +17,7 @@ jobs:
 
       SCRIPT_REPO: github.com/tuthanika/VIETSTAR-Windows
       SCRIPT_PATH: C:\RUN
-
+      INSTALL_PATH: C:\INSTALL
       RCLONE_CONF_REPO: github.com/tuthanika/Rclone-Auto-Refresh-Token
       RCLONE_CONFIG_PATH: C:\RUN\rclone.conf
 
