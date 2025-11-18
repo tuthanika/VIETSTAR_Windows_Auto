@@ -32,6 +32,11 @@ jobs:
 
       - name: Show rclone version
         run: rclone version
+
+      - name: Prepare working directories
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
         
       - name: Fetch rclone.conf from GitHub
         shell: cmd
