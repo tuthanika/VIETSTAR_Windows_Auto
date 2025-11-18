@@ -106,6 +106,7 @@ jobs:
           copy upload-build.cmd "${{ env.SCRIPT_PATH }}"
 
       - name: Run build
+        shell: cmd
         run: |
           cd "${{ env.SCRIPT_PATH }}"
           if "${{ github.event.inputs.mode }}"=="auto" (
