@@ -109,7 +109,8 @@ jobs:
           Expand-Archive -Path $zip -DestinationPath "$env:INSTALL_PATH\rclone" -Force
           $rcloneExe = Get-ChildItem "$env:INSTALL_PATH\rclone" -Recurse -Filter "rclone.exe" | Select-Object -First 1
           Copy-Item $rcloneExe.FullName "$env:SCRIPT_PATH\rclone.exe" -Force
-          & "$env:SCRIPT_PATH\rclone.exe" version
+          & "$env:SCRIPT_PATH\rclone.exe" version        
+          & Get-ChildItem $env:SCRIPT_PATH\rclone.exe
 
       - name: Fetch rclone.conf from GitHub
         shell: cmd
@@ -151,6 +152,7 @@ jobs:
       - name: Prepare, build, upload per mode (with debug logs)
         shell: cmd
         run: |
+          dir /b C:\RUN\rclone.exe 
           cd /d "${{ env.SCRIPT_PATH }}"
           for /f %%M in (modes.txt) do (
             echo [RUN] Mode %%M
