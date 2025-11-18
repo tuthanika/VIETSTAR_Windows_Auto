@@ -90,6 +90,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
+          New-Item -ItemType Directory -Path "$env:INSTALL_PATH" -Force | Out-Null
 
       - name: Clone SCRIPT_REPO
         run: |
