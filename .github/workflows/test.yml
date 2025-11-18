@@ -2,15 +2,16 @@ name: Test WinFsp and Rclone Mount
 
 on:
   workflow_dispatch:
-  
+
+jobs:
+  run-download-upload:
+    runs-on: windows-latest
+
     env:
       GH_PAT: ${{ secrets.GH_PAT }}
       RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\RUN\rclone.conf' }}
       REMOTE_NAME: ${{ vars.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
 
-jobs:
-  test:
-    runs-on: windows-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
