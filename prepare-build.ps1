@@ -4,7 +4,6 @@ param(
 
 Write-Host "[DEBUG] prepare-build.ps1 started"
 Write-Host "[DEBUG] MODE arg: $Mode"
-
 Write-Host "[DEBUG] RCLONE_PATH=$env:RCLONE_PATH"
 Write-Host "[DEBUG] ALIST_PATH=$env:ALIST_PATH"
 Write-Host "[DEBUG] RCLONE_CONFIG_PATH=$env:RCLONE_CONFIG_PATH"
@@ -36,28 +35,29 @@ Get-Content $ruleFile | ForEach-Object {
 Write-Host "[DEBUG] folder=$($ruleMap['folder'])"
 Write-Host "[DEBUG] patterns=$($ruleMap['patterns'])"
 
-# Chọn file iso
+# Lấy danh sách file bằng lsjson
 if ($ruleMap['patterns']) {
-	$remote = "$($env:RCLONE_PATH)$($env:iso)/$($ruleMap['folder'])"
-	Write-Host "[DEBUG] rclone ls $remote --include $($ruleMap['patterns'])"
+    $remoteDir = "$($env:RCLONE_PATH)$($env:iso)/$($ruleMap['folder'])"
+    Write-Host "[DEBUG] rclone lsjson $remoteDir --include $($ruleMap['patterns'])"
 
-	$list = & $env:SCRIPT_PATH\rclone.exe `
-	    --config $env:RCLONE_CONFIG_PATH `
-	    ls $remote --include "$($ruleMap['patterns'])"
-
-	if ($LASTEXITCODE -ne 0) {
-	    Write-Error "[ERROR] rclone ls failed (exit=$LASTEXITCODE)"
-	    exit 1
-	}
-
-    $lastFile = ($list | ForEach-Object { ($_ -split '\s+',2)[1] }) | Select-Object -Last 1
-    Write-Host "[DEBUG] fileA=$lastFile"
-
-    if ($lastFile) {
-        $localDir = "$env:SCRIPT_PATH\$env:iso"
-        $alistUrl = "$env:ALIST_PATH/$($env:iso)/$($ruleMap['folder'])/$lastFile"
-        Write-Host "[PREPARE] Download $lastFile"
-        aria2c -q -d $localDir $alistUrl
+    try {
+        $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
+            --config "$env:RCLONE_CONFIG_PATH" `
+            --include "$($ruleMap['patterns'])" 2>$null
+        if ($jsonMain) {
+            $files = $jsonMain | ConvertFrom-Json
+            $lastFile = $files | Select-Object -Last 1
+            Write-Host "[DEBUG] fileA=$($lastFile.Name)"
+            if ($lastFile) {
+                $localDir = "$env:SCRIPT_PATH\$env:iso"
+                $alistUrl = "$env:ALIST_PATH/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                Write-Host "[PREPARE] Download $($lastFile.Name)"
+                aria2c -q -d $localDir $alistUrl
+            }
+        }
+    } catch {
+        Write-Error "[ERROR] rclone lsjson failed"
+        exit 1
     }
 }
 

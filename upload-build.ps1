@@ -34,12 +34,13 @@ Get-ChildItem "$env:SCRIPT_PATH\$env:vietstar" -Filter *.iso | ForEach-Object {
 }
 Add-Content $buildMd ""
 
-$remote = "$($env:RCLONE_PATH)$($env:vietstar)/$folder"
-Write-Host "[UPLOAD] To $remote"
+$remoteDir = "$($env:RCLONE_PATH)$($env:vietstar)/$folder"
+Write-Host "[UPLOAD] To $remoteDir"
 
-& $env:SCRIPT_PATH\rclone.exe `
-    --config $env:RCLONE_CONFIG_PATH `
-    copy "$env:SCRIPT_PATH\$env:vietstar" $remote --include "*.iso"
+& "$env:SCRIPT_PATH\rclone.exe" `
+    copy "$env:SCRIPT_PATH\$env:vietstar" $remoteDir `
+    --config "$env:RCLONE_CONFIG_PATH" `
+    --include "*.iso"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "[ERROR] Upload failed (rclone copy exit=$LASTEXITCODE)"
