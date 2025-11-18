@@ -157,13 +157,16 @@ jobs:
         shell: pwsh
         run: |
           & "${{ env.SCRIPT_PATH }}\prepare-build.ps1" "${{ github.event.inputs.mode }}"
-
+          
       - name: Build per mode (cmd)
         shell: cmd
         run: |
           cd /d "%SCRIPT_PATH%"
+          echo Starting build for mode ${{ github.event.inputs.mode }}
           call zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }} > build-${{ github.event.inputs.mode }}.log 2>&1
+          echo Build finished, showing log:
           type build-${{ github.event.inputs.mode }}.log
+        
 
       - name: Upload build
         shell: pwsh

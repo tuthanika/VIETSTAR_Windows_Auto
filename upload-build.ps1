@@ -29,6 +29,10 @@ Write-Host "[DEBUG] Timestamp: $dt"
 $buildMd = "$env:SCRIPT_PATH\BUILD.md"
 Add-Content $buildMd "Build mode: $Mode"
 Add-Content $buildMd "Date: $dt"
+Write-Host "Checking local ISO files in $env:SCRIPT_PATH\$env:vietstar"
+Get-ChildItem "$env:SCRIPT_PATH\$env:vietstar" -Filter *.iso | ForEach-Object {
+    Write-Host "  Found: $($_.FullName)"
+}
 Get-ChildItem "$env:SCRIPT_PATH\$env:vietstar" -Filter *.iso | ForEach-Object {
     Add-Content $buildMd "Built file: $($_.Name)"
 }
