@@ -91,6 +91,10 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path $env:SCRIPT_PATH -Force | Out-Null
 
+      - name: Install aria2
+        run: |
+          choco install aria2 -y
+
       - name: Install rclone
         shell: pwsh
         run: |
