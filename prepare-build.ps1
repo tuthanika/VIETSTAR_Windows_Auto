@@ -5,17 +5,20 @@ Write-Host "[DEBUG] MODE arg: $Mode"
 Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 Write-Host "[DEBUG] RCLONE_PATH=$env:RCLONE_PATH"
 Write-Host "[DEBUG] ALIST_HOST=$env:ALIST_HOST"
-Write-Host "[DEBUG] ALIST_TOKEN present? " -NoNewline; Write-Host ([string]::IsNullOrEmpty($env:ALIST_TOKEN) ? "NO" : "YES")
+Write-Host "[DEBUG] ALIST_PATH=$env:ALIST_PATH"
+Write-Host "[DEBUG] ALIST_TOKEN set? " -NoNewline; Write-Host ([string]::IsNullOrEmpty($env:ALIST_TOKEN) ? "NO" : "YES")
 Write-Host "[DEBUG] RCLONE_CONFIG_PATH=$env:RCLONE_CONFIG_PATH"
 
 # Tạo thư mục local
 foreach ($d in @("$env:SCRIPT_PATH\$env:iso",
+                 "$env:SCRIPT_PATH\$env:vietstar",
                  "$env:SCRIPT_PATH\$env:driver",
                  "$env:SCRIPT_PATH\$env:boot7",
-                 "$env:SCRIPT_PATH\$env:silent",
-                 "$env:SCRIPT_PATH\$env:vietstar")) {
-    Write-Host "[DEBUG] mkdir $d"
-    if (-not (Test-Path $d)) { New-Item -ItemType Directory -Path $d | Out-Null }
+                 "$env:SCRIPT_PATH\$env:silent")) {
+    if (-not (Test-Path $d)) {
+        Write-Host "[DEBUG] mkdir $d"
+        New-Item -ItemType Directory -Path $d | Out-Null
+    }
 }
 
 # Đọc rule.env
@@ -34,7 +37,7 @@ Get-Content $ruleFile | ForEach-Object {
 Write-Host "[DEBUG] folder=$($ruleMap['folder'])"
 Write-Host "[DEBUG] patterns=$($ruleMap['patterns'])"
 
-# Lấy danh sách file bằng rclone lsjson
+# Tìm file bằng rclone lsjson
 if ($ruleMap['patterns']) {
     $remoteDir = "$($env:RCLONE_PATH)$($env:iso)/$($ruleMap['folder'])"
     Write-Host "[DEBUG] rclone lsjson $remoteDir --include $($ruleMap['patterns'])"
@@ -56,16 +59,14 @@ if ($ruleMap['patterns']) {
             Write-Host "[DEBUG] fileA=$($lastFile.Name)"
 
             if ($lastFile) {
-                # Chuẩn bị gọi API Alist để lấy raw_url
-                $alistPath = "/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                $alistPathRel = "/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
                 $apiUrl = "$($env:ALIST_HOST.TrimEnd('/'))/api/fs/get"
-                $body = @{ path = $alistPath } | ConvertTo-Json -Compress
+                $body = @{ path = $alistPathRel } | ConvertTo-Json -Compress
 
                 Write-Host "[DEBUG] Alist API url=$apiUrl"
-                Write-Host "[DEBUG] Alist API path=$alistPath"
-                Write-Host "[DEBUG] POST with Authorization header"
+                Write-Host "[DEBUG] Alist API path=$alistPathRel"
 
-                $response = $null
+                $downloadUrl = $null
                 try {
                     $response = Invoke-RestMethod -Uri $apiUrl `
                         -Method Post `
@@ -73,32 +74,23 @@ if ($ruleMap['patterns']) {
                         -Body $body `
                         -ContentType "application/json" `
                         -ErrorAction Stop
+
+                    Write-Host "=== DEBUG: Alist API response JSON ==="
+                    $response | ConvertTo-Json -Depth 6 | Write-Host
+
+                    $downloadUrl = $response.data.raw_url
                 } catch {
                     Write-Warning "[WARN] Alist API request failed: $($_.Exception.Message)"
                 }
 
-                if ($response -is [string]) {
-                    # Trường hợp trả về HTML (sai endpoint)
-                    Write-Host "=== DEBUG: Alist API raw string response (HTML detected) ==="
-                    Write-Host ($response.Substring(0, [Math]::Min(500, $response.Length)))
-                    Write-Error "[ERROR] Alist API returned HTML, check ALIST_HOST or token."
-                    exit 1
-                }
-
-                Write-Host "=== DEBUG: Alist API response JSON ==="
-                $response | ConvertTo-Json -Depth 6 | Write-Host
-
-                $downloadUrl = $response.data.raw_url
                 if ([string]::IsNullOrWhiteSpace($downloadUrl)) {
-                    Write-Error "[ERROR] raw_url not found in API response. Verify path and token."
-                    exit 1
+                    Write-Warning "[WARN] raw_url not found, fallback to direct URL"
+                    $downloadUrl = "$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
                 }
 
                 Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
                 $localDir = "$env:SCRIPT_PATH\$env:iso"
-
-                # Tải bằng aria2c (không cần header, vì raw_url là link trực tiếp)
-                $ariaOut = & aria2c -d $localDir $downloadUrl 2>&1
+                $ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir $downloadUrl 2>&1
                 Write-Host "=== DEBUG: aria2c output ==="
                 Write-Host $ariaOut
             }
