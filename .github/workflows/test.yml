@@ -137,6 +137,11 @@ jobs:
             if ($r.SilentPatterns) { $kv += "silentPatterns=$([string]::Join(';',$r.SilentPatterns))" }
             Set-Content -Path "$env:SCRIPT_PATH\rule.$m.env" -Value ($kv -join "`n")
           }
+          
+      - name: Select rule for mode
+        shell: pwsh
+        run: |
+          Copy-Item "$env:SCRIPT_PATH\rule.${{ github.event.inputs.mode }}.env" "$env:SCRIPT_PATH\rule.env" -Force
 
       - name: Prepare build
         shell: pwsh
