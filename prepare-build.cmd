@@ -1,6 +1,5 @@
 @echo on
 setlocal EnableExtensions EnableDelayedExpansion
-
 chcp 1252 >nul
 
 echo [DEBUG] prepare-build.cmd started
@@ -12,7 +11,6 @@ set "RC=%SCRIPT_PATH%\rclone.exe --config %SCRIPT_PATH%\rclone.conf %rclone_flag
 :: Kiểm tra rclone và config
 if not exist "%SCRIPT_PATH%\rclone.exe" (
   echo [ERROR] rclone.exe not found at "%SCRIPT_PATH%\rclone.exe"
-  dir "%SCRIPT_PATH%"
   exit /b 1
 )
 if not exist "%SCRIPT_PATH%\rclone.conf" (
@@ -32,14 +30,13 @@ for %%D in ("%SCRIPT_PATH%\%iso%" "%SCRIPT_PATH%\%driver%" "%SCRIPT_PATH%\%boot7
   )
 )
 
-:: Load rule.env (do step trước hoặc PowerShell chuẩn tạo sẵn; không PowerShell trong batch)
+:: Load rule.env
 if not exist "%SCRIPT_PATH%\rule.env" (
   echo [ERROR] rule.env not found at "%SCRIPT_PATH%\rule.env"
-  dir "%SCRIPT_PATH%"
   exit /b 1
 )
 
-:: Reset các biến
+:: Reset biến
 set "folder="
 set "patterns="
 set "drvFolder="
@@ -50,41 +47,41 @@ set "silentFolder="
 set "silentPatterns="
 
 for /f "usebackq tokens=1,* delims==" %%A in ("%SCRIPT_PATH%\rule.env") do (
-  set "key=%%A"
-  set "val=%%B"
-  if /I "!key!"=="mode"          set "mode_rule=!val!"
-  if /I "!key!"=="folder"        set "folder=!val!"
-  if /I "!key!"=="patterns"      set "patterns=!val!"
-  if /I "!key!"=="drvFolder"     set "drvFolder=!val!"
-  if /I "!key!"=="drvPatterns"   set "drvPatterns=!val!"
-  if /I "!key!"=="bootFolder"    set "bootFolder=!val!"
-  if /I "!key!"=="bootPatterns"  set "bootPatterns=!val!"
-  if /I "!key!"=="silentFolder"  set "silentFolder=!val!"
-  if /I "!key!"=="silentPatterns" set "silentPatterns=!val!"
+  if /I "%%A"=="mode"          set "mode_rule=%%B"
+  if /I "%%A"=="folder"        set "folder=%%B"
+  if /I "%%A"=="patterns"      set "patterns=%%B"
+  if /I "%%A"=="drvFolder"     set "drvFolder=%%B"
+  if /I "%%A"=="drvPatterns"   set "drvPatterns=%%B"
+  if /I "%%A"=="bootFolder"    set "bootFolder=%%B"
+  if /I "%%A"=="bootPatterns"  set "bootPatterns=%%B"
+  if /I "%%A"=="silentFolder"  set "silentFolder=%%B"
+  if /I "%%A"=="silentPatterns" set "silentPatterns=%%B"
 )
 
-echo [DEBUG] mode_rule=!mode_rule!
-echo [DEBUG] folder=!folder!
-echo [DEBUG] patterns=!patterns!
-echo [DEBUG] drvFolder=!drvFolder!
-echo [DEBUG] drvPatterns=!drvPatterns!
-echo [DEBUG] bootFolder=!bootFolder!
-echo [DEBUG] bootPatterns=!bootPatterns!
-echo [DEBUG] silentFolder=!silentFolder!
-echo [DEBUG] silentPatterns=!silentPatterns!
+echo [DEBUG] mode_rule=%mode_rule%
+echo [DEBUG] folder=%folder%
+echo [DEBUG] patterns=%patterns%
+echo [DEBUG] drvFolder=%drvFolder%
+echo [DEBUG] drvPatterns=%drvPatterns%
+echo [DEBUG] bootFolder=%bootFolder%
+echo [DEBUG] bootPatterns=%bootPatterns%
+echo [DEBUG] silentFolder=%silentFolder%
+echo [DEBUG] silentPatterns=%silentPatterns%
 
-:: Helper: chọn file mới nhất theo sort tên từ rclone ls (không PowerShell)
 set "TMP_LIST=%TEMP%\_rclone_ls.txt"
 
 :choose_latest
 set "_remote_dir=%~1"
 set "_include=%~2"
 set "_outvar=%~3"
-set "%_outvar%="
+if "%_include%"=="" (
+  echo [DEBUG] choose_latest: include empty, skip
+  goto :eof
+)
 echo [DEBUG] choose_latest: remote="%_remote_dir%" include="%_include%"
 "%RC%" ls "%_remote_dir%" --include "%_include%" > "%TMP_LIST%" 2>&1
 if errorlevel 1 (
-  echo [ERROR] rclone ls failed on "%_remote_dir%" with include "%_include%"
+  echo [ERROR] rclone ls failed on "%_remote_dir%" include "%_include%"
   type "%TMP_LIST%"
   del "%TMP_LIST%" >nul 2>&1
   goto :eof
@@ -93,21 +90,6 @@ for /f "usebackq tokens=1,* delims= " %%S in ("%TMP_LIST%") do (
   set "lastfile=%%~nxT"
 )
 set "%_outvar%=%lastfile%"
-del "%TMP_LIST%" >nul 2>&1
-goto :eof
-
-:get_remote_size
-set "_remote_dir=%~1"
-set "_include=%~2"
-set "_name=%~3"
-set "_outvar=%~4"
-set "%_outvar%="
-"%RC%" ls "%_remote_dir%" --include "%_include%" > "%TMP_LIST%" 2>&1
-for /f "usebackq tokens=1,* delims= " %%S in ("%TMP_LIST%") do (
-  for /f "delims=" %%N in ("%%T") do (
-    if /I "%%~nxN"=="%_name%" set "%_outvar%=%%S"
-  )
-)
 del "%TMP_LIST%" >nul 2>&1
 goto :eof
 
@@ -124,61 +106,55 @@ if "%_file%"=="" (
 if not exist "%_local_dir%" mkdir "%_local_dir%"
 set "_local_file=%_local_dir%\%_file%"
 echo [DEBUG] download_if_needed: local="%_local_file%" remote="%_remote_dir%" include="%_include%" url="%_alist_url%"
-
 if exist "%_local_file%" (
   for %%Z in ("%_local_file%") do set "_local_size=%%~zZ"
-  call :get_remote_size "%_remote_dir%" "%_include%" "%_file%" _remote_size
-  echo [DEBUG] local_size=%_local_size% remote_size=%_remote_size%
-  if defined _remote_size if "%_local_size%"=="%_remote_size%" (
-    echo [PREPARE] Skip download (size match): %_file%
-    goto :eof
-  )
+  echo [DEBUG] local_size=%_local_size%
 )
 echo [PREPARE] Download %_file%
 aria2c -q -d "%_local_dir%" "%_alist_url%"
-if errorlevel 1 (
-  echo [ERROR] aria2c failed (errorlevel=%errorlevel%) url=%_alist_url%
-  exit /b 1
-)
 goto :eof
 
 :: Bước 0: chọn file nguồn A và file build X
-call :choose_latest "%RCLONE_PATH%/%iso%/%folder%" "%patterns%" fileA
-call :choose_latest "%RCLONE_PATH%/%vietstar%/%folder%" "%patterns%" fileX
+if not "%patterns%"=="" (
+  call :choose_latest "%RCLONE_PATH%/%iso%/%folder%" "%patterns%" fileA
+  call :choose_latest "%RCLONE_PATH%/%vietstar%/%folder%" "%patterns%" fileX
+)
 
-echo [DEBUG] fileA=!fileA!
-echo [DEBUG] fileX=!fileX!
+echo [DEBUG] fileA=%fileA%
+echo [DEBUG] fileX=%fileX%
 
-if /I "!fileA!"=="!fileX!" (
+if /I "%fileA%"=="%fileX%" (
   echo [PREPARE] Same name A/X → set skip flag
   > "%SCRIPT_PATH%\_skip_%MODE%.flag" echo SKIP
   goto set_env
 )
 
 :: Bước 1: tải theo rule
-call :download_if_needed "%RCLONE_PATH%/%iso%/%folder%" "%patterns%" "%SCRIPT_PATH%\%iso%" "!fileA!" "%ALIST_PATH%/%iso%/%folder%/!fileA!"
+if not "%fileA%"=="" (
+  call :download_if_needed "%RCLONE_PATH%/%iso%/%folder%" "%patterns%" "%SCRIPT_PATH%\%iso%" "%fileA%" "%ALIST_PATH%/%iso%/%folder%/%fileA%"
+)
 
-if defined drvFolder if defined drvPatterns (
+if not "%drvFolder%"=="" if not "%drvPatterns%"=="" (
   call :choose_latest "%RCLONE_PATH%/%driver%/%drvFolder%" "%drvPatterns%" fileB
-  call :download_if_needed "%RCLONE_PATH%/%driver%/%drvFolder%" "%drvPatterns%" "%SCRIPT_PATH%\%driver%" "!fileB!" "%ALIST_PATH%/%driver%/%drvFolder%/!fileB!"
+  call :download_if_needed "%RCLONE_PATH%/%driver%/%drvFolder%" "%drvPatterns%" "%SCRIPT_PATH%\%driver%" "%fileB%" "%ALIST_PATH%/%driver%/%drvFolder%/%fileB%"
 )
 
-if defined bootFolder if defined bootPatterns (
+if not "%bootFolder%"=="" if not "%bootPatterns%"=="" (
   call :choose_latest "%RCLONE_PATH%/%boot7%" "%bootPatterns%" fileC
-  call :download_if_needed "%RCLONE_PATH%/%boot7%" "%bootPatterns%" "%SCRIPT_PATH%\%boot7%" "!fileC!" "%ALIST_PATH%/%boot7%/!fileC!"
+  call :download_if_needed "%RCLONE_PATH%/%boot7%" "%bootPatterns%" "%SCRIPT_PATH%\%boot7%" "%fileC%" "%ALIST_PATH%/%boot7%/%fileC%"
 )
 
-if defined silentFolder if defined silentPatterns (
+if not "%silentFolder%"=="" if not "%silentPatterns%"=="" (
   call :choose_latest "%RCLONE_PATH%/%silent%" "%silentPatterns%" fileD
-  call :download_if_needed "%RCLONE_PATH%/%silent%" "%silentPatterns%" "%SCRIPT_PATH%\%silent%" "!fileD!" "%ALIST_PATH%/%silent%/!fileD!"
+  call :download_if_needed "%RCLONE_PATH%/%silent%" "%silentPatterns%" "%SCRIPT_PATH%\%silent%" "%fileD%" "%ALIST_PATH%/%silent%/%fileD%"
 )
 
 :: Bước 2: mount silent nếu có
-if defined fileD (
+if not "%fileD%"=="" (
   imdisk -D -m A: >nul 2>&1
-  imdisk -a -m A: -f "%SCRIPT_PATH%\%silent%\!fileD!"
+  imdisk -a -m A: -f "%SCRIPT_PATH%\%silent%\%fileD%"
   if errorlevel 1 (
-    echo [DEBUG] imdisk mount failed, fallback to local silent folder
+    echo [DEBUG] imdisk mount failed, fallback
     set "silent=%SCRIPT_PATH%\%silent%"
   ) else (
     set "silent=A:\Silent\VIETSTAR-Silent-Network\Apps\exe"

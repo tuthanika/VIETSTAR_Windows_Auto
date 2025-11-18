@@ -1,18 +1,15 @@
 @echo on
 setlocal EnableExtensions EnableDelayedExpansion
 
-:: ===== DEBUG START =====
 echo [DEBUG] upload-build.cmd started
 echo [DEBUG] MODE arg: "%~1"
-:: ===== DEBUG END =======
 
 set "MODE=%~1"
 set "RC=%SCRIPT_PATH%\rclone.exe --config %SCRIPT_PATH%\rclone.conf %rclone_flag%"
 
-:: Đọc folder từ rule.env (được prepare-build.cmd hoặc step trước đó đặt sẵn)
+:: Đọc folder từ rule.env
 if not exist "%SCRIPT_PATH%\rule.env" (
   echo [ERROR] rule.env not found at "%SCRIPT_PATH%\rule.env"
-  dir "%SCRIPT_PATH%"
   exit /b 1
 )
 
@@ -27,30 +24,14 @@ if "%folder%"=="" (
   exit /b 1
 )
 
-:: Tạo timestamp an toàn bằng batch (không PowerShell)
-:: Format: YYYY-MM-DD HH:MM:SS
-for /f "tokens=1-3 delims=/-. " %%a in ("%date%") do (
-  set "YYYY=%%c"
-  set "MM=%%b"
-  set "DD=%%a"
-)
-set "_time=%time%"
-:: zero-pad milliseconds drift by removing commas/spaces
-for /f "tokens=1-3 delims=:." %%x in ("%_time%") do (
-  set "HH=%%x"
-  set "MIN=%%y"
-  set "SEC=%%z"
-)
-:: Một số runner có HH bắt đầu bằng space → trim
-if "!HH:~0,1!"==" " set "HH=!HH:~1!"
-set "_dt=%YYYY%-%MM%-%DD% %HH%:%MIN%:%SEC%"
-
-echo [DEBUG] Timestamp: !_dt!
+:: Lấy timestamp bằng PowerShell để tránh lỗi parse %date%
+for /f "usebackq tokens=*" %%A in (`powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-dd HH:mm:ss'"`) do set "_dt=%%A"
+echo [DEBUG] Timestamp: %_dt%
 
 set "_build_md=%SCRIPT_PATH%\BUILD.md"
 
 echo Build mode: %MODE%>> "%_build_md%"
-echo Date: !_dt!>> "%_build_md%"
+echo Date: %_dt%>> "%_build_md%"
 for %%f in ("%SCRIPT_PATH%\%vietstar%\*.iso") do echo Built file: %%~nxf>> "%_build_md%"
 echo.>> "%_build_md%"
 
