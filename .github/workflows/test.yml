@@ -108,23 +108,32 @@ jobs:
       - name: Run build
         run: |
           Set-Location "${{ env.SCRIPT_PATH }}"
+
           if ("${{ github.event.inputs.mode }}" -eq "auto") {
             $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
             foreach ($r in $rules) {
-              cmd /c prepare-build.cmd $r.Mode
-              if (Test-Path (Join-Path $env:SCRIPT_PATH "_skip_$($r.Mode).flag")) {
+              Write-Host "[RUN] Mode $($r.Mode)"
+              # chạy prepare-build.cmd
+              & cmd /c "prepare-build.cmd $($r.Mode)"
+              $skipFlag = Join-Path $env:SCRIPT_PATH "_skip_$($r.Mode).flag"
+              if (Test-Path $skipFlag) {
                 Write-Host "[SKIP] Mode $($r.Mode) skipped"
               } else {
-                cmd /c zzz.Windows-imdisk.cmd $r.Mode
-                cmd /c upload-build.cmd $r.Mode
+                & cmd /c "zzz.Windows-imdisk.cmd $($r.Mode)"
+                & cmd /c "upload-build.cmd $($r.Mode)"
               }
             }
-          } else {
-            cmd /c prepare-build.cmd "${{ github.event.inputs.mode }}"
-            if (Test-Path "_skip_${{ github.event.inputs.mode }}.flag") {
-              Write-Host "[SKIP] Mode ${{ github.event.inputs.mode }} skipped"
+          }
+          else {
+            $mode = "${{ github.event.inputs.mode }}"
+            Write-Host "[RUN] Mode $mode"
+            & cmd /c "prepare-build.cmd $mode"
+            $skipFlag = "_skip_${mode}.flag"
+            if (Test-Path $skipFlag) {
+              Write-Host "[SKIP] Mode $mode skipped"
             } else {
-              cmd /c zzz.Windows-imdisk.cmd "${{ github.event.inputs.mode }}"
-              cmd /c upload-build.cmd "${{ github.event.inputs.mode }}"
+              & cmd /c "zzz.Windows-imdisk.cmd $mode"
+              & cmd /c "upload-build.cmd $mode"
             }
           }
+
