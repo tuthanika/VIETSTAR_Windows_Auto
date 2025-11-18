@@ -21,7 +21,7 @@ jobs:
       RCLONE_CONF_REPO: github.com/tuthanika/Rclone-Auto-Refresh-Token
       RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\RUN\rclone.conf' }}
 
-      RCLONE_PATH: "OD_APP-C03-vietstar:"
+      RCLONE_PATH: OD_APP-C03-vietstar
 
       ALIST_PATH: https://cloud.vietstarhp.com/od-app/C03.vietstar@vietstarhp.onmicrosoft.com
 

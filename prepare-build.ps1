@@ -31,7 +31,7 @@ Write-Host "[DEBUG] patterns=$($ruleMap['patterns'])"
 
 # Lấy danh sách file bằng rclone lsjson
 if ($ruleMap['patterns']) {
-    $remoteDir = "$($env:RCLONE_PATH)$($env:iso)/$($ruleMap['folder'])"
+    $remoteDir = "$($env:RCLONE_PATH):$($env:iso)/$($ruleMap['folder'])"
     Write-Host "[DEBUG] rclone lsjson $remoteDir --include $($ruleMap['patterns'])"
 
     try {
