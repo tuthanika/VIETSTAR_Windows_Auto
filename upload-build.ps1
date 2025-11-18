@@ -4,20 +4,18 @@ param(
 
 Write-Host "[DEBUG] upload-build.ps1 started"
 Write-Host "[DEBUG] MODE arg: $Mode"
-
-$RC = "$env:SCRIPT_PATH\rclone.exe --config $env:RCLONE_CONFIG_PATH $env:rclone_flag"
+Write-Host "[DEBUG] RCLONE_CONFIG_PATH=$env:RCLONE_CONFIG_PATH"
 
 $ruleFile = "$env:SCRIPT_PATH\rule.env"
 if (-not (Test-Path $ruleFile)) {
     Write-Error "[ERROR] rule.env not found at $ruleFile"
     exit 1
 }
-$rules = Get-Content $ruleFile | ForEach-Object {
-    $parts = $_ -split '=',2
-    if ($parts.Length -eq 2) { @{ Key=$parts[0]; Value=$parts[1] } }
-}
 $ruleMap = @{}
-foreach ($r in $rules) { $ruleMap[$r.Key] = $r.Value }
+Get-Content $ruleFile | ForEach-Object {
+    $parts = $_ -split '=',2
+    if ($parts.Length -eq 2) { $ruleMap[$parts[0]] = $parts[1] }
+}
 
 $folder = $ruleMap['folder']
 if (-not $folder) {
@@ -38,9 +36,14 @@ Add-Content $buildMd ""
 
 $remote = "$($env:RCLONE_PATH)$($env:vietstar)/$folder"
 Write-Host "[UPLOAD] To $remote"
-& $env:SCRIPT_PATH\rclone.exe copy "$env:SCRIPT_PATH\$env:vietstar" "$remote" --include "*.iso"
+
+& $env:SCRIPT_PATH\rclone.exe `
+    --config $env:RCLONE_CONFIG_PATH `
+    $env:rclone_flag `
+    copy "$env:SCRIPT_PATH\$env:vietstar" "$remote" --include "*.iso"
+
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "[ERROR] Upload failed (rclone copy errorlevel=$LASTEXITCODE)"
+    Write-Error "[ERROR] Upload failed (rclone copy exit=$LASTEXITCODE)"
     exit 1
 }
 

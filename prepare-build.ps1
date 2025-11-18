@@ -5,20 +5,9 @@ param(
 Write-Host "[DEBUG] prepare-build.ps1 started"
 Write-Host "[DEBUG] MODE arg: $Mode"
 
-$RC = "$env:SCRIPT_PATH\rclone.exe --config $env:RCLONE_CONFIG_PATH $env:rclone_flag"
-
-# Kiểm tra rclone và config
-if (-not (Test-Path "$env:SCRIPT_PATH\rclone.exe")) {
-    Write-Error "[ERROR] rclone.exe not found at $env:SCRIPT_PATH\rclone.exe"
-    exit 1
-}
-if (-not (Test-Path "$env:RCLONE_CONFIG_PATH")) {
-    Write-Error "[ERROR] rclone.conf not found at $env:RCLONE_CONFIG_PATH"
-    exit 1
-}
-
 Write-Host "[DEBUG] RCLONE_PATH=$env:RCLONE_PATH"
 Write-Host "[DEBUG] ALIST_PATH=$env:ALIST_PATH"
+Write-Host "[DEBUG] RCLONE_CONFIG_PATH=$env:RCLONE_CONFIG_PATH"
 
 # Tạo thư mục local
 foreach ($d in @("$env:SCRIPT_PATH\$env:iso",
@@ -38,25 +27,33 @@ if (-not (Test-Path $ruleFile)) {
     Write-Error "[ERROR] rule.env not found at $ruleFile"
     exit 1
 }
-$rules = Get-Content $ruleFile | ForEach-Object {
-    $parts = $_ -split '=',2
-    if ($parts.Length -eq 2) { @{ Key=$parts[0]; Value=$parts[1] } }
-}
-
 $ruleMap = @{}
-foreach ($r in $rules) { $ruleMap[$r.Key] = $r.Value }
+Get-Content $ruleFile | ForEach-Object {
+    $parts = $_ -split '=',2
+    if ($parts.Length -eq 2) { $ruleMap[$parts[0]] = $parts[1] }
+}
 
 Write-Host "[DEBUG] folder=$($ruleMap['folder'])"
 Write-Host "[DEBUG] patterns=$($ruleMap['patterns'])"
 
-# Ví dụ: chọn file iso
+# Chọn file iso
 if ($ruleMap['patterns']) {
     $remote = "$($env:RCLONE_PATH)$($env:iso)/$($ruleMap['folder'])"
     Write-Host "[DEBUG] rclone ls $remote --include $($ruleMap['patterns'])"
-    $list = & $env:SCRIPT_PATH\rclone.exe ls "$remote" --include "$($ruleMap['patterns'])"
+
+    $list = & $env:SCRIPT_PATH\rclone.exe `
+        --config $env:RCLONE_CONFIG_PATH `
+        $env:rclone_flag `
+        ls "$remote" --include "$($ruleMap['patterns'])"
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "[ERROR] rclone ls failed (exit=$LASTEXITCODE)"
+        exit 1
+    }
+
     $lastFile = ($list | ForEach-Object { ($_ -split '\s+',2)[1] }) | Select-Object -Last 1
     Write-Host "[DEBUG] fileA=$lastFile"
-    # tải về
+
     if ($lastFile) {
         $localDir = "$env:SCRIPT_PATH\$env:iso"
         $alistUrl = "$env:ALIST_PATH/$($env:iso)/$($ruleMap['folder'])/$lastFile"
