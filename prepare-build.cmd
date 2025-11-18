@@ -1,4 +1,4 @@
-@echo off
+
 setlocal EnableExtensions EnableDelayedExpansion
 
 :: Chuyển codepage về 1252 để tránh vấn đề UTF-8 trên runner

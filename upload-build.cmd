@@ -1,4 +1,4 @@
-@echo off
+
 setlocal EnableExtensions
 
 set "MODE=%~1"
