@@ -1,56 +1,114 @@
-name: Test WinFsp and Rclone Mount
+name: VIETSTAR build
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Chọn mode (ví dụ 7-32, 7-64, auto)'
+        required: true
+        default: 'auto'
 
 jobs:
-  run-download-upload:
+  build:
     runs-on: windows-latest
-
     env:
       GH_PAT: ${{ secrets.GH_PAT }}
-      RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\RUN\rclone.conf' }}
-      REMOTE_NAME: ${{ vars.REMOTE_NAME || 'OD_APP-C03-vietstar' }}
-      SCRIPT_PATH: C:\RUN
+      REPO_PATH: ${{ github.workspace }}
+
+      SCRIPT_REPO: ${{ vars.SCRIPT_REPO || 'github.com/tuthanika/VIETSTAR-Windows' }}
+      SCRIPT_PATH: ${{ vars.SCRIPT_PATH || 'C:\\RUN' }}
+
+      RCLONE_CONF_REPO: ${{ vars.RCLONE_CONF_REPO || 'github.com/tuthanika/Rclone-Auto-Refresh-Token' }}
+      RCLONE_CONFIG_PATH: ${{ vars.RCLONE_CONFIG_PATH || 'C:\\RUN\\rclone.conf' }}
+
+      RCLONE_PATH: ${{ vars.RCLONE_PATH || 'OD_APP-C03-vietstar' }}
+      ALIST_PATH: ${{ vars.ALIST_PATH || 'https://cloud.vietstarhp.com/od-app/C03.vietstar@vietstarhp.onmicrosoft.com' }}
+
+      vietstar: ${{ vars.VIETSTAR || 'z.VIETSTAR' }}
+      silent: ${{ vars.SILENT || 'z.Silent' }}
+      oem: ${{ vars.OEM || '0.OEM' }}
+      dll: ${{ vars.DLL || '1.DLL' }}
+      driver: ${{ vars.DRIVER || 'z.DRIVER' }}
+      iso: ${{ vars.ISO || 'z.ISO' }}
+      boot7: ${{ vars.BOOT7 || 'z.BOOT7' }}
+      bootwim: ${{ vars.BOOTWIM || 'C:\\1' }}
+
+      rclone_flag: ${{ vars.RCLONE_FLAG || '--fast-list --delete-during --checksum --no-update-modtime --transfers 8 --checkers 8 --contimeout 60s --timeout 300s --retries 3 --low-level-retries 10 --fast-list --onedrive-delta --server-side-across-configs --onedrive-no-versions --onedrive-hard-delete --onedrive-av-override --drive-copy-shortcut-content --drive-acknowledge-abuse --drive-stop-on-upload-limit --drive-stop-on-download-limit --checksum --track-renames --no-update-modtime' }}
+
+      FILE_CODE_RULES: |
+        [
+          { "Mode": "7-32", "Patterns": ["*windows*7*86*"], "Folder": "Windows 7" },
+          { "Mode": "7-64", "Patterns": ["*windows*7*64*"], "Folder": "Windows 7" },
+          { "Mode": "10-32", "Patterns": ["*windows*10*86*"], "Folder": "Windows 10" },
+          { "Mode": "10-64", "Patterns": ["*windows*10*64*"], "Folder": "Windows 10" },
+          { "Mode": "10-32-ltsc", "Patterns": ["*windows*10*ltsc*86*"], "Folder": "Windows 10 LTSC" },
+          { "Mode": "10-64-ltsc", "Patterns": ["*windows*10*ltsc*64*"], "Folder": "Windows 10 LTSC" },
+          { "Mode": "11-64", "Patterns": ["*windows*11*64*"], "Folder": "Windows 11" },
+          { "Mode": "11-64-ltsc", "Patterns": ["*windows*11*ltsc*64*"], "Folder": "Windows 11 LTSC" },
+          { "Mode": "ALL-32", "Patterns": ["*windows_all*x86*"], "Folder": "Windows ALL" },
+          { "Mode": "ALL-64", "Patterns": ["*windows_all*x64*"], "Folder": "Windows ALL" }
+        ]
+      MAX_FILE: ${{ vars.MAX_FILE || '1' }}
 
     steps:
-      - name: Checkout repo
+      - name: Checkout Auto repo
         uses: actions/checkout@v4
 
-      - name: Install Chocolatey
+      - name: Debug env
         run: |
-          Set-ExecutionPolicy Bypass -Scope Process -Force
-          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+          echo MODE=${{ github.event.inputs.mode }}
+          echo SCRIPT_PATH=${{ env.SCRIPT_PATH }}
+          echo SCRIPT_REPO=${{ env.SCRIPT_REPO }}
+          echo RCLONE_PATH=${{ env.RCLONE_PATH }}
+          echo ALIST_PATH=${{ env.ALIST_PATH }}
 
-      - name: Install WinFsp
+      - name: Clone SCRIPT_REPO into SCRIPT_PATH
         run: |
-          choco install winfsp -y
+          if not exist "${{ env.SCRIPT_PATH }}" mkdir "${{ env.SCRIPT_PATH }}"
+          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
 
-      - name: Install rclone
-        run: choco install rclone -y
-
-      - name: Show rclone version
-        run: rclone version
-
-      - name: Prepare working directories
-        shell: pwsh
+      - name: Install rclone into SCRIPT_PATH
         run: |
-          New-Item -ItemType Directory -Path "$env:SCRIPT_PATH" -Force | Out-Null
-        
-      - name: Fetch rclone.conf from GitHub
-        shell: cmd
-        run: |
-          curl -H "Authorization: token %GH_PAT%" ^
-               -L -o "%RCLONE_CONFIG_PATH%" ^
-               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
+          curl -L https://downloads.rclone.org/rclone-current-windows-amd64.zip -o rclone.zip
+          tar -xf rclone.zip
+          for /f "delims=" %%f in ('dir /b /s rclone-*-windows-amd64\rclone.exe') do copy "%%f" "${{ env.SCRIPT_PATH }}\rclone.exe"
 
-      - name: Try mount remote
-        shell: pwsh
+      - name: Install aria2 (if not present)
         run: |
-          $confPath = $env:RCLONE_CONFIG_PATH
-          Start-Process -FilePath "rclone.exe" `
-            -ArgumentList @("cmount", "OD_APP-C03-vietstar:", "R:", "--config", "$confPath") `
-            -NoNewWindow
-          timeout /t 10
-          dir R: || echo "Mount failed"
+          choco install aria2 -y
+        shell: powershell
+
+      - name: Download rclone.conf into SCRIPT_PATH
+        run: |
+          git clone https://${{ env.GH_PAT }}@${{ env.RCLONE_CONF_REPO }} confrepo
+          copy confrepo\rclone.conf "${{ env.SCRIPT_PATH }}\rclone.conf"
+
+      - name: Copy helper scripts into SCRIPT_PATH
+        run: |
+          copy "%REPO_PATH%\prepare-build.cmd" "${{ env.SCRIPT_PATH }}\prepare-build.cmd"
+          copy "%REPO_PATH%\upload-build.cmd" "${{ env.SCRIPT_PATH }}\upload-build.cmd"
+
+      - name: Run build in selected mode or auto
+        run: |
+          cd "${{ env.SCRIPT_PATH }}"
+          if "${{ github.event.inputs.mode }}"=="auto" (
+            powershell -NoProfile -Command ^
+              "$rules = $env:FILE_CODE_RULES | ConvertFrom-Json; ^
+               foreach($r in $rules){ ^
+                 cmd /c prepare-build.cmd $r.Mode; ^
+                 if (Test-Path (Join-Path $env:SCRIPT_PATH (\"_skip_\" + $r.Mode + \".flag\"))) { ^
+                   Write-Host \"[SKIP] Mode $($r.Mode) skipped\"; ^
+                 } else { ^
+                   cmd /c zzz.Windows-imdisk.cmd $r.Mode; ^
+                   cmd /c upload-build.cmd $r.Mode; ^
+                 } ^
+               }"
+          ) else (
+            call prepare-build.cmd "${{ github.event.inputs.mode }}"
+            if exist "_skip_${{ github.event.inputs.mode }}.flag" (
+              echo [SKIP] Mode ${{ github.event.inputs.mode }} skipped
+            ) else (
+              call zzz.Windows-imdisk.cmd "${{ github.event.inputs.mode }}"
+              call upload-build.cmd "${{ github.event.inputs.mode }}"
+            )
+          )
