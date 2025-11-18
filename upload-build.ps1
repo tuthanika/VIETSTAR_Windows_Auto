@@ -42,7 +42,7 @@ $remoteDir = "$($env:RCLONE_PATH)$($env:vietstar)/$folder"
 Write-Host "[UPLOAD] To $remoteDir"
 
 & "$env:SCRIPT_PATH\rclone.exe" `
-    copy "$env:SCRIPT_PATH\$env:vietstar" $remoteDir `
+    copy "$env:SCRIPT_PATH\$env:vietstar" "$($env:RCLONE_PATH)$($env:vietstar)/$folder" `
     --config "$env:RCLONE_CONFIG_PATH" `
     --include "*.iso"
 
