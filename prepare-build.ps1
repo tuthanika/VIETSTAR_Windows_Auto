@@ -39,7 +39,7 @@ if ($ruleMap['patterns']) {
     try {
         $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
             --config "$env:RCLONE_CONFIG_PATH" `
-            --include "$($ruleMap['patterns'])" 2>&1
+            --include "$($ruleMap['patterns'])"
 
         Write-Host "=== DEBUG: rclone raw output ==="
         Write-Host $jsonMain
@@ -58,7 +58,7 @@ if ($ruleMap['patterns']) {
                 Write-Host "[PREPARE] Download $($lastFile.Name) from $alistUrl"
 
                 # Dùng aria2c với Authorization header
-                $ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir $alistUrl 2>&1
+                $ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir $alistUrl
                 Write-Host "=== DEBUG: aria2c output ==="
                 Write-Host $ariaOut
             }

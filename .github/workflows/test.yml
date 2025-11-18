@@ -162,11 +162,8 @@ jobs:
       - name: Build per mode (cmd)
         shell: cmd
         run: |
-          cd /d "%SCRIPT_PATH%"
           echo Starting build for mode ${{ github.event.inputs.mode }}
-          call zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }}
-          echo Build finished, showing log:
-          type build-${{ github.event.inputs.mode }}.log
+          call %SCRIPT_PATH%\zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }}
 
       - name: Upload build
         shell: pwsh
