@@ -6,7 +6,7 @@ on:
       mode:
         description: 'Chọn mode (ví dụ 7-32, 7-64, auto)'
         required: true
-        default: 'auto'
+        default: '7-32'
 
 jobs:
   build:
