@@ -105,35 +105,28 @@ jobs:
           copy prepare-build.cmd "${{ env.SCRIPT_PATH }}"
           copy upload-build.cmd "${{ env.SCRIPT_PATH }}"
 
-      - name: Run build
+      - name: Prepare build
+        shell: cmd
         run: |
-          Set-Location "${{ env.SCRIPT_PATH }}"
+          cd /d "${{ env.SCRIPT_PATH }}"
+          call prepare-build.cmd "${{ github.event.inputs.mode }}"
 
-          if ("${{ github.event.inputs.mode }}" -eq "auto") {
-            $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-            foreach ($r in $rules) {
-              Write-Host "[RUN] Mode $($r.Mode)"
-              # chạy prepare-build.cmd
-              & cmd /c "prepare-build.cmd $($r.Mode)"
-              $skipFlag = Join-Path $env:SCRIPT_PATH "_skip_$($r.Mode).flag"
-              if (Test-Path $skipFlag) {
-                Write-Host "[SKIP] Mode $($r.Mode) skipped"
-              } else {
-                & cmd /c "zzz.Windows-imdisk.cmd $($r.Mode)"
-                & cmd /c "upload-build.cmd $($r.Mode)"
-              }
-            }
-          }
-          else {
-            $mode = "${{ github.event.inputs.mode }}"
-            Write-Host "[RUN] Mode $mode"
-            & cmd /c "prepare-build.cmd $mode"
-            $skipFlag = "_skip_${mode}.flag"
-            if (Test-Path $skipFlag) {
-              Write-Host "[SKIP] Mode $mode skipped"
-            } else {
-              & cmd /c "zzz.Windows-imdisk.cmd $mode"
-              & cmd /c "upload-build.cmd $mode"
-            }
-          }
+      - name: Run build
+        shell: cmd
+        run: |
+          cd /d "${{ env.SCRIPT_PATH }}"
+          if exist "_skip_${{ github.event.inputs.mode }}.flag" (
+            echo [SKIP] Mode ${{ github.event.inputs.mode }} skipped
+          ) else (
+            call zzz.Windows-imdisk.cmd "${{ github.event.inputs.mode }}"
+          )
 
+      - name: Upload build
+        shell: cmd
+        run: |
+          cd /d "${{ env.SCRIPT_PATH }}"
+          if exist "_skip_${{ github.event.inputs.mode }}.flag" (
+            echo [SKIP] Upload skipped
+          ) else (
+            call upload-build.cmd "${{ github.event.inputs.mode }}"
+          )
