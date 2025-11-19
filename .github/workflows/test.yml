@@ -92,6 +92,11 @@ jobs:
           if (-not (Test-Path "${{ env.SCRIPT_PATH }}")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
 
+      - name: Check UltraISO version
+        shell: cmd
+        run: |
+          "SCRIPT_REPO%\UltraISO\UltraISO.exe" /?
+
       - name: Prepare working directories
         shell: pwsh
         run: |
