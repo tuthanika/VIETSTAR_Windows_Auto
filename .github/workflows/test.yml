@@ -95,7 +95,7 @@ jobs:
       - name: Check UltraISO version
         shell: cmd
         run: |
-          "%SCRIPT_REPO%\UltraISO\UltraISO.exe" /?
+          "%SCRIPT_PATH%\UltraISO\UltraISO.exe" /?
 
       - name: Prepare working directories
         shell: pwsh
