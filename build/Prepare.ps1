@@ -2,7 +2,6 @@ param([string]$Mode)
 
 Write-Host "=== Prepare start for $Mode ==="
 Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
-Write-Host "[DEBUG] RCLONE_CONFIG_PATH=$env:RCLONE_CONFIG_PATH"
 
 foreach ($d in @("$env:SCRIPT_PATH\$env:iso",
                  "$env:SCRIPT_PATH\$env:driver",
