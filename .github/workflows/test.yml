@@ -105,6 +105,7 @@ jobs:
         shell: pwsh
         run: |
           choco install imdisk -y
+          & imdisk -v
 
       - name: Install rclone
         shell: pwsh

@@ -54,7 +54,7 @@ foreach ($m in $runModes) {
 # Mount Silent ISO to A:
 $isoSilent = "$env:SCRIPT_PATH\z.Silent.iso"
 Write-Host "[DEBUG] Mounting Silent ISO: $isoSilent to drive A:"
-& "C:\Program Files\ImDisk\imdisk.exe" -mount -o rw -f $isoSilent -m A:
+& imdisk -mount -o rw -f $isoSilent -m A:
 
 # Override silent path to A:\
 $env:silent = "A:\"
