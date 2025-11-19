@@ -78,42 +78,41 @@ if ($ruleMap['patterns']) {
                     Write-Host "=== DEBUG: Alist API response JSON ==="
                     $response | ConvertTo-Json -Depth 6 | Write-Host
 
-# Lấy raw_url từ response và debug ngay
-$rawUrl = $response.data.raw_url
-Write-Host "[DEBUG] raw_url (from response)=$rawUrl"
-Write-Host "[DEBUG] raw_url length=$($rawUrl.Length)"
 
-# Áp dụng logic kiểm tra nội bộ
-if ([string]::IsNullOrWhiteSpace($rawUrl)) {
-    Write-Warning "[WARN] raw_url not found, fallback to direct URL"
-    $downloadUrl = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
-} else {
-    $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
-    if ($rawUrl.StartsWith($expectedPrefix)) {
-        Write-Host "[DEBUG] raw_url is internal, rebuild direct URL"
-        $downloadUrl = "$expectedPrefix/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
-    } else {
-        Write-Host "[DEBUG] raw_url is external, keep as-is"
-        $downloadUrl = $rawUrl
-    }
-}
 
-Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
-Write-Host "[DEBUG] final downloadUrl length=$($downloadUrl.Length)"
+                    # Lấy raw_url từ response và debug ngay
+                    $rawUrl = $response.data.raw_url
+                    Write-Host "[DEBUG] raw_url (from response)=$rawUrl"
+                    Write-Host "[DEBUG] raw_url length=$($rawUrl.Length)"
 
-$localDir = "$env:SCRIPT_PATH\$env:iso"
+                    # Áp dụng logic kiểm tra nội bộ
+                    if ([string]::IsNullOrWhiteSpace($rawUrl)) {
+                        Write-Warning "[WARN] raw_url not found, fallback to direct URL"
+                        $downloadUrl = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                    } else {
+                        $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
+                        if ($rawUrl.StartsWith($expectedPrefix)) {
+                            Write-Host "[DEBUG] raw_url is internal, rebuild direct URL"
+                            $downloadUrl = "$expectedPrefix/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                        } else {
+                            Write-Host "[DEBUG] raw_url is external, keep as-is"
+                            $downloadUrl = $rawUrl
+                        }
+                    }
 
-# Escape ngoặc kép để không bị cắt ở ký tự &
-$ariaOut = & aria2c -d $localDir "`"$downloadUrl`"" 2>&1
-Write-Host "=== DEBUG: aria2c output ==="
-Write-Host $ariaOut
-            }
-        } else {
-            Write-Host "[DEBUG] No files matched pattern"
-        }
-    } catch {
-        Write-Warning "[WARN] rclone lsjson failed: $_"
-    }
+                    Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
+                    Write-Host "[DEBUG] final downloadUrl length=$($downloadUrl.Length)"
+
+                    $localDir = "$env:SCRIPT_PATH\$env:iso"
+
+                    # Escape ngoặc kép để không bị cắt ở ký tự &
+                    $ariaOut = & aria2c -d $localDir "`"$downloadUrl`"" 2>&1
+                    Write-Host "=== DEBUG: aria2c output ==="
+                    Write-Host $ariaOut
+                }
+                catch {
+                    Write-Warning "[WARN] Alist API request failed: $($_.Exception.Message)"
+                }
 }
 
 Write-Host "=== DEBUG: prepare-build.ps1 finished ==="
