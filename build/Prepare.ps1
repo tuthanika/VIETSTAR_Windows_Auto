@@ -26,13 +26,45 @@ Get-Content $ruleFile | ForEach-Object {
 }
 Write-Host "[DEBUG] rule.env keys: $($ruleMap.Keys -join ', ')"
 
+function Get-RemoteDir {
+    param(
+        [string]$baseVal,     # e.g. z.ISO | z.DRIVER | z.BOOT7 | z.Silent
+        [string]$folderName   # e.g. Windows 7 | DriverCeo/DP | z.BOOT7
+    )
+    if ([string]::IsNullOrWhiteSpace($folderName)) {
+        return "$($env:RCLONE_PATH)$baseVal"
+    }
+    # Nếu folderName đã chứa base, không cộng base lần nữa
+    if ($folderName -eq $baseVal -or $folderName.StartsWith("$baseVal/")) {
+        return "$($env:RCLONE_PATH)$folderName"
+    }
+    # Bình thường: base/Folder
+    return "$($env:RCLONE_PATH)$baseVal/$folderName"
+}
+
+function Get-AlistRelPath {
+    param(
+        [string]$alistBase,   # e.g. z.ISO | z.DRIVER | z.BOOT7 | z.Silent
+        [string]$folderName,  # như trên
+        [string]$fileName
+    )
+    # folder phần tương đối dưới ALIST_PATH
+    $folderRel =
+        if ([string]::IsNullOrWhiteSpace($folderName)) { $alistBase }
+        elseif ($folderName -eq $alistBase) { $alistBase }
+        elseif ($folderName.StartsWith("$alistBase/")) { $folderName }
+        else { "$alistBase/$folderName" }
+
+    return "/$($env:ALIST_PATH)/$folderRel/$fileName"
+}
+
 function Invoke-DownloadRule {
     param(
         [string]$folderName,
         [string]$patterns,
-        [string]$localSubDir,  # z.ISO | z.DRIVER | z.BOOT7 | z.Silent (value)
-        [string]$label,        # iso | driver | boot7 | silent
-        [string]$baseEnvVar    # "iso" | "driver" | "boot7" | "silent" (key)
+        [string]$localSubDirValue, # z.ISO | z.DRIVER | z.BOOT7 | z.Silent
+        [string]$label,            # iso | driver | boot7 | silent
+        [string]$baseEnvVar        # "iso" | "driver" | "boot7" | "silent"
     )
 
     if ([string]::IsNullOrWhiteSpace($folderName) -or [string]::IsNullOrWhiteSpace($patterns)) {
@@ -40,9 +72,8 @@ function Invoke-DownloadRule {
         return $null
     }
 
-    # Build correct remote base path per label
-    $basePathVal = (Get-Item "env:$baseEnvVar").Value
-    $remoteDir = "$($env:RCLONE_PATH)$basePathVal/$folderName"
+    $baseVal = (Get-Item "env:$baseEnvVar").Value
+    $remoteDir = Get-RemoteDir -baseVal $baseVal -folderName $folderName
     Write-Host "[DEBUG][$label] remoteDir=$remoteDir"
     Write-Host "[DEBUG][$label] rclone lsjson $remoteDir --include $patterns"
 
@@ -54,12 +85,10 @@ function Invoke-DownloadRule {
         Write-Host "=== DEBUG[$label]: rclone raw output ==="
         Write-Host $jsonMain
 
-        # Only parse JSON list
         if ($jsonMain -match '^\s*\[') {
-            $files = $jsonMain | ConvertFrom-Json
-
-            # Filter out directories, take files only
-            $fileEntries = @($files | Where-Object { $_.IsDir -eq $false })
+            $entries = $jsonMain | ConvertFrom-Json
+            # Chỉ lấy file (IsDir=false)
+            $fileEntries = @($entries | Where-Object { $_.IsDir -eq $false })
             if (-not $fileEntries -or $fileEntries.Count -eq 0) {
                 Write-Host "[DEBUG][$label] No file entries after filtering IsDir=false."
                 return $null
@@ -68,10 +97,8 @@ function Invoke-DownloadRule {
             $lastFile = $fileEntries | Select-Object -Last 1
             Write-Host "[DEBUG][$label] Found file $($lastFile.Name) in $folderName"
 
-            # Alist path must use the same base (iso/driver/boot7/silent), not hard-coded iso
-            # Example final path: /<ALIST_PATH>/<baseSubDir>/<folderName>/<fileName>
-            $alistBase = $basePathVal
-            $alistPathRel = "/$($env:ALIST_PATH)/$alistBase/$folderName/$($lastFile.Name)"
+            # Alist RelPath đồng bộ với base
+            $alistPathRel = Get-AlistRelPath -alistBase $baseVal -folderName $folderName -fileName $lastFile.Name
             $apiUrl = "$($env:ALIST_HOST.TrimEnd('/'))/api/fs/get"
             $body = @{ path = $alistPathRel } | ConvertTo-Json -Compress
 
@@ -105,14 +132,13 @@ function Invoke-DownloadRule {
                 Write-Host "[DEBUG][$label] raw_url.$label.txt endsWith '&ApiVersion=2.0' (raw)=" + $rawFromFile.EndsWith("&ApiVersion=2.0")
                 Write-Host "[DEBUG][$label] raw_url.$label.txt endsWith '&ApiVersion=2.0' (trim)=" + $rawFromFile.TrimEnd().EndsWith("&ApiVersion=2.0")
 
-                # Build final downloadUrl
                 $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
                 if ([string]::IsNullOrWhiteSpace($rawUrl)) {
                     Write-Warning "[WARN][$label] raw_url not found, fallback to direct URL"
-                    $downloadUrl = "$expectedPrefix/$alistBase/$folderName/$($lastFile.Name)"
+                    $downloadUrl = "$expectedPrefix/$((Get-AlistRelPath -alistBase $baseVal -folderName $folderName -fileName $lastFile.Name).TrimStart('/'))"
                 } elseif ($rawUrl.StartsWith($expectedPrefix)) {
                     Write-Host "[DEBUG][$label] raw_url is internal, rebuild direct URL"
-                    $downloadUrl = "$expectedPrefix/$alistBase/$folderName/$($lastFile.Name)"
+                    $downloadUrl = "$expectedPrefix/$((Get-AlistRelPath -alistBase $baseVal -folderName $folderName -fileName $lastFile.Name).Split('/',3)[2])"
                 } else {
                     Write-Host "[DEBUG][$label] raw_url is external, keep as-is"
                     $downloadUrl = $rawUrl
@@ -132,7 +158,7 @@ function Invoke-DownloadRule {
                 Write-Host "[DEBUG][$label] download_url.$label.txt endsWith '&ApiVersion=2.0' (raw)=" + $dlFromFile.EndsWith("&ApiVersion=2.0")
                 Write-Host "[DEBUG][$label] download_url.$label.txt endsWith '&ApiVersion=2.0' (trim)=" + $dlFromFile.TrimEnd().EndsWith("&ApiVersion=2.0")
 
-                $localDir = "$env:SCRIPT_PATH\$localSubDir"
+                $localDir = "$env:SCRIPT_PATH\$localSubDirValue"
                 $ariaListFile = "$env:SCRIPT_PATH\aria2_urls.$label.txt"
                 $downloadUrl | Out-File -FilePath $ariaListFile -Encoding utf8 -NoNewline
 
@@ -175,9 +201,9 @@ function Invoke-DownloadRule {
 }
 
 $results = @{}
-$results['iso']    = Invoke-DownloadRule -folderName $ruleMap['folder']       -patterns $ruleMap['patterns']       -localSubDir $env:iso    -label "iso"    -baseEnvVar "iso"
-$results['driver'] = Invoke-DownloadRule -folderName $ruleMap['drvFolder']    -patterns $ruleMap['drvPatterns']    -localSubDir $env:driver -label "driver" -baseEnvVar "driver"
-$results['boot7']  = Invoke-DownloadRule -folderName $ruleMap['bootFolder']   -patterns $ruleMap['bootPatterns']   -localSubDir $env:boot7  -label "boot7"  -baseEnvVar "boot7"
-$results['silent'] = Invoke-DownloadRule -folderName $ruleMap['silentFolder'] -patterns $ruleMap['silentPatterns'] -localSubDir $env:silent -label "silent" -baseEnvVar "silent"
+$results['iso']    = Invoke-DownloadRule -folderName $ruleMap['folder']       -patterns $ruleMap['patterns']       -localSubDirValue $env:iso    -label "iso"    -baseEnvVar "iso"
+$results['driver'] = Invoke-DownloadRule -folderName $ruleMap['drvFolder']    -patterns $ruleMap['drvPatterns']    -localSubDirValue $env:driver -label "driver" -baseEnvVar "driver"
+$results['boot7']  = Invoke-DownloadRule -folderName $ruleMap['bootFolder']   -patterns $ruleMap['bootPatterns']   -localSubDirValue $env:boot7  -label "boot7"  -baseEnvVar "boot7"
+$results['silent'] = Invoke-DownloadRule -folderName $ruleMap['silentFolder'] -patterns $ruleMap['silentPatterns'] -localSubDirValue $env:silent -label "silent" -baseEnvVar "silent"
 
 Write-Output $results
