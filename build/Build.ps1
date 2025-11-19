@@ -29,7 +29,7 @@ if (-not (Test-Path $cmdFile)) {
 }
 
 Write-Host "[DEBUG] Calling: zzz.Windows-imdisk.cmd $Mode"
-cmd /c `"\"$cmdFile\" $Mode`"
+& $cmdFile $Mode
 $exitCode = $LASTEXITCODE
 Write-Host "[DEBUG] zzz.Windows-imdisk.cmd exit code=$exitCode"
 if ($exitCode -ne 0) {
