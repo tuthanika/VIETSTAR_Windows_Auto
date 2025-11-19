@@ -78,8 +78,6 @@ if ($ruleMap['patterns']) {
                     Write-Host "=== DEBUG: Alist API response JSON ==="
                     $response | ConvertTo-Json -Depth 6 | Write-Host
 
-
-
                     # Lấy raw_url từ response và debug ngay
                     $rawUrl = $response.data.raw_url
                     Write-Host "[DEBUG] raw_url (from response)=$rawUrl"
@@ -113,6 +111,15 @@ if ($ruleMap['patterns']) {
                 catch {
                     Write-Warning "[WARN] Alist API request failed: $($_.Exception.Message)"
                 }
+            } # đóng if ($lastFile)
+        } else {
+            Write-Host "[DEBUG] No files matched pattern"
+        } # đóng if ($jsonMain)
+    }
+    catch {
+        Write-Warning "[WARN] rclone lsjson failed: $_"
+    }
+} # đóng if ($ruleMap['patterns'])
 
 Write-Host "=== DEBUG: prepare-build.ps1 finished ==="
-exit 0	
+exit 0
