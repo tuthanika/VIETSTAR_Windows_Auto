@@ -116,7 +116,7 @@ jobs:
         run: |
           curl -H "Authorization: token %GH_PAT%" ^
                -L -o "%RCLONE_CONFIG_PATH%" ^
-               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.con
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
       
       - name: Copy build scripts
         shell: pwsh
