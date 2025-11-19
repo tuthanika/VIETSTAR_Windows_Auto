@@ -160,6 +160,13 @@ jobs:
       - name: Build per mode (cmd)
         shell: cmd
         run: |
+          set "vietstar=%SCRIPT_PATH%\%vietstar%"
+          set "silent=%SCRIPT_PATH%\%silent%"
+          set "oem=%SCRIPT_PATH%\%oem%"
+          set "dll=%SCRIPT_PATH%\%dll%"
+          set "driver=%SCRIPT_PATH%\%driver%"
+          set "iso=%SCRIPT_PATH%\%iso%"
+          set "boot7=%SCRIPT_PATH%\%boot7%"
           echo Starting build for mode ${{ github.event.inputs.mode }}
           call %SCRIPT_PATH%\zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }}
 
