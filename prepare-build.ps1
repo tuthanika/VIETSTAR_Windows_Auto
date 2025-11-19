@@ -78,26 +78,35 @@ if ($ruleMap['patterns']) {
                     Write-Host "=== DEBUG: Alist API response JSON ==="
                     $response | ConvertTo-Json -Depth 6 | Write-Host
 
-                    $downloadUrl = $response.data.raw_url
+# Lấy raw_url từ response và debug ngay
+$rawUrl = $response.data.raw_url
+Write-Host "[DEBUG] raw_url (from response)=$rawUrl"
+Write-Host "[DEBUG] raw_url length=$($rawUrl.Length)"
 
-if ([string]::IsNullOrWhiteSpace($downloadUrl)) {
+# Áp dụng logic kiểm tra nội bộ
+if ([string]::IsNullOrWhiteSpace($rawUrl)) {
     Write-Warning "[WARN] raw_url not found, fallback to direct URL"
     $downloadUrl = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
 } else {
-    Write-Host "[DEBUG] raw_url is external, use as-is"
+    $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
+    if ($rawUrl.StartsWith($expectedPrefix)) {
+        Write-Host "[DEBUG] raw_url is internal, rebuild direct URL"
+        $downloadUrl = "$expectedPrefix/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+    } else {
+        Write-Host "[DEBUG] raw_url is external, keep as-is"
+        $downloadUrl = $rawUrl
+    }
 }
 
-Write-Host "[DEBUG] raw_url length=$($downloadUrl.Length)"
-Set-Content -Path "$env:SCRIPT_PATH\raw_url.txt" -Value $downloadUrl
-
 Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
+Write-Host "[DEBUG] final downloadUrl length=$($downloadUrl.Length)"
+
 $localDir = "$env:SCRIPT_PATH\$env:iso"
 
-# Không dùng --follow-redirect=true, chỉ để mặc định
-$ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir "$downloadUrl" 2>&1
+# Escape ngoặc kép để không bị cắt ở ký tự &
+$ariaOut = & aria2c -d $localDir "`"$downloadUrl`"" 2>&1
 Write-Host "=== DEBUG: aria2c output ==="
 Write-Host $ariaOut
-
             }
         } else {
             Write-Host "[DEBUG] No files matched pattern"
