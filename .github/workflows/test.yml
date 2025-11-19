@@ -116,61 +116,18 @@ jobs:
         run: |
           curl -H "Authorization: token %GH_PAT%" ^
                -L -o "%RCLONE_CONFIG_PATH%" ^
-               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
-
-      - name: Copy helper scripts
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.con
+      
+      - name: Copy build scripts
+        shell: pwsh
         run: |
-          copy prepare-build.ps1 "${{ env.SCRIPT_PATH }}"
-          copy upload-build.ps1 "${{ env.SCRIPT_PATH }}"
-          
-      - name: Resolve modes and write rule envs
+          mkdir $env:SCRIPT_PATH\build
+          Copy-Item -Path build\* -Destination $env:SCRIPT_PATH\build -Recurse -Force
+          Write-Host "Copied build scripts to $env:SCRIPT_PATH\build"
+
+      - name: Run integrated pipeline
         shell: pwsh
         run: |
           Set-Location $env:SCRIPT_PATH
-          $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-          $inputMode = "${{ github.event.inputs.mode }}"
-          if ($inputMode -eq "auto") {
-            $modes = $rules.Mode
-          } else {
-            $modes = @($inputMode)
-          }
-          Set-Content -Path "$env:SCRIPT_PATH\modes.txt" -Value ($modes -join "`n")
-          foreach ($m in $modes) {
-            $r = $rules | Where-Object { $_.Mode -eq $m }
-            $kv = @("mode=$($r.Mode)", "folder=$($r.Folder)", "patterns=$([string]::Join(';',$r.Patterns))")
-            if ($r.DriverFolder)   { $kv += "drvFolder=$($r.DriverFolder)" }
-            if ($r.DriverPatterns) { $kv += "drvPatterns=$([string]::Join(';',$r.DriverPatterns))" }
-            if ($r.BootFolder)     { $kv += "bootFolder=$($r.BootFolder)" }
-            if ($r.BootPatterns)   { $kv += "bootPatterns=$([string]::Join(';',$r.BootPatterns))" }
-            if ($r.SilentFolder)   { $kv += "silentFolder=$($r.SilentFolder)" }
-            if ($r.SilentPatterns) { $kv += "silentPatterns=$([string]::Join(';',$r.SilentPatterns))" }
-            Set-Content -Path "$env:SCRIPT_PATH\rule.$m.env" -Value ($kv -join "`n")
-          }
-   
-      - name: Select rule for mode
-        shell: pwsh
-        run: |
-          Copy-Item "$env:SCRIPT_PATH\rule.${{ github.event.inputs.mode }}.env" "$env:SCRIPT_PATH\rule.env" -Force
+          . "$env:SCRIPT_PATH\build\Main.ps1" "${{ github.event.inputs.mode }}"
 
-      - name: Prepare build
-        shell: pwsh
-        run: |
-          & "${{ env.SCRIPT_PATH }}\prepare-build.ps1" "${{ github.event.inputs.mode }}"
-          
-      - name: Build per mode (cmd)
-        shell: cmd
-        run: |
-          set "vietstar=%SCRIPT_PATH%\%vietstar%"
-          set "silent=%SCRIPT_PATH%\%silent%"
-          set "oem=%SCRIPT_PATH%\%oem%"
-          set "dll=%SCRIPT_PATH%\%dll%"
-          set "driver=%SCRIPT_PATH%\%driver%"
-          set "iso=%SCRIPT_PATH%\%iso%"
-          set "boot7=%SCRIPT_PATH%\%boot7%"
-          echo Starting build for mode ${{ github.event.inputs.mode }}
-          call %SCRIPT_PATH%\zzz.Windows-imdisk.cmd ${{ github.event.inputs.mode }}
-
-      - name: Upload build
-        shell: pwsh
-        run: |
-          & "${{ env.SCRIPT_PATH }}\upload-build.ps1" "${{ github.event.inputs.mode }}"
