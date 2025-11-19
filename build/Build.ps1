@@ -29,9 +29,10 @@ if (-not (Test-Path $cmdFile)) {
 }
 
 Write-Host "[DEBUG] Calling: $cmdFile $Mode"
-cmd /c "$cmdFile $Mode"
+Start-Process -FilePath $cmdFile -ArgumentList $Mode -NoNewWindow -Wait
 $exitCode = $LASTEXITCODE
 Write-Host "[DEBUG] Exit code=$exitCode"
+
 
 if ($exitCode -ne 0) {
     Write-Warning "[WARN] zzz.Windows-imdisk.cmd returned non-zero exit code ($exitCode)"
