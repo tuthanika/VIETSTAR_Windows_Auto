@@ -47,7 +47,9 @@ foreach ($m in $runModes) {
 
     Write-RuleEnvForMode -r $r
 
-    $prepResult = . "$env:SCRIPT_PATH\build\Prepare.ps1" -Mode $m
+	$prepOut = @(& "$env:SCRIPT_PATH\build\Prepare.ps1" -Mode $m)
+	$prepResult = $prepOut | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
+	if (-not $prepResult) { $prepResult = @{} }
 
     # Set env paths for CMD (absolute) before calling build
     $env:vietstar = "$env:SCRIPT_PATH\$env:vietstar"

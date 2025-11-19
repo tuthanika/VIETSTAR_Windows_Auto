@@ -1,7 +1,14 @@
 param(
     [string]$Mode,
-    [hashtable]$Input
+    [object]$Input
 )
+
+$inputMap = @{}
+if ($Input -is [hashtable]) { $inputMap = $Input }
+elseif ($Input -is [System.Collections.IDictionary]) {
+    foreach ($k in $Input.Keys) { $inputMap[$k] = $Input[$k] }
+}
+Write-Host "[DEBUG] Input keys=$($inputMap.Keys -join ', ')"
 
 Write-Host "=== Build start for $Mode ==="
 Write-Host "[DEBUG] Input keys=$($Input.Keys -join ', ')"
