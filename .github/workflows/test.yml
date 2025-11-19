@@ -48,7 +48,7 @@ jobs:
             "BootFolder": "z.BOOT7",
             "BootPatterns": ["*windows*7*86*.iso"],
             "SilentFolder": "z.Silent",
-            "SilentPatterns": ["*lite*.iso"]
+            "SilentPatterns": ["*Lite*.iso"]
           },
           {
             "Mode": "7-64",
