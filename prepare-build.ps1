@@ -162,7 +162,10 @@ try {
     $ariaOut = & aria2c `
         -l "$ariaLog" `
         --log-level=debug `
-        --max-connection-per-server=4 `
+		--file-allocation=none `
+        --max-connection-per-server=16 `
+		--split=16 `
+		--enable-http-keep-alive=false `
         -d "$localDir" `
         --input-file="$ariaListFile" 2>&1
 
