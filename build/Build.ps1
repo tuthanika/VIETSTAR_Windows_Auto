@@ -28,11 +28,12 @@ if (-not (Test-Path $cmdFile)) {
     exit 1
 }
 
-Write-Host "[DEBUG] Calling: zzz.Windows-imdisk.cmd $Mode"
-$exitCode = cmd /c "$cmdFile $Mode" 2>&1
-Write-Host $exitCode
+Write-Host "[DEBUG] Calling: $cmdFile $Mode"
+$procOut = cmd /c "$cmdFile $Mode" 2>&1
+$procOut | ForEach-Object { Write-Host $_ }
 $exitCode = $LASTEXITCODE
-Write-Host "[DEBUG] zzz.Windows-imdisk.cmd exit code=$exitCode"
+Write-Host "[DEBUG] Exit code=$exitCode"
+
 if ($exitCode -ne 0) {
     Write-Warning "[WARN] zzz.Windows-imdisk.cmd returned non-zero exit code ($exitCode)"
 }
