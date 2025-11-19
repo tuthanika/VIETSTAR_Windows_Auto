@@ -57,7 +57,7 @@ Write-Host "[DEBUG] Mounting Silent ISO: $isoSilent to drive A:"
 & imdisk -mount -o rw -f $isoSilent -m A:
 
 # Override silent path to A:\
-$env:silent = "A:\"
+$env:silent = "A:\Apps\exe"
 Write-Host "[DEBUG] Silent ISO mounted, silent path set to $env:silent"
 
 # Set env paths for CMD (absolute) before calling build
