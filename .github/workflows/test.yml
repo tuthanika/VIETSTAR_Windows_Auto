@@ -125,6 +125,11 @@ jobs:
           Copy-Item -Path build\* -Destination $env:SCRIPT_PATH\build -Recurse -Force
           Write-Host "Copied build scripts to $env:SCRIPT_PATH\build" 
         
+      - name: Show free disk space after cleanup
+        shell: cmd
+        run: |
+          fsutil volume diskfree C:
+        
       - name: Cleanup runner disk
         shell: pwsh
         run: |
@@ -139,44 +144,22 @@ jobs:
         run: |
           fsutil volume diskfree C:
 
-      - name: Remove Visual Studio Code
+      - name: Deep cleanup runner
         shell: pwsh
         run: |
-          $vsCodePath = "C:\Users\runneradmin\AppData\Local\Programs\Microsoft VS Code"
-          if (Test-Path $vsCodePath) {
-            Write-Host "Removing VS Code at $vsCodePath"
-            Remove-Item -Recurse -Force $vsCodePath
-          } else {
-            Write-Host "VS Code not found at $vsCodePath"
-          }
-          
-      - name: Show free disk space after cleanup
-        shell: cmd
-        run: |
-          fsutil volume diskfree C:
-          
-      - name: Cleanup VS Code cache
-        shell: pwsh
-        run: |
-          Remove-Item -Recurse -Force "C:\Users\runneradmin\AppData\Roaming\Code" -ErrorAction SilentlyContinue
-          
-      - name: Show free disk space after cleanup
-        shell: cmd
-        run: |
-          fsutil volume diskfree C:
-        
-      - name: Cleanup runner environments
-        shell: pwsh
-        run: |
-          Write-Host "=== Cleanup unused environments ==="
           $paths = @(
             "C:\Program Files\Java",
             "C:\Program Files\Android",
             "C:\hostedtoolcache\windows\Python",
             "C:\Program Files\nodejs",
             "C:\Users\runneradmin\AppData\Local\Programs\Microsoft VS Code",
+            "C:\Program Files (x86)\Microsoft Visual Studio",
+            "C:\Program Files\Microsoft Visual Studio",
             "C:\Program Files\dotnet\sdk",
-            "C:\ProgramData\chocolatey\lib"
+            "C:\ProgramData\chocolatey\lib",
+            "C:\Windows\SoftwareDistribution\Download",
+            "C:\Users\runneradmin\AppData\Local\Temp",
+            "C:\Windows\Temp"
           )
           foreach ($p in $paths) {
             if (Test-Path $p) {
@@ -184,10 +167,6 @@ jobs:
               Remove-Item -Recurse -Force $p -ErrorAction SilentlyContinue
             }
           }
-   
-      - name: Show free disk space
-        run: Get-PSDrive C | Format-Table Used,Free
-        shell: pwsh
         
       - name: Show free disk space after cleanup
         shell: cmd
