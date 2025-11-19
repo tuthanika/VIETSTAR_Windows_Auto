@@ -87,10 +87,10 @@ if ($ruleMap['patterns']) {
                     Write-Warning "[WARN] raw_url not found, fallback to direct URL"
                     $downloadUrl = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
                 }
-
+				Write-Host "[DEBUG] raw_url length=$($downloadUrl.Length)"
                 Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
                 $localDir = "$env:SCRIPT_PATH\$env:iso"
-                $ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir $downloadUrl 2>&1
+				$ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir "$downloadUrl" 2>&1
                 Write-Host "=== DEBUG: aria2c output ==="
                 Write-Host $ariaOut
             }
