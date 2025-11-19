@@ -29,8 +29,7 @@ if (-not (Test-Path $cmdFile)) {
 }
 
 Write-Host "[DEBUG] Calling: $cmdFile $Mode"
-$procOut = cmd /c "$cmdFile $Mode" 2>&1
-$procOut | ForEach-Object { Write-Host $_ }
+cmd /c "$cmdFile $Mode"
 $exitCode = $LASTEXITCODE
 Write-Host "[DEBUG] Exit code=$exitCode"
 
