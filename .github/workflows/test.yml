@@ -17,10 +17,10 @@ jobs:
       REPO_PATH: ${{ github.workspace }}
 
       SCRIPT_REPO: github.com/tuthanika/VIETSTAR-Windows
-      SCRIPT_PATH: C:\RUN
-      INSTALL_PATH: C:\INSTALL
+      SCRIPT_PATH: D:\RUN
+      INSTALL_PATH: D:\INSTALL
       RCLONE_CONF_REPO: github.com/tuthanika/Rclone-Auto-Refresh-Token
-      RCLONE_CONFIG_PATH: 'C:\RUN\rclone.conf'
+      RCLONE_CONFIG_PATH: 'D:\RUN\rclone.conf'
 
       RCLONE_PATH: "OD_APP-C03-vietstar:"
       ALIST_HOST: https://cloud.vietstarhp.com
@@ -129,36 +129,22 @@ jobs:
         shell: cmd
         run: |
           fsutil volume diskfree C:
-          
-      - uses: mathio/gha-cleanup@v1
-        with:
-          remove-browsers: true
-          verbose: true
-          
-      - name: Show free disk space after cleanup
-        shell: cmd
-        run: |
-          fsutil volume diskfree C:
-          
-      - name: Fast cleanup runner
-        shell: cmd
-        run: |
-          rd /s /q "C:\Program Files\Java"
-          rd /s /q "C:\Program Files\Android"
-          rd /s /q "C:\hostedtoolcache\windows\Python"
-          rd /s /q "C:\Program Files\nodejs"
-          rd /s /q "C:\Users\runneradmin\AppData\Local\Programs\Microsoft VS Code"
-          rd /s /q "C:\Program Files (x86)\Microsoft Visual Studio"
-          rd /s /q "C:\Program Files\Microsoft Visual Studio"
-          rd /s /q "C:\Program Files\dotnet\sdk"
-          rd /s /q "C:\Windows\SoftwareDistribution\Download"
-          rd /s /q "C:\Users\runneradmin\AppData\Local\Temp"
-          rd /s /q "C:\Windows\Temp"
-
-      - name: Show free disk space after cleanup
-        shell: cmd
-        run: |
-          fsutil volume diskfree C:
+          fsutil volume diskfree D:
+               
+#      - name: Fast cleanup runner
+#        shell: cmd
+#        run: |
+#          rd /s /q "C:\Program Files\Java"
+#          rd /s /q "C:\Program Files\Android"
+#          rd /s /q "C:\hostedtoolcache\windows\Python"
+#          rd /s /q "C:\Program Files\nodejs"
+#          rd /s /q "C:\Users\runneradmin\AppData\Local\Programs\Microsoft VS Code"
+#          rd /s /q "C:\Program Files (x86)\Microsoft Visual Studio"
+#          rd /s /q "C:\Program Files\Microsoft Visual Studio"
+#          rd /s /q "C:\Program Files\dotnet\sdk"
+#          rd /s /q "C:\Windows\SoftwareDistribution\Download"
+#          rd /s /q "C:\Users\runneradmin\AppData\Local\Temp"
+#          rd /s /q "C:\Windows\Temp"
 
       - name: Run integrated pipeline
         shell: pwsh
