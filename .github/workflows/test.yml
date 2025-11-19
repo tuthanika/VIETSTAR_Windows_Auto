@@ -136,7 +136,8 @@ jobs:
 
       - name: Show free disk space after cleanup
         shell: cmd
-        run: fsutil volume diskfree C:
+        run: |
+          fsutil volume diskfree C:
 
       - name: Remove Visual Studio Code
         shell: pwsh
@@ -151,8 +152,9 @@ jobs:
           
       - name: Show free disk space after cleanup
         shell: cmd
-        run: fsutil volume diskfree C:
-
+        run: |
+          fsutil volume diskfree C:
+          
       - name: Cleanup VS Code cache
         shell: pwsh
         run: |
@@ -160,7 +162,8 @@ jobs:
           
       - name: Show free disk space after cleanup
         shell: cmd
-        run: fsutil volume diskfree C:
+        run: |
+          fsutil volume diskfree C:
         
       - name: Cleanup runner environments
         shell: pwsh
@@ -188,7 +191,8 @@ jobs:
         
       - name: Show free disk space after cleanup
         shell: cmd
-        run: fsutil volume diskfree C:
+        run: |
+          fsutil volume diskfree C:
 
       - name: Run integrated pipeline
         shell: pwsh
