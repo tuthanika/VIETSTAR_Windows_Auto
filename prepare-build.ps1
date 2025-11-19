@@ -113,7 +113,6 @@ if ($ruleMap['patterns']) {
                 catch {
                     Write-Warning "[WARN] Alist API request failed: $($_.Exception.Message)"
                 }
-}
 
 Write-Host "=== DEBUG: prepare-build.ps1 finished ==="
 exit 0	
