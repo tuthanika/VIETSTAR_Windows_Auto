@@ -130,6 +130,16 @@ jobs:
         run: |
           fsutil volume diskfree C:
           
+      - uses: mathio/gha-cleanup@v1
+        with:
+          remove-browsers: true
+          verbose: true
+          
+      - name: Show free disk space after cleanup
+        shell: cmd
+        run: |
+          fsutil volume diskfree C:
+          
       - name: Fast cleanup runner
         shell: cmd
         run: |

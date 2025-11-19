@@ -51,23 +51,34 @@ foreach ($m in $runModes) {
 	$prepResult = $prepOut | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
 	if (-not $prepResult) { $prepResult = @{} }
 
-    # Set env paths for CMD (absolute) before calling build
-    $env:vietstar = "$env:SCRIPT_PATH\$env:vietstar"
-    $env:silent   = "$env:SCRIPT_PATH\$env:silent"
-    $env:oem      = "$env:SCRIPT_PATH\$env:oem"
-    $env:dll      = "$env:SCRIPT_PATH\$env:dll"
-    $env:driver   = "$env:SCRIPT_PATH\$env:driver"
-    $env:iso      = "$env:SCRIPT_PATH\$env:iso"
-    $env:boot7    = "$env:SCRIPT_PATH\$env:boot7"
+# Mount Silent ISO to A:
+$isoSilent = "$env:SCRIPT_PATH\z.Silent.iso"
+Write-Host "[DEBUG] Mounting Silent ISO: $isoSilent to drive A:"
+& "$env:SCRIPT_PATH\imdisk.exe" -mount -o rw -f $isoSilent -m A:
 
-    Write-Host "[DEBUG] Env paths set:"
-    Write-Host "  vietstar=$env:vietstar"
-    Write-Host "  silent=$env:silent"
-    Write-Host "  oem=$env:oem"
-    Write-Host "  dll=$env:dll"
-    Write-Host "  driver=$env:driver"
-    Write-Host "  iso=$env:iso"
-    Write-Host "  boot7=$env:boot7"
+# Override silent path to A:\
+$env:silent = "A:\"
+Write-Host "[DEBUG] Silent ISO mounted, silent path set to $env:silent"
+
+# Set env paths for CMD (absolute) before calling build
+$env:vietstar = "$env:SCRIPT_PATH\$env:vietstar"
+$env:silent   = "$env:silent"   # đã mount A:\ ở trên
+$env:oem      = "$env:SCRIPT_PATH\$env:oem"
+$env:dll      = "$env:SCRIPT_PATH\$env:dll"
+$env:driver   = "$env:SCRIPT_PATH\$env:driver"
+$env:iso      = "$env:SCRIPT_PATH\$env:iso"
+$env:boot7    = "$env:SCRIPT_PATH\$env:boot7"
+
+Write-Host "[DEBUG] Env paths set:"
+Write-Host "  vietstar=$env:vietstar"
+Write-Host "  silent=$env:silent"
+Write-Host "  oem=$env:oem"
+Write-Host "  dll=$env:dll"
+Write-Host "  driver=$env:driver"
+Write-Host "  iso=$env:iso"
+Write-Host "  boot7=$env:boot7"
+
+# Call build
 
     $buildResult = . "$env:SCRIPT_PATH\build\Build.ps1" -Mode $m -Input $prepResult
 
