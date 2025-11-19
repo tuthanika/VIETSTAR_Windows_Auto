@@ -102,7 +102,7 @@ if ($ruleMap['patterns']) {
                     $localDir = "$env:SCRIPT_PATH\$env:iso"
 
                     # Bao URL trong dấu ngoặc kép để không bị cắt
-                    $ariaOut = & aria2c --follow-redirect=true --header="Authorization: $env:ALIST_TOKEN" -d $localDir "$downloadUrl" 2>&1
+                    $ariaOut = & aria2c --header="Authorization: $env:ALIST_TOKEN" -d $localDir "$downloadUrl" 2>&1
                     Write-Host "=== DEBUG: aria2c output ==="
                     Write-Host $ariaOut
             }
