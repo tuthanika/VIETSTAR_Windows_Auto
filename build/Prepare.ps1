@@ -2,6 +2,7 @@ param([string]$Mode)
 
 Write-Host "=== Prepare start for $Mode ==="
 Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
+Write-Host "[DEBUG] RCLONE_CONFIG_PATH=$env:RCLONE_CONFIG_PATH"
 
 foreach ($d in @("$env:SCRIPT_PATH\$env:iso",
                  "$env:SCRIPT_PATH\$env:driver",
@@ -38,7 +39,7 @@ function Invoke-DownloadRule {
         Write-Host "[DEBUG][$label] Skip (not defined in env)"
         return $null
     }
-
+	
     $remoteDir = "$($env:RCLONE_PATH)$($env:iso)/$folderName"
     Write-Host "[DEBUG][$label] rclone lsjson $remoteDir --include $patterns"
 
@@ -46,7 +47,7 @@ function Invoke-DownloadRule {
         $jsonMain = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
             --config "$env:RCLONE_CONFIG_PATH" `
             --include "$patterns" 2>&1
-
+			
         Write-Host "=== DEBUG[$label]: rclone raw output ==="
         Write-Host $jsonMain
 
@@ -167,5 +168,5 @@ $results['driver'] = Invoke-DownloadRule -folderName $ruleMap['drvFolder']    -p
 $results['boot7']  = Invoke-DownloadRule -folderName $ruleMap['bootFolder']   -patterns $ruleMap['bootPatterns']   -localSubDir $env:boot7  -label "boot7"
 $results['silent'] = Invoke-DownloadRule -folderName $ruleMap['silentFolder'] -patterns $ruleMap['silentPatterns'] -localSubDir $env:silent -label "silent"
 
-Write-Host "=== Prepare done for $Mode ==="
-Write-Output $results
+Write-Output $results  # chỉ output hashtable này, không để hàm con tự Write-Output
+
