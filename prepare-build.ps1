@@ -75,38 +75,90 @@ if ($ruleMap['patterns']) {
                         -ContentType "application/json" `
                         -ErrorAction Stop
 
-                    Write-Host "=== DEBUG: Alist API response JSON ==="
-                    $response | ConvertTo-Json -Depth 6 | Write-Host
+                    Write-Host "=== DEBUG: Alist API response JSON (full) ==="
+                    ($response | ConvertTo-Json -Depth 6) | Write-Host
 
-                    # Lấy raw_url từ response và debug ngay
-                    $rawUrl = $response.data.raw_url
-                    Write-Host "[DEBUG] raw_url (from response)=$rawUrl"
+                    # Ép kiểu string cho raw_url để tránh object formatting bất ngờ
+                    $rawUrl = [string]$response.data.raw_url
+
+                    # Debug bước 1: in console, độ dài, 64 ký tự cuối, marker &ApiVersion=2.0
+                    Write-Host "[DEBUG] raw_url (console)=$rawUrl"
                     Write-Host "[DEBUG] raw_url length=$($rawUrl.Length)"
+                    $tailLen = [Math]::Min(64, $rawUrl.Length)
+                    Write-Host "[DEBUG] raw_url tail[$tailLen]=" + $rawUrl.Substring($rawUrl.Length - $tailLen)
+                    Write-Host "[DEBUG] raw_url endsWith '&ApiVersion=2.0'=" + $rawUrl.EndsWith("&ApiVersion=2.0")
 
-                    # Áp dụng logic kiểm tra nội bộ
+                    # Debug bước 2: lưu file để đối chiếu, đọc lại nguyên vẹn
+                    $rawFile = "$env:SCRIPT_PATH\raw_url.txt"
+                    Set-Content -Path $rawFile -Value $rawUrl -Encoding UTF8
+                    $rawFromFile = Get-Content $rawFile -Raw
+                    Write-Host "[DEBUG] raw_url.txt length=$($rawFromFile.Length)"
+                    $tailLenFile = [Math]::Min(64, $rawFromFile.Length)
+                    Write-Host "[DEBUG] raw_url.txt tail[$tailLenFile]=" + $rawFromFile.Substring($rawFromFile.Length - $tailLenFile)
+                    Write-Host "[DEBUG] raw_url.txt endsWith '&ApiVersion=2.0'=" + $rawFromFile.EndsWith("&ApiVersion=2.0")
+
+                    # Debug bước 3: hash để chắc chắn không đổi giữa biến và file
+                    $sha = [System.Security.Cryptography.SHA256]::Create()
+                    $rawHashMem = [System.BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($rawUrl))).Replace("-", "")
+                    $rawHashFile = [System.BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($rawFromFile))).Replace("-", "")
+                    Write-Host "[DEBUG] raw_url SHA256 (mem)=$rawHashMem"
+                    Write-Host "[DEBUG] raw_url SHA256 (file)=$rawHashFile"
+                    Write-Host "[DEBUG] raw_url mem==file:" ($rawHashMem -eq $rawHashFile)
+
+                    # Giữ logic nội bộ như cũ
+                    $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
                     if ([string]::IsNullOrWhiteSpace($rawUrl)) {
                         Write-Warning "[WARN] raw_url not found, fallback to direct URL"
-                        $downloadUrl = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                        $downloadUrl = "$expectedPrefix/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
+                    } elseif ($rawUrl.StartsWith($expectedPrefix)) {
+                        Write-Host "[DEBUG] raw_url is internal, rebuild direct URL"
+                        $downloadUrl = "$expectedPrefix/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
                     } else {
-                        $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
-                        if ($rawUrl.StartsWith($expectedPrefix)) {
-                            Write-Host "[DEBUG] raw_url is internal, rebuild direct URL"
-                            $downloadUrl = "$expectedPrefix/$($env:iso)/$($ruleMap['folder'])/$($lastFile.Name)"
-                        } else {
-                            Write-Host "[DEBUG] raw_url is external, keep as-is"
-                            $downloadUrl = $rawUrl
-                        }
+                        Write-Host "[DEBUG] raw_url is external, keep as-is"
+                        $downloadUrl = $rawUrl
                     }
 
-                    Write-Host "[PREPARE] Download $($lastFile.Name) from $downloadUrl"
-                    Write-Host "[DEBUG] final downloadUrl length=$($downloadUrl.Length)"
+                    # Debug downloadUrl tương tự để so sánh
+                    Write-Host "[DEBUG] downloadUrl (console)=$downloadUrl"
+                    Write-Host "[DEBUG] downloadUrl length=$($downloadUrl.Length)"
+                    $dlTailLen = [Math]::Min(64, $downloadUrl.Length)
+                    Write-Host "[DEBUG] downloadUrl tail[$dlTailLen]=" + $downloadUrl.Substring($downloadUrl.Length - $dlTailLen)
+                    Write-Host "[DEBUG] downloadUrl endsWith '&ApiVersion=2.0'=" + $downloadUrl.EndsWith("&ApiVersion=2.0")
 
+                    $dlFile = "$env:SCRIPT_PATH\download_url.txt"
+                    Set-Content -Path $dlFile -Value $downloadUrl -Encoding UTF8
+                    $dlFromFile = Get-Content $dlFile -Raw
+                    Write-Host "[DEBUG] download_url.txt length=$($dlFromFile.Length)"
+                    $dlTailLenFile = [Math]::Min(64, $dlFromFile.Length)
+                    Write-Host "[DEBUG] download_url.txt tail[$dlTailLenFile]=" + $dlFromFile.Substring($dlFromFile.Length - $dlTailLenFile)
+                    Write-Host "[DEBUG] download_url.txt endsWith '&ApiVersion=2.0'=" + $dlFromFile.EndsWith("&ApiVersion=2.0")
+
+                    $dlHashMem = [System.BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($downloadUrl))).Replace("-", "")
+                    $dlHashFile = [System.BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($dlFromFile))).Replace("-", "")
+                    Write-Host "[DEBUG] downloadUrl SHA256 (mem)=$dlHashMem"
+                    Write-Host "[DEBUG] downloadUrl SHA256 (file)=$dlHashFile"
+                    Write-Host "[DEBUG] downloadUrl mem==file:" ($dlHashMem -eq $dlHashFile)
+
+                    # Gọi aria2c: dùng input-file để loại bỏ mọi vấn đề escape/ký tự đặc biệt
                     $localDir = "$env:SCRIPT_PATH\$env:iso"
+                    $ariaListFile = "$env:SCRIPT_PATH\aria2_urls.txt"
+                    Set-Content -Path $ariaListFile -Value $downloadUrl -Encoding UTF8
 
-                    # Escape ngoặc kép để không bị cắt ở ký tự &
-                    $ariaOut = & aria2c -d $localDir "`"$downloadUrl`"" 2>&1
+                    Write-Host "[PREPARE] Download $($lastFile.Name) from input-file: $ariaListFile"
+                    Write-Host "[DEBUG] aria2 input file endsWith '&ApiVersion=2.0'=" + ((Get-Content $ariaListFile -Raw).EndsWith("&ApiVersion=2.0"))
+
+                    $ariaLog = "$env:SCRIPT_PATH\aria2.log"
+                    $ariaOut = & aria2c `
+                        -l "$ariaLog" `
+                        --log-level=debug `
+                        --max-connection-per-server=4 `
+                        -d "$localDir" `
+                        --input-file="$ariaListFile" 2>&1
+
                     Write-Host "=== DEBUG: aria2c output ==="
                     Write-Host $ariaOut
+                    Write-Host "=== DEBUG: aria2c log tail ==="
+                    if (Test-Path $ariaLog) { Get-Content "$ariaLog" -Tail 80 | ForEach-Object { Write-Host $_ } }
                 }
                 catch {
                     Write-Warning "[WARN] Alist API request failed: $($_.Exception.Message)"
