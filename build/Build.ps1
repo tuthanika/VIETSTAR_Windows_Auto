@@ -46,3 +46,4 @@ return @{
     Mode      = $Mode
     BuildPath = $buildOut
     ExitCode  = $exitCode
+}
