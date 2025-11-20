@@ -51,6 +51,13 @@ if ($isoFile) {
 }
 Write-Host "[DEBUG] Status: $Status"
 
+Write-Host "[DEBUG] Build returning hashtable:"
+Write-Host "  Type = $((@{ Mode=$Mode; BuildPath=$env:vietstar; Status=$Status }).GetType().FullName)"
+Write-Host "  Keys = Mode, BuildPath, Status"
+Write-Host "  Mode=$Mode"
+Write-Host "  BuildPath=$env:vietstar"
+Write-Host "  Status=$Status"
+
 return @{
     Mode      = $Mode
     BuildPath = $env:vietstar

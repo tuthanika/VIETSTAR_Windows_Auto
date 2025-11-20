@@ -3,6 +3,9 @@ param(
     [object]$Input
 )
 
+Write-Host "[DEBUG] Upload received Input type=$($Input.GetType().FullName)"
+Write-Host "[DEBUG] Upload received Input value=$Input"
+
 Write-Host "=== Upload start for $Mode ==="
 
 # Chuẩn hóa input thành hashtable
@@ -21,6 +24,10 @@ if ($buildResult.Status -ne "ISO ready") {
     Write-Warning "[WARN] No ISO to upload for mode $Mode"
     return @{ Mode = $Mode; Status = $buildResult.Status }
 }
+
+Write-Host "[DEBUG] Coerced buildResult type=$($buildResult.GetType().FullName)"
+Write-Host "[DEBUG] Coerced buildResult keys=$($buildResult.Keys -join ', ')"
+Write-Host "[DEBUG] Coerced buildResult.Status=$($buildResult.Status)"
 
 # Lấy ISO thực tế
 $isoFile = Get-ChildItem -Path $buildResult.BuildPath -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1

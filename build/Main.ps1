@@ -82,19 +82,21 @@ foreach ($m in $runModes) {
     # Call build
     $buildOut = . "$env:SCRIPT_PATH\build\Build.ps1" -Mode $m -Input $prepResult
 
-    # Lọc hashtable nếu có nhiều output (không thay đổi logic cũ, chỉ thêm an toàn)
+    Write-Host "[DEBUG] Raw buildOut type=$($buildOut.GetType().FullName)"
+    Write-Host "[DEBUG] Raw buildOut value=$buildOut"
+
     $buildResult = $buildOut
     if ($buildOut -isnot [hashtable]) {
         $buildResult = $buildOut | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
     }
 
-    if (-not $buildResult) {
-        Write-Warning "[WARN] Build returned no hashtable for mode $m, skipping upload"
-        continue
-    }
-
+    Write-Host "[DEBUG] buildResult type=$($buildResult.GetType().FullName)"
+    Write-Host "[DEBUG] buildResult keys=$($buildResult.Keys -join ', ')"
+    Write-Host "[DEBUG] buildResult.Status=$($buildResult.Status)"
+	
     # Call upload (Upload.ps1 đã chấp nhận object, tự chuẩn hóa)
     $uploadOut = . "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m -Input $buildResult
+    Write-Host "[DEBUG] Called Upload with Input type=$($buildResult.GetType().FullName)"
 
     # (Optional) Lọc output upload nếu cần hashtable cuối cùng
     $uploadResult = $uploadOut
