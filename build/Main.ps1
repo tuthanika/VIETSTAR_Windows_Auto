@@ -73,13 +73,13 @@ foreach ($m in $runModes) {
     Write-Host "[DEBUG] Silent ISO mounted, silent path set to $env:silent"
 
     # Set env paths for CMD (absolute) before calling build
-    $env:vietstar = Join-Path $env:SCRIPT_PATH $env:vietstar
+    $env:vietstar = Join-Path $env:SCRIPT_PATH $env:vietstar_path
     $env:silent   = $env:silent   # giữ nguyên vì đã mount A:\
-    $env:oem      = Join-Path $env:SCRIPT_PATH $env:oem
-    $env:dll      = Join-Path $env:SCRIPT_PATH $env:dll
-    $env:driver   = Join-Path $env:SCRIPT_PATH $env:driver
-    $env:iso      = Join-Path $env:SCRIPT_PATH $env:iso
-    $env:boot7    = Join-Path $env:SCRIPT_PATH $env:boot7
+    $env:oem      = Join-Path $env:SCRIPT_PATH $env:oem_path
+    $env:dll      = Join-Path $env:SCRIPT_PATH $env:dll_path
+    $env:driver   = Join-Path $env:SCRIPT_PATH $env:driver_path
+    $env:iso      = Join-Path $env:SCRIPT_PATH $env:iso_path
+    $env:boot7    = Join-Path $env:SCRIPT_PATH $env:boot7_path
 
     Write-Host "[DEBUG] Env paths set:"
     Write-Host "  vietstar=$env:vietstar"
