@@ -23,8 +23,6 @@ if (-not (Test-Path $cmdFile)) {
     exit 1
 }
 
-
-
 Write-Host "[DEBUG] Calling: $cmdFile $Mode"
 Start-Process -FilePath $cmdFile -ArgumentList $Mode -NoNewWindow -Wait
 $exitCode = $LASTEXITCODE
