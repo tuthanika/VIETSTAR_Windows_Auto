@@ -26,7 +26,6 @@ jobs:
       ALIST_HOST: https://cloud.vietstarhp.com
       ALIST_PATH: od-app/C03.vietstar@vietstarhp.onmicrosoft.com
 
-      OK_UPLOAD: z.VIETSTAR
       vietstar_path: z.VIETSTAR
       silent_path: z.Silent
       oem_path: 0.OEM
@@ -44,14 +43,12 @@ jobs:
             "Mode": "7-32",
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*86*.iso"],
-            "BootFolder": "z.BOOT7",
             "BootPatterns": ["*windows*7*86*.iso"]
           },
           {
             "Mode": "7-64",
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*64*.iso"],
-            "BootFolder": "z.BOOT7",
             "BootPatterns": ["*7*64*.iso"]
           }
         ]

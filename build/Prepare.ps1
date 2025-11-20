@@ -3,7 +3,7 @@ param([string]$Mode)
 Write-Host "=== Prepare start for $Mode ==="
 Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 
-# Local dirs using *_path (safe regardless of values)
+# Tạo thư mục local từ *_path (an toàn, không nhân đôi)
 $isoDir    = Join-Path $env:SCRIPT_PATH $env:iso_path
 $driverDir = Join-Path $env:SCRIPT_PATH $env:driver_path
 $boot7Dir  = Join-Path $env:SCRIPT_PATH $env:boot7_path
@@ -16,7 +16,7 @@ foreach ($d in @($isoDir, $driverDir, $boot7Dir, $silentDir)) {
     }
 }
 
-# Read rule.env
+# Đọc rule.env
 $ruleFile = Join-Path $env:SCRIPT_PATH "rule.env"
 if (-not (Test-Path $ruleFile)) { Write-Error "[ERROR] rule.env not found"; exit 1 }
 
@@ -30,17 +30,30 @@ Get-Content $ruleFile | ForEach-Object {
 }
 Write-Host "[DEBUG] rule.env keys: $($ruleMap.Keys -join ', ')"
 
-# Helper: list and pick latest file by pattern from remote base and folder
+# Ghép remote path: base_path + (optional) subFolder
+function Resolve-RemoteDir {
+    param(
+        [string]$basePath,   # ví dụ z.ISO, z.BOOT7, z.DRIVER, z.Silent, z.VIETSTAR
+        [string]$subFolder   # thư mục con từ rule.env (có thể rỗng)
+    )
+    if ([string]::IsNullOrWhiteSpace($subFolder)) {
+        return "$($env:RCLONE_PATH)$basePath"
+    } else {
+        return "$($env:RCLONE_PATH)$basePath/$subFolder"
+    }
+}
+
+# Liệt kê từ remote và chọn file cuối cùng theo patterns
 function Resolve-RemoteLatest {
     param(
-        [string]$base,      # e.g. z.ISO, z.DRIVER, z.BOOT7, z.Silent
-        [string]$folder,    # e.g. Windows 7
-        [string]$patterns   # semicolon patterns
+        [string]$base,
+        [string]$subFolder,
+        [string]$patterns
     )
     if ([string]::IsNullOrWhiteSpace($patterns)) { return $null }
 
-    $remoteDir = "$($env:RCLONE_PATH)$base/$folder"
-    Write-Host "[DEBUG] Resolve-RemoteLatest base=$base folder=$folder patterns=$patterns"
+    $remoteDir = Resolve-RemoteDir -basePath $base -subFolder $subFolder
+    Write-Host "[DEBUG] Resolve-RemoteLatest base=$base subFolder=$subFolder patterns=$patterns"
     Write-Host "[DEBUG] remoteDir=$remoteDir"
 
     try {
@@ -51,17 +64,22 @@ function Resolve-RemoteLatest {
         Write-Host "=== DEBUG: raw rclone output ==="
         $jsonOut | ForEach-Object { Write-Host "  $_" }
 
-        if (-not $jsonOut -or ($jsonOut -notmatch '^\s*\[')) {
-            Write-Host "[DEBUG] rclone lsjson returned no JSON (string length=$($jsonOut.Length))"
+        # Cố gắng parse JSON, nếu lỗi thì coi như không có file
+        try {
+            $entries = $jsonOut | ConvertFrom-Json
+        } catch {
+            Write-Host "[DEBUG] ConvertFrom-Json failed: $($_.Exception.Message)"
             return $null
         }
 
-        $entries = $jsonOut | ConvertFrom-Json
-        Write-Host "[DEBUG] entries count=$($entries.Count)"
-        $entries | ForEach-Object { Write-Host "  entry: Name=$($_.Name) IsDir=$($_.IsDir)" }
+        if (-not $entries) {
+            Write-Host "[DEBUG] entries is null/empty"
+            return $null
+        }
 
         $files = @($entries | Where-Object { $_.IsDir -eq $false })
-        Write-Host "[DEBUG] file entries count=$($files.Count)"
+        Write-Host "[DEBUG] entries count=$($entries.Count), file entries=$($files.Count)"
+        $files | ForEach-Object { Write-Host "  file: Name=$($_.Name) Size=$($_.Size) ModTime=$($_.ModTime)" }
 
         if (-not $files -or $files.Count -eq 0) { return $null }
         return ($files | Select-Object -Last 1)
@@ -72,16 +90,22 @@ function Resolve-RemoteLatest {
     }
 }
 
-# Helper: build download URL via Alist for a given base/folder/file
+# Lấy URL tải qua Alist (giữ nguyên logic raw_url / expectedPrefix)
 function Get-DownloadUrl {
     param(
-        [string]$base,
-        [string]$folder,
+        [string]$base,        # *_path
+        [string]$subFolder,   # từ rule.env: folder/drvFolder/bootFolder/silentFolder
         [string]$fileName
     )
-    $alistPathRel = "/$($env:ALIST_PATH)/$base/$folder/$fileName"
+
+    # Xây path tương đối dưới ALIST_PATH: /ALIST_PATH/base[/subFolder]/fileName
+    $folderRel = if ([string]::IsNullOrWhiteSpace($subFolder)) { $base } else { "$base/$subFolder" }
+    $alistPathRel = "/$($env:ALIST_PATH)/$folderRel/$fileName"
     $apiUrl = "$($env:ALIST_HOST.TrimEnd('/'))/api/fs/get"
     $body = @{ path = $alistPathRel } | ConvertTo-Json -Compress
+
+    Write-Host "[DEBUG] Alist API url=$apiUrl"
+    Write-Host "[DEBUG] Alist API path=$alistPathRel"
 
     try {
         $response = Invoke-RestMethod -Uri $apiUrl `
@@ -91,53 +115,67 @@ function Get-DownloadUrl {
             -ContentType "application/json" `
             -ErrorAction Stop
 
+        Write-Host "=== DEBUG: Alist response ==="
+        ($response | ConvertTo-Json -Depth 6 | Out-String) | Write-Host
+
         $rawUrl = [string]$response.data.raw_url
+        Write-Host "[DEBUG] raw_url=$rawUrl"
+
+        # Quyết định URL cuối
         $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
         if ([string]::IsNullOrWhiteSpace($rawUrl)) {
-            return "$expectedPrefix/$base/$folder/$fileName"
+            Write-Warning "[WARN] raw_url empty, fallback to direct"
+            return "$expectedPrefix/$folderRel/$fileName"
         } elseif ($rawUrl.StartsWith($expectedPrefix)) {
-            return "$expectedPrefix/$base/$folder/$fileName"
+            Write-Host "[DEBUG] raw_url internal, rebuild direct"
+            return "$expectedPrefix/$folderRel/$fileName"
         } else {
+            Write-Host "[DEBUG] raw_url external, keep as-is"
             return $rawUrl
         }
     }
     catch {
         Write-Warning "[WARN] Alist API request failed: $($_.Exception.Message)"
-        return $null
+        # Fallback direct URL
+        $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
+        return "$expectedPrefix/$folderRel/$fileName"
     }
 }
 
 function Invoke-DownloadGroup {
     param(
-        [string]$label,           # iso | driver | boot7 | silent
-        [string]$base,            # *_path value (e.g. z.ISO)
-        [string]$folder,          # from rule.env
-        [string]$patterns,        # from rule.env
-        [string]$localDir         # resolved local dir
+        [string]$label,       # iso | driver | boot7 | silent
+        [string]$base,        # *_path
+        [string]$subFolder,   # từ rule.env ứng với nhóm
+        [string]$patterns,    # từ rule.env ứng với nhóm
+        [string]$localDir
     )
 
-    if ([string]::IsNullOrWhiteSpace($folder) -or [string]::IsNullOrWhiteSpace($patterns)) {
-        Write-Host "[DEBUG][$label] Skip (not defined in rule)"
+    Write-Host "[DEBUG][$label] base=$base subFolder=$subFolder patterns=$patterns localDir=$localDir"
+
+    if ([string]::IsNullOrWhiteSpace($patterns)) {
+        Write-Host "[DEBUG][$label] Skip (no patterns)"
         return $null
     }
 
-    $latest = Resolve-RemoteLatest -base $base -folder $folder -patterns $patterns
+    $latest = Resolve-RemoteLatest -base $base -subFolder $subFolder -patterns $patterns
     if (-not $latest) {
         Write-Host "[DEBUG][$label] No matching files found."
         return $null
     }
 
-    Write-Host "[DEBUG][$label] Found file $($latest.Name) in $folder"
-    $dlUrl = Get-DownloadUrl -base $base -folder $folder -fileName $latest.Name
-    if (-not $dlUrl) { return $null }
+    Write-Host "[DEBUG][$label] Selected file=$($latest.Name)"
+    $downloadUrl = Get-DownloadUrl -base $base -subFolder $subFolder -fileName $latest.Name
 
+    # Ghi ra input file cho aria2c
     $ariaListFile = Join-Path $env:SCRIPT_PATH "aria2_urls.$label.txt"
-    $ariaLog = Join-Path $env:SCRIPT_PATH "aria2.$label.log"
+    $ariaLog      = Join-Path $env:SCRIPT_PATH "aria2.$label.log"
+    $downloadUrl | Out-File -FilePath $ariaListFile -Encoding utf8 -NoNewline
 
-    $dlUrl | Out-File -FilePath $ariaListFile -Encoding utf8 -NoNewline
-    Write-Host "[PREPARE][$label] Download $($latest.Name) from input-file: $ariaListFile"
+    Write-Host "[PREPARE][$label] Download $($latest.Name) from: $downloadUrl"
+    Write-Host "[DEBUG][$label] aria2 input=$ariaListFile log=$ariaLog"
 
-    # Stream aria2c logs realtime
+    # Chạy aria2c và stream log ra console
     & aria2c `
         -l "$ariaLog" `
         --log-level=info `
@@ -150,14 +188,34 @@ function Invoke-DownloadGroup {
 
     if (Test-Path $ariaLog) { Get-Content $ariaLog -Tail 60 | ForEach-Object { Write-Host $_ } }
 
-    return (Join-Path $localDir $latest.Name)
+    $localFile = Join-Path $localDir $latest.Name
+    Write-Host "[DEBUG][$label] Local file expected: $localFile"
+    return $localFile
 }
 
+# Lấy subFolder/patterns từ rule.env theo đúng chuẩn bạn yêu cầu
+$isoFolder       = $ruleMap['folder']        # ISO/Vietstar ghép thêm Folder
+$isoPatterns     = $ruleMap['patterns']
+
+$drvFolder       = $ruleMap['drvFolder']     # Driver: nếu có thì base/DriverFolder, không thì base
+$drvPatterns     = $ruleMap['drvPatterns']
+
+$bootFolder      = $ruleMap['bootFolder']    # Boot: nếu có thì base/BootFolder, không thì base
+$bootPatterns    = $ruleMap['bootPatterns']
+
+$silentFolder    = $ruleMap['silentFolder']  # Silent: nếu có thì base/SilentFolder, không thì base
+$silentPatterns  = $ruleMap['silentPatterns']
+
+Write-Host "[DEBUG] ISO folder=$isoFolder patterns=$isoPatterns"
+Write-Host "[DEBUG] DRIVER folder=$drvFolder patterns=$drvPatterns"
+Write-Host "[DEBUG] BOOT7 folder=$bootFolder patterns=$bootPatterns"
+Write-Host "[DEBUG] SILENT folder=$silentFolder patterns=$silentPatterns"
+
 $results = @{
-    iso    = Invoke-DownloadGroup -label "iso"    -base $env:iso_path    -folder $ruleMap['folder']       -patterns $ruleMap['patterns']       -localDir $isoDir
-    driver = Invoke-DownloadGroup -label "driver" -base $env:driver_path -folder $ruleMap['drvFolder']    -patterns $ruleMap['drvPatterns']    -localDir $driverDir
-    boot7  = Invoke-DownloadGroup -label "boot7"  -base $env:boot7_path  -folder $ruleMap['bootFolder']   -patterns $ruleMap['bootPatterns']   -localDir $boot7Dir
-    silent = Invoke-DownloadGroup -label "silent" -base $env:silent_path -folder $ruleMap['silentFolder'] -patterns $ruleMap['silentPatterns'] -localDir $silentDir
+    iso    = Invoke-DownloadGroup -label "iso"    -base $env:iso_path    -subFolder $isoFolder    -patterns $isoPatterns     -localDir $isoDir
+    driver = Invoke-DownloadGroup -label "driver" -base $env:driver_path -subFolder $drvFolder    -patterns $drvPatterns     -localDir $driverDir
+    boot7  = Invoke-DownloadGroup -label "boot7"  -base $env:boot7_path  -subFolder $bootFolder   -patterns $bootPatterns    -localDir $boot7Dir
+    silent = Invoke-DownloadGroup -label "silent" -base $env:silent_path -subFolder $silentFolder -patterns $silentPatterns  -localDir $silentDir
 }
 
 Write-Output $results
