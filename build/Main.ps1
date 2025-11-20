@@ -53,9 +53,20 @@ foreach ($m in $runModes) {
     if (-not $prepResult) { $prepResult = @{} }
 
     # Mount Silent ISO to A:
-    $isoSilent = "$env:SCRIPT_PATH\z.Silent.iso"
-    Write-Host "[DEBUG] Mounting Silent ISO: $isoSilent to drive A:"
-    & imdisk -a -m A: -f "$isoSilent"
+    # Thư mục chứa ISO silent
+    $isoFolder = Join-Path $env:SCRIPT_PATH "z.Silent"
+    
+    # Lấy file ISO mới nhất trong thư mục
+    $isoSilent = Get-ChildItem -Path $isoFolder -Filter *.iso -File |
+                 Sort-Object LastWriteTime -Descending |
+                 Select-Object -First 1
+
+    if ($isoSilent) {
+        Write-Host "[DEBUG] Mounting Silent ISO: $($isoSilent.FullName) to drive A:"
+        & imdisk -a -m A: -f $isoSilent.FullName
+    } else {
+        Write-Warning "[WARN] No ISO file found in $isoFolder"
+    }
 
     # Override silent path to A:\
     $env:silent = "A:\Apps\exe"

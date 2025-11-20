@@ -26,6 +26,7 @@ jobs:
       ALIST_HOST: https://cloud.vietstarhp.com
       ALIST_PATH: od-app/C03.vietstar@vietstarhp.onmicrosoft.com
 
+      OK_UPLOAD: z.VIETSTAR
       vietstar: z.VIETSTAR
       silent: z.Silent
       oem: 0.OEM
