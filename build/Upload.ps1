@@ -58,7 +58,7 @@ if ([string]::IsNullOrWhiteSpace($env:RCLONE_PATH)) {
     return @{ Mode = $Mode; Status = "Skipped (no RCLONE_PATH)" }
 }
 
-$remoteRoot = $($env:RCLONE_PATH)$($env:OK_UPLOAD)
+$remoteRoot = "$env:RCLONE_PATH$env:OK_UPLOAD"
 $remoteDest = "$remoteRoot/$folder"
 
 # Thực hiện upload
