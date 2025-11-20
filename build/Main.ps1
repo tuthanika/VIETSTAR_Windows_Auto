@@ -79,17 +79,28 @@ foreach ($m in $runModes) {
     Write-Host "  iso=$env:iso"
     Write-Host "  boot7=$env:boot7"
 
-    # Call build (giữ nguyên), sau đó lọc ra đúng hashtable
+    # Call build
     $buildOut = . "$env:SCRIPT_PATH\build\Build.ps1" -Mode $m -Input $prepResult
-    $buildResult = $buildOut | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
+
+    # Lọc hashtable nếu có nhiều output (không thay đổi logic cũ, chỉ thêm an toàn)
+    $buildResult = $buildOut
+    if ($buildOut -isnot [hashtable]) {
+        $buildResult = $buildOut | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
+    }
+
     if (-not $buildResult) {
         Write-Warning "[WARN] Build returned no hashtable for mode $m, skipping upload"
         continue
     }
 
-    # Call upload với đúng hashtable
+    # Call upload (Upload.ps1 đã chấp nhận object, tự chuẩn hóa)
     $uploadOut = . "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m -Input $buildResult
-    $uploadResult = $uploadOut | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
+
+    # (Optional) Lọc output upload nếu cần hashtable cuối cùng
+    $uploadResult = $uploadOut
+    if ($uploadOut -isnot [hashtable]) {
+        $uploadResult = $uploadOut | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
+    }
     if (-not $uploadResult) {
         Write-Warning "[WARN] Upload returned no result for mode $m"
     }

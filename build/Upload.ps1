@@ -1,12 +1,29 @@
 param(
     [string]$Mode,
-    [hashtable]$Input
+    [object]$Input
 )
 
 Write-Host "=== Upload start for $Mode ==="
 
-# Nhận hashtable từ Build.ps1
-$buildResult = $Input
+# Chuẩn hóa Input thành hashtable, tránh lỗi binding khi Main truyền ArrayList
+$buildResult = $null
+if ($Input -is [hashtable]) {
+    $buildResult = $Input
+} elseif ($Input -is [System.Collections.IDictionary]) {
+    $buildResult = @{}
+    foreach ($k in $Input.Keys) { $buildResult[$k] = $Input[$k] }
+} elseif ($Input -is [System.Collections.IEnumerable]) {
+    $buildResult = ($Input | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1)
+}
+
+if (-not $buildResult) {
+    Write-Warning "[WARN] Upload received no hashtable input"
+    return @{
+        Mode   = $Mode
+        Status = "Skipped (invalid input)"
+    }
+}
+
 Write-Host "[DEBUG] BuildResult keys=$($buildResult.Keys -join ', ')"
 
 $buildPath = $buildResult.BuildPath
@@ -19,6 +36,8 @@ if (-not $buildPath -or -not (Test-Path $buildPath)) {
 }
 
 Write-Host "[DEBUG] Looking for ISO in: $buildPath"
+
+# Lấy ISO mới nhất
 $isoFile = Get-ChildItem -Path $buildPath -Filter *.iso -File |
            Sort-Object LastWriteTime -Descending |
            Select-Object -First 1
@@ -41,7 +60,7 @@ $uploadOut = & "$env:SCRIPT_PATH\rclone.exe" copy "$($isoFile.FullName)" "remote
 Write-Host "=== DEBUG: rclone upload output ==="
 Write-Host $uploadOut
 
-# Xóa ISO sau khi upload
+# Xóa ISO sau upload
 try {
     Write-Host "[DEBUG] Cleanup ISO: $($isoFile.FullName)"
     Remove-Item -Path $isoFile.FullName -Force -ErrorAction SilentlyContinue
