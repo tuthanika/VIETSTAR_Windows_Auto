@@ -101,6 +101,13 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path $env:SCRIPT_PATH -Force | Out-Null
+          
+      - name: Create folder
+        shell: pwsh
+        run: |
+          $path = Join-Path $env:SCRIPT_PATH $env:vietstar
+          New-Item -ItemType Directory -Force -Path $path
+          Write-Host "Created folder: $path"
 
       - name: Install aria2
         run: |
