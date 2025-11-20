@@ -41,8 +41,8 @@ if (-not (Test-Path $buildOut)) {
     New-Item -ItemType Directory -Force -Path $buildOut | Out-Null
 }
 
-Write-Output @{
+# Chỉ trả về Hashtable, không thêm Write-Host ở đây
+return @{
     Mode      = $Mode
     BuildPath = $buildOut
     ExitCode  = $exitCode
-}
