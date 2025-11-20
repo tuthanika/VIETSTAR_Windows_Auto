@@ -96,7 +96,7 @@ jobs:
         shell: cmd
         run: |
           echo Hello > "%SCRIPT_PATH%\UltraISO\hello.txt"
-          "%SCRIPT_PATH%\UltraISO\UltraISO.exe" /cmd /newiso "%SCRIPT_PATH%\UltraISO\hello.txt" /saveas "%SCRIPT_PATH%\UltraISO\test.iso"
+          %SCRIPT_PATH%\UltraISO\UltraISO.exe -imax -l -f %SCRIPT_PATH%\UltraISO\hello.txt -volu TEST_CD -out %SCRIPT_PATH%\test.iso
 
       - name: Prepare working directories
         shell: pwsh
