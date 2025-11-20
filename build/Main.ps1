@@ -112,7 +112,7 @@ foreach ($m in $runModes) {
     # Chỉ gọi Upload nếu ISO ready
     if ($buildResult.Status -eq "ISO ready") {
         Write-Host "[DEBUG] Calling Upload for mode $m (Upload sẽ tự xác định remote path theo env rules)"
-		$null = . "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m
+		& "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m
     } else {
         Write-Host "[DEBUG] Skip Upload for mode $m (Status=$($buildResult.Status))"
     }
