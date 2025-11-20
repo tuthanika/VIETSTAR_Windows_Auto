@@ -58,13 +58,12 @@ if ([string]::IsNullOrWhiteSpace($env:RCLONE_PATH)) {
     return @{ Mode = $Mode; Status = "Skipped (no RCLONE_PATH)" }
 }
 
-$remoteRoot = "$($env:RCLONE_PATH)$($env:vietstar_path)"
+$remoteRoot = "$($env:RCLONE_PATH)$($env:vietstar)"
 $remoteDest = "$remoteRoot/$folder"
 
 # Thực hiện upload
-$flags = $env:rclone_flag -split '\s+'
-$uploadOut = & "$env:SCRIPT_PATH\rclone.exe" copy "$($isoFile.FullName)" "$remoteDest" --config "$env:RCLONE_CONFIG_PATH" @flags 2>&1
-
+$flags = $env:rclone_flag
+$uploadOut = & "$env:SCRIPT_PATH\rclone.exe" copy "$($isoFile.FullName)" "$remoteDest" --config "$env:RCLONE_CONFIG_PATH" $flags 2>&1
 Write-Host $uploadOut
 
 # Xóa ISO sau upload

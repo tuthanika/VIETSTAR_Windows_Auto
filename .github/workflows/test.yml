@@ -26,14 +26,14 @@ jobs:
       ALIST_HOST: https://cloud.vietstarhp.com
       ALIST_PATH: od-app/C03.vietstar@vietstarhp.onmicrosoft.com
 
-      vietstar_path: z.VIETSTAR
-      silent_path:: z.Silent
-      oem_path:: 0.OEM
-      dll_path:: 1.DLL
-      driver_path:: z.DRIVER
-      iso_path:: z.ISO
-      boot7_path:: z.BOOT7
-      bootwim_path:: C:\1
+      vietstar: z.VIETSTAR
+      silent: z.Silent
+      oem: 0.OEM
+      dll: 1.DLL
+      driver: z.DRIVER
+      iso: z.ISO
+      boot7: z.BOOT7
+      bootwim: C:\1
 
       rclone_flag: --fast-list --delete-during --checksum --no-update-modtime --transfers 8 --checkers 8 --contimeout 60s --timeout 300s --retries 3 --low-level-retries 10 --onedrive-delta --server-side-across-configs --onedrive-no-versions --onedrive-hard-delete --onedrive-av-override --drive-copy-shortcut-content --drive-acknowledge-abuse --drive-stop-on-upload-limit --drive-stop-on-download-limit --checksum --track-renames --no-update-modtime
 
@@ -88,6 +88,15 @@ jobs:
           if (-not (Test-Path "${{ env.SCRIPT_PATH }}")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
 
+      - name: Check UltraISO version
+        shell: cmd
+        run: |
+          echo Hello > "%SCRIPT_PATH%\UltraISO\hello.txt"
+          %SCRIPT_PATH%\UltraISO\UltraISO.exe -imax -l -f %SCRIPT_PATH%\UltraISO\hello.txt -volu TEST_CD -out %SCRIPT_PATH%\test.iso
+          
+          if exist "%SCRIPT_PATH%\test.iso" (
+          for %%I in ("%SCRIPT_PATH%\test.iso") do (echo ISO created successfully. Size: %%~zI bytes)) else (echo ERROR: ISO file was not created.)
+
       - name: Prepare working directories
         shell: pwsh
         run: |
@@ -96,7 +105,7 @@ jobs:
       - name: Create folder
         shell: pwsh
         run: |
-          $path = Join-Path $env:SCRIPT_PATH $env:vietstar_path
+          $path = Join-Path $env:SCRIPT_PATH $env:vietstar
           New-Item -ItemType Directory -Force -Path $path
           Write-Host "Created folder: $path"
 
