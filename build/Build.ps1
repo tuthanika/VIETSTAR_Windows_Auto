@@ -51,15 +51,15 @@ if ($isoFile) {
 }
 Write-Host "[DEBUG] Status: $Status"
 
-Write-Host "[DEBUG] Build returning hashtable:"
-Write-Host "  Type = $((@{ Mode=$Mode; BuildPath=$env:vietstar; Status=$Status }).GetType().FullName)"
-Write-Host "  Keys = Mode, BuildPath, Status"
-Write-Host "  Mode=$Mode"
-Write-Host "  BuildPath=$env:vietstar"
-Write-Host "  Status=$Status"
-
-return @{
+$info = @{
     Mode      = $Mode
     BuildPath = $env:vietstar
     Status    = $Status
 }
+
+# Ghi ra file JSON
+$outFile = Join-Path $env:SCRIPT_PATH "build_result_$Mode.json"
+$info | ConvertTo-Json | Set-Content -Path $outFile -Encoding UTF8
+
+Write-Host "[DEBUG] Build wrote result file: $outFile"
+

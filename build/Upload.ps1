@@ -4,30 +4,13 @@ param(
 )
 
 Write-Host "[DEBUG] Upload received Input type=$($Input.GetType().FullName)"
-Write-Host "[DEBUG] Upload received Input value=$Input"
-
 Write-Host "=== Upload start for $Mode ==="
+# Nếu Input là PSObject (đọc từ JSON), chuyển sang hashtable
+$buildResult = @{}
+$props = $Input | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name
+foreach ($p in $props) { $buildResult[$p] = $Input.$p }
 
-# Chuẩn hóa input thành hashtable
-$buildResult = $null
-if ($Input -is [hashtable]) { $buildResult = $Input }
-elseif ($Input -is [System.Collections.IEnumerable]) {
-    $buildResult = ($Input | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1)
-}
-
-if (-not $buildResult) {
-    Write-Warning "[WARN] Upload received no hashtable input"
-    return @{ Mode = $Mode; Status = "Skipped (invalid input)" }
-}
-
-if ($buildResult.Status -ne "ISO ready") {
-    Write-Warning "[WARN] No ISO to upload for mode $Mode"
-    return @{ Mode = $Mode; Status = $buildResult.Status }
-}
-
-Write-Host "[DEBUG] Coerced buildResult type=$($buildResult.GetType().FullName)"
 Write-Host "[DEBUG] Coerced buildResult keys=$($buildResult.Keys -join ', ')"
-Write-Host "[DEBUG] Coerced buildResult.Status=$($buildResult.Status)"
 
 # Lấy ISO thực tế
 $isoFile = Get-ChildItem -Path $buildResult.BuildPath -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
