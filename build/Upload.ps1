@@ -62,11 +62,10 @@ $remoteRoot = "$env:RCLONE_PATH$env:OK_UPLOAD"
 $remoteDest = "$remoteRoot/$folder"
 
 # Thực hiện upload
-Write-Host "[DEBUG] Uploading ISO to $remoteDest"
+Write-Output "[DEBUG] Uploading ISO to $remoteDest"
 $flags = $env:rclone_flag -split '\s+'
 & "$env:SCRIPT_PATH\rclone.exe" copy "$($isoFile.FullName)" "$remoteDest" --config "$env:RCLONE_CONFIG_PATH" @flags
-
-# Xóa ISO sau upload
 Remove-Item -Path $isoFile.FullName -Force -ErrorAction SilentlyContinue
 
-return @{ Mode = $Mode; Status = "ISO uploaded and deleted" }
+# Trả về object sau khi log đã in
+,@{ Mode = $Mode; Status = "ISO uploaded and deleted" }
