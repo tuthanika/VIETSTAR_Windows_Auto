@@ -6,7 +6,7 @@ on:
       mode:
         description: 'Chọn mode (ví dụ 7-32, 7-64, auto)'
         required: true
-        default: '7-32'
+        default: 'all'
 
 jobs:
   build:
@@ -51,30 +51,8 @@ jobs:
             "Mode": "7-64",
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*64*.iso"],
-            "DriverFolder": "DriverCeo/DP",
-            "DriverPatterns": ["*7*64*.iso"],
             "BootFolder": "z.BOOT7",
-            "BootPatterns": ["*7*64*.iso"],
-            "SilentFolder": "z.Silent",
-            "SilentPatterns": ["*lite*.iso"]
-          },
-          {
-            "Mode": "11-64",
-            "Folder": "Windows 11",
-            "Patterns": ["*windows*11*version*64*.iso", "*windows*11*64*.iso"],
-            "DriverFolder": "z.DRIVER",
-            "DriverPatterns": ["*Win10*x64*.iso"],
-            "SilentFolder": "z.Silent",
-            "SilentPatterns": ["*lite*.iso"]
-          },
-          {
-            "Mode": "11-64-ltsc",
-            "Folder": "Windows 11 LTSC",
-            "Patterns": ["*windows*11*ltsc*64*.iso"],
-            "DriverFolder": "z.DRIVER",
-            "DriverPatterns": ["*Win10*x64*.iso"],
-            "SilentFolder": "z.Silent",
-            "SilentPatterns": ["*lite*.iso"]
+            "BootPatterns": ["*7*64*.iso"]
           }
         ]
 
