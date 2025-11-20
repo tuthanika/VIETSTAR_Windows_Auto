@@ -41,6 +41,22 @@ if (-not (Test-Path $buildOut)) {
     New-Item -ItemType Directory -Force -Path $buildOut | Out-Null
 }
 
+# Kiểm tra ISO trong vietstar
+$isoFile = Get-ChildItem -Path $env:vietstar -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+if ($isoFile) {
+    $Status = "ISO ready"
+} else {
+    $Status = "No ISO"
+}
+
+return @{
+    Mode      = $Mode
+    BuildPath = $env:vietstar
+    Status    = $Status
+}
+
+
 # Chỉ trả về Hashtable, không thêm Write-Host ở đây
 return @{
     Mode      = $Mode
