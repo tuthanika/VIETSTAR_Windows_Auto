@@ -3,17 +3,20 @@ param([string]$Mode)
 Write-Host "=== Prepare start for $Mode ==="
 Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 
-foreach ($d in @("$env:SCRIPT_PATH\$env:iso",
-                 "$env:SCRIPT_PATH\$env:driver",
-                 "$env:SCRIPT_PATH\$env:boot7",
-                 "$env:SCRIPT_PATH\$env:silent")) {
-    if (-not (Test-Path $d)) {
+# Resolve local directories an toàn bằng Join-Path
+$isoDir    = Join-Path $env:SCRIPT_PATH $env:iso
+$driverDir = Join-Path $env:SCRIPT_PATH $env:driver
+$boot7Dir  = Join-Path $env:SCRIPT_PATH $env:boot7
+$silentDir = Join-Path $env:SCRIPT_PATH $env:silent
+
+foreach ($d in @($isoDir, $driverDir, $boot7Dir, $silentDir)) {
+    if (-not (Test-Path -LiteralPath $d)) {
         Write-Host "[DEBUG] mkdir $d"
         New-Item -ItemType Directory -Path $d | Out-Null
     }
 }
 
-$ruleFile = "$env:SCRIPT_PATH\rule.env"
+$ruleFile = Join-Path $env:SCRIPT_PATH "rule.env"
 if (-not (Test-Path $ruleFile)) { Write-Error "[ERROR] rule.env not found"; exit 1 }
 
 $ruleMap = @{}
@@ -28,27 +31,24 @@ Write-Host "[DEBUG] rule.env keys: $($ruleMap.Keys -join ', ')"
 
 function Get-RemoteDir {
     param(
-        [string]$baseVal,     # e.g. z.ISO | z.DRIVER | z.BOOT7 | z.Silent
-        [string]$folderName   # e.g. Windows 7 | DriverCeo/DP | z.BOOT7
+        [string]$baseVal,
+        [string]$folderName
     )
     if ([string]::IsNullOrWhiteSpace($folderName)) {
         return "$($env:RCLONE_PATH)$baseVal"
     }
-    # Nếu folderName đã chứa base, không cộng base lần nữa
     if ($folderName -eq $baseVal -or $folderName.StartsWith("$baseVal/")) {
         return "$($env:RCLONE_PATH)$folderName"
     }
-    # Bình thường: base/Folder
     return "$($env:RCLONE_PATH)$baseVal/$folderName"
 }
 
 function Get-AlistRelPath {
     param(
-        [string]$alistBase,   # e.g. z.ISO | z.DRIVER | z.BOOT7 | z.Silent
-        [string]$folderName,  # như trên
+        [string]$alistBase,
+        [string]$folderName,
         [string]$fileName
     )
-    # folder phần tương đối dưới ALIST_PATH
     $folderRel =
         if ([string]::IsNullOrWhiteSpace($folderName)) { $alistBase }
         elseif ($folderName -eq $alistBase) { $alistBase }
@@ -62,9 +62,9 @@ function Invoke-DownloadRule {
     param(
         [string]$folderName,
         [string]$patterns,
-        [string]$localSubDirValue, # z.ISO | z.DRIVER | z.BOOT7 | z.Silent
-        [string]$label,            # iso | driver | boot7 | silent
-        [string]$baseEnvVar        # "iso" | "driver" | "boot7" | "silent"
+        [string]$localSubDirValue,
+        [string]$label,
+        [string]$baseEnvVar
     )
 
     if ([string]::IsNullOrWhiteSpace($folderName) -or [string]::IsNullOrWhiteSpace($patterns)) {
@@ -87,7 +87,6 @@ function Invoke-DownloadRule {
 
         if ($jsonMain -match '^\s*\[') {
             $entries = $jsonMain | ConvertFrom-Json
-            # Chỉ lấy file (IsDir=false)
             $fileEntries = @($entries | Where-Object { $_.IsDir -eq $false })
             if (-not $fileEntries -or $fileEntries.Count -eq 0) {
                 Write-Host "[DEBUG][$label] No file entries after filtering IsDir=false."
@@ -97,13 +96,9 @@ function Invoke-DownloadRule {
             $lastFile = $fileEntries | Select-Object -Last 1
             Write-Host "[DEBUG][$label] Found file $($lastFile.Name) in $folderName"
 
-            # Alist RelPath đồng bộ với base
             $alistPathRel = Get-AlistRelPath -alistBase $baseVal -folderName $folderName -fileName $lastFile.Name
             $apiUrl = "$($env:ALIST_HOST.TrimEnd('/'))/api/fs/get"
             $body = @{ path = $alistPathRel } | ConvertTo-Json -Compress
-
-            Write-Host "[DEBUG][$label] Alist API url=$apiUrl"
-            Write-Host "[DEBUG][$label] Alist API path=$alistPathRel"
 
             try {
                 $response = Invoke-RestMethod -Uri $apiUrl `
@@ -113,78 +108,35 @@ function Invoke-DownloadRule {
                     -ContentType "application/json" `
                     -ErrorAction Stop
 
-                Write-Host "=== DEBUG[$label]: Alist API response JSON (full) ==="
-                ($response | ConvertTo-Json -Depth 6 | Out-String) | Write-Host
-
                 $rawUrl = [string]$response.data.raw_url
-
-                Write-Host "[DEBUG][$label] raw_url length=$($rawUrl.Length)"
-                $tailLen = [Math]::Min(64, $rawUrl.Length)
-                Write-Host "[DEBUG][$label] raw_url tail[$tailLen]=" + ($tailLen -gt 0 ? $rawUrl.Substring($rawUrl.Length - $tailLen) : "")
-                Write-Host "[DEBUG][$label] raw_url endsWith '&ApiVersion=2.0'=" + $rawUrl.EndsWith("&ApiVersion=2.0")
-
-                $rawFile = "$env:SCRIPT_PATH\raw_url.$label.txt"
-                $rawUrl | Out-File -FilePath $rawFile -Encoding utf8 -NoNewline
-                $rawFromFile = (Get-Content $rawFile -Raw)
-                Write-Host "[DEBUG][$label] raw_url.$label.txt length=$($rawFromFile.Length)"
-                $tailLenFile = [Math]::Min(64, $rawFromFile.Length)
-                Write-Host "[DEBUG][$label] raw_url.$label.txt tail[$tailLenFile]=" + ($tailLenFile -gt 0 ? $rawFromFile.Substring($rawFromFile.Length - $tailLenFile) : "")
-                Write-Host "[DEBUG][$label] raw_url.$label.txt endsWith '&ApiVersion=2.0' (raw)=" + $rawFromFile.EndsWith("&ApiVersion=2.0")
-                Write-Host "[DEBUG][$label] raw_url.$label.txt endsWith '&ApiVersion=2.0' (trim)=" + $rawFromFile.TrimEnd().EndsWith("&ApiVersion=2.0")
-
                 $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
                 if ([string]::IsNullOrWhiteSpace($rawUrl)) {
-                    Write-Warning "[WARN][$label] raw_url not found, fallback to direct URL"
                     $downloadUrl = "$expectedPrefix/$((Get-AlistRelPath -alistBase $baseVal -folderName $folderName -fileName $lastFile.Name).TrimStart('/'))"
                 } elseif ($rawUrl.StartsWith($expectedPrefix)) {
-                    Write-Host "[DEBUG][$label] raw_url is internal, rebuild direct URL"
                     $downloadUrl = "$expectedPrefix/$((Get-AlistRelPath -alistBase $baseVal -folderName $folderName -fileName $lastFile.Name).Split('/',3)[2])"
                 } else {
-                    Write-Host "[DEBUG][$label] raw_url is external, keep as-is"
                     $downloadUrl = $rawUrl
                 }
 
-                Write-Host "[DEBUG][$label] downloadUrl length=$($downloadUrl.Length)"
-                $dlTailLen = [Math]::Min(64, $downloadUrl.Length)
-                Write-Host "[DEBUG][$label] downloadUrl tail[$dlTailLen]=" + ($dlTailLen -gt 0 ? $downloadUrl.Substring($downloadUrl.Length - $dlTailLen) : "")
-                Write-Host "[DEBUG][$label] downloadUrl endsWith '&ApiVersion=2.0'=" + $downloadUrl.EndsWith("&ApiVersion=2.0")
-
-                $dlFile = "$env:SCRIPT_PATH\download_url.$label.txt"
-                $downloadUrl | Out-File -FilePath $dlFile -Encoding utf8 -NoNewline
-                $dlFromFile = (Get-Content $dlFile -Raw)
-                Write-Host "[DEBUG][$label] download_url.$label.txt length=$($dlFromFile.Length)"
-                $dlTailLenFile = [Math]::Min(64, $dlFromFile.Length)
-                Write-Host "[DEBUG][$label] download_url.$label.txt tail[$dlTailLenFile]=" + ($dlTailLenFile -gt 0 ? $dlFromFile.Substring($dlFromFile.Length - $dlTailLenFile) : "")
-                Write-Host "[DEBUG][$label] download_url.$label.txt endsWith '&ApiVersion=2.0' (raw)=" + $dlFromFile.EndsWith("&ApiVersion=2.0")
-                Write-Host "[DEBUG][$label] download_url.$label.txt endsWith '&ApiVersion=2.0' (trim)=" + $dlFromFile.TrimEnd().EndsWith("&ApiVersion=2.0")
-
-                $localDir = "$env:SCRIPT_PATH\$localSubDirValue"
-                $ariaListFile = "$env:SCRIPT_PATH\aria2_urls.$label.txt"
+                $localDir = Join-Path $env:SCRIPT_PATH $localSubDirValue
+                $ariaListFile = Join-Path $env:SCRIPT_PATH "aria2_urls.$label.txt"
                 $downloadUrl | Out-File -FilePath $ariaListFile -Encoding utf8 -NoNewline
 
                 Write-Host "[PREPARE][$label] Download $($lastFile.Name) from input-file: $ariaListFile"
-                $ariaFileRaw = Get-Content $ariaListFile -Raw
-                Write-Host "[DEBUG][$label] aria2 input file length=$($ariaFileRaw.Length)"
-                Write-Host "[DEBUG][$label] aria2 input file endsWith '&ApiVersion=2.0' (raw)=" + $ariaFileRaw.EndsWith("&ApiVersion=2.0")
-                Write-Host "[DEBUG][$label] aria2 input file endsWith '&ApiVersion=2.0' (trim)=" + $ariaFileRaw.TrimEnd().EndsWith("&ApiVersion=2.0")
-
-                $ariaLog = "$env:SCRIPT_PATH\aria2.$label.log"
-                $ariaOut = & aria2c `
+                $ariaLog = Join-Path $env:SCRIPT_PATH "aria2.$label.log"
+                & aria2c `
                     -l "$ariaLog" `
-                    --log-level=debug `
+                    --log-level=info `
                     --file-allocation=none `
                     --max-connection-per-server=16 `
                     --split=16 `
                     --enable-http-keep-alive=false `
                     -d "$localDir" `
-                    --input-file="$ariaListFile" 2>&1
+                    --input-file="$ariaListFile"
 
-                Write-Host "=== DEBUG[$label]: aria2c output ==="
-                Write-Host $ariaOut
-                Write-Host "=== DEBUG[$label]: aria2c log tail ==="
-                if (Test-Path $ariaLog) { Get-Content "$ariaLog" -Tail 60 | ForEach-Object { Write-Host $_ } }
+                if (Test-Path $ariaLog) { Get-Content $ariaLog -Tail 60 | ForEach-Object { Write-Host $_ } }
 
-                return "$localDir\$($lastFile.Name)"
+                return (Join-Path $localDir $lastFile.Name)
             }
             catch {
                 Write-Warning "[WARN][$label] Alist API request failed: $($_.Exception.Message)"
@@ -200,10 +152,11 @@ function Invoke-DownloadRule {
     return $null
 }
 
-$results = @{}
-$results['iso']    = Invoke-DownloadRule -folderName $ruleMap['folder']       -patterns $ruleMap['patterns']       -localSubDirValue $env:iso    -label "iso"    -baseEnvVar "iso"
-$results['driver'] = Invoke-DownloadRule -folderName $ruleMap['drvFolder']    -patterns $ruleMap['drvPatterns']    -localSubDirValue $env:driver -label "driver" -baseEnvVar "driver"
-$results['boot7']  = Invoke-DownloadRule -folderName $ruleMap['bootFolder']   -patterns $ruleMap['bootPatterns']   -localSubDirValue $env:boot7  -label "boot7"  -baseEnvVar "boot7"
-$results['silent'] = Invoke-DownloadRule -folderName $ruleMap['silentFolder'] -patterns $ruleMap['silentPatterns'] -localSubDirValue $env:silent -label "silent" -baseEnvVar "silent"
+$results = @{
+    iso    = Invoke-DownloadRule -folderName $ruleMap['folder']       -patterns $ruleMap['patterns']       -localSubDirValue $env:iso    -label "iso"    -baseEnvVar "iso"
+    driver = Invoke-DownloadRule -folderName $ruleMap['drvFolder']    -patterns $ruleMap['drvPatterns']    -localSubDirValue $env:driver -label "driver" -baseEnvVar "driver"
+    boot7  = Invoke-DownloadRule -folderName $ruleMap['bootFolder']   -patterns $ruleMap['bootPatterns']   -localSubDirValue $env:boot7  -label "boot7"  -baseEnvVar "boot7"
+    silent = Invoke-DownloadRule -folderName $ruleMap['silentFolder'] -patterns $ruleMap['silentPatterns'] -localSubDirValue $env:silent -label "silent" -baseEnvVar "silent"
+}
 
 Write-Output $results
