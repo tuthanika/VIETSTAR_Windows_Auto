@@ -63,7 +63,7 @@ foreach ($m in $runModes) {
 
     # Set env paths for CMD (absolute) before calling build
     $env:vietstar = "$env:SCRIPT_PATH\$env:vietstar"
-    $env:silent   = "$env:silent"   # đã mount A:\ ở trên
+    $env:silent   = "$env:silent"
     $env:oem      = "$env:SCRIPT_PATH\$env:oem"
     $env:dll      = "$env:SCRIPT_PATH\$env:dll"
     $env:driver   = "$env:SCRIPT_PATH\$env:driver"
@@ -79,21 +79,33 @@ foreach ($m in $runModes) {
     Write-Host "  iso=$env:iso"
     Write-Host "  boot7=$env:boot7"
 
-    # Call build
-    $buildOut = . "$env:SCRIPT_PATH\build\Build.ps1" -Mode $m -Input $prepResult
+    # Call build (build sẽ ghi JSON)
+    $null = . "$env:SCRIPT_PATH\build\Build.ps1" -Mode $m -Input $prepResult
 
+    # Đọc JSON (Raw để lấy toàn chuỗi)
     $outFile = Join-Path $env:SCRIPT_PATH "build_result_$m.json"
     if (-not (Test-Path $outFile)) {
         Write-Warning "[WARN] Build result file not found for mode $m"
         continue
     }
 
-    $buildResult = Get-Content $outFile | ConvertFrom-Json
-    Write-Host "[DEBUG] Main read buildResult type=$($buildResult.GetType().FullName)"
-    Write-Host "[DEBUG] buildResult keys=$($buildResult.PSObject.Properties.Name -join ', ')"
+    $json = Get-Content $outFile -Raw
+    $buildResult = $json | ConvertFrom-Json
+    if (-not $buildResult) {
+        Write-Warning "[WARN] Failed to parse build result JSON for mode $m"
+        continue
+    }
 
-    # Truyền object này sang Upload
-    $uploadOut = . "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m -Input $buildResult
+    Write-Host "[DEBUG] Build result: Status=$($buildResult.Status), BuildPath=$($buildResult.BuildPath)"
+
+    # Chỉ gọi Upload nếu ISO ready
+    if ($buildResult.Status -eq "ISO ready") {
+        Write-Host "[DEBUG] Calling Upload for mode $m (reading JSON internally)"
+        $null = . "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m
+    } else {
+        Write-Host "[DEBUG] Skip Upload for mode $m (Status=$($buildResult.Status))"
+    }
+
     Write-Host "=== MODE DONE: $m ==="
 }
 

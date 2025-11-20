@@ -43,23 +43,15 @@ if (-not (Test-Path $buildOut)) {
 
 # Kiểm tra ISO trong vietstar
 $isoFile = Get-ChildItem -Path $env:vietstar -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-
-if ($isoFile) {
-    $Status = "ISO ready"
-} else {
-    $Status = "No ISO"
-}
+$Status = if ($isoFile) { "ISO ready" } else { "No ISO" }
 Write-Host "[DEBUG] Status: $Status"
 
+# Ghi ra file JSON
 $info = @{
     Mode      = $Mode
     BuildPath = $env:vietstar
     Status    = $Status
 }
-
-# Ghi ra file JSON
 $outFile = Join-Path $env:SCRIPT_PATH "build_result_$Mode.json"
 $info | ConvertTo-Json | Set-Content -Path $outFile -Encoding UTF8
-
 Write-Host "[DEBUG] Build wrote result file: $outFile"
-
