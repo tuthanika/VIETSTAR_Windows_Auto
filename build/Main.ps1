@@ -96,7 +96,7 @@ foreach ($m in $runModes) {
 	
     # Call upload (Upload.ps1 đã chấp nhận object, tự chuẩn hóa)
 	Write-Host "[DEBUG] Passing to Upload: type=$($buildResult.GetType().FullName)"
-	$uploadOut = . "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m -Input ,$buildResult
+	$uploadOut = . "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m -Input ([hashtable]$buildResult)
     Write-Host "[DEBUG] Called Upload with Input type=$($buildResult.GetType().FullName)"
 
     # (Optional) Lọc output upload nếu cần hashtable cuối cùng
