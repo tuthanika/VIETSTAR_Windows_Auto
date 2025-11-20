@@ -38,20 +38,31 @@ function Resolve-RemoteLatest {
         [string]$patterns   # semicolon patterns
     )
     if ([string]::IsNullOrWhiteSpace($patterns)) { return $null }
+
     $remoteDir = "$($env:RCLONE_PATH)$base/$folder"
-    Write-Host "[DEBUG] rclone lsjson $remoteDir --include $patterns"
+    Write-Host "[DEBUG] Resolve-RemoteLatest base=$base folder=$folder patterns=$patterns"
+    Write-Host "[DEBUG] remoteDir=$remoteDir"
 
     try {
         $jsonOut = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
             --config "$env:RCLONE_CONFIG_PATH" `
             --include "$patterns" 2>&1
 
+        Write-Host "=== DEBUG: raw rclone output ==="
+        $jsonOut | ForEach-Object { Write-Host "  $_" }
+
         if (-not $jsonOut -or ($jsonOut -notmatch '^\s*\[')) {
-            Write-Host "[DEBUG] rclone lsjson returned no JSON."
+            Write-Host "[DEBUG] rclone lsjson returned no JSON (string length=$($jsonOut.Length))"
             return $null
         }
+
         $entries = $jsonOut | ConvertFrom-Json
+        Write-Host "[DEBUG] entries count=$($entries.Count)"
+        $entries | ForEach-Object { Write-Host "  entry: Name=$($_.Name) IsDir=$($_.IsDir)" }
+
         $files = @($entries | Where-Object { $_.IsDir -eq $false })
+        Write-Host "[DEBUG] file entries count=$($files.Count)"
+
         if (-not $files -or $files.Count -eq 0) { return $null }
         return ($files | Select-Object -Last 1)
     }
