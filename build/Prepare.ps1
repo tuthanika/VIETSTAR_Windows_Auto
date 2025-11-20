@@ -3,10 +3,10 @@ param([string]$Mode)
 Write-Host "=== Prepare start for $Mode ==="
 Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 
-foreach ($d in @("$env:SCRIPT_PATH\$env:iso",
-                 "$env:SCRIPT_PATH\$env:driver",
-                 "$env:SCRIPT_PATH\$env:boot7",
-                 "$env:SCRIPT_PATH\$env:silent")) {
+foreach ($d in @("$env:SCRIPT_PATH\$env:iso_path",
+                 "$env:SCRIPT_PATH\$env:driver_path",
+                 "$env:SCRIPT_PATH\$env:boot7_path",
+                 "$env:SCRIPT_PATH\$env:silent_path")) {
     if (-not (Test-Path $d)) {
         Write-Host "[DEBUG] mkdir $d"
         New-Item -ItemType Directory -Path $d | Out-Null
@@ -201,9 +201,9 @@ function Invoke-DownloadRule {
 }
 
 $results = @{}
-$results['iso']    = Invoke-DownloadRule -folderName $ruleMap['folder']       -patterns $ruleMap['patterns']       -localSubDirValue $env:iso    -label "iso"    -baseEnvVar "iso"
-$results['driver'] = Invoke-DownloadRule -folderName $ruleMap['drvFolder']    -patterns $ruleMap['drvPatterns']    -localSubDirValue $env:driver -label "driver" -baseEnvVar "driver"
-$results['boot7']  = Invoke-DownloadRule -folderName $ruleMap['bootFolder']   -patterns $ruleMap['bootPatterns']   -localSubDirValue $env:boot7  -label "boot7"  -baseEnvVar "boot7"
-$results['silent'] = Invoke-DownloadRule -folderName $ruleMap['silentFolder'] -patterns $ruleMap['silentPatterns'] -localSubDirValue $env:silent -label "silent" -baseEnvVar "silent"
+$results['iso']    = Invoke-DownloadRule -folderName $ruleMap['folder']       -patterns $ruleMap['patterns']       -localSubDirValue $env:iso_path    -label "iso"    -baseEnvVar "iso"
+$results['driver'] = Invoke-DownloadRule -folderName $ruleMap['drvFolder']    -patterns $ruleMap['drvPatterns']    -localSubDirValue $env:driver_path -label "driver" -baseEnvVar "driver"
+$results['boot7']  = Invoke-DownloadRule -folderName $ruleMap['bootFolder']   -patterns $ruleMap['bootPatterns']   -localSubDirValue $env:boot7_path  -label "boot7"  -baseEnvVar "boot7"
+$results['silent'] = Invoke-DownloadRule -folderName $ruleMap['silentFolder'] -patterns $ruleMap['silentPatterns'] -localSubDirValue $env:silent_path -label "silent" -baseEnvVar "silent"
 
 Write-Output $results
