@@ -49,17 +49,10 @@ if ($isoFile) {
 } else {
     $Status = "No ISO"
 }
+Write-Host "[DEBUG] Status: $Status"
 
 return @{
     Mode      = $Mode
     BuildPath = $env:vietstar
     Status    = $Status
-}
-
-
-# Chỉ trả về Hashtable, không thêm Write-Host ở đây
-return @{
-    Mode      = $Mode
-    BuildPath = $buildOut
-    ExitCode  = $exitCode
 }
