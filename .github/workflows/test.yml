@@ -43,7 +43,7 @@ jobs:
             "Mode": "7-32",
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*86*.iso"],
-            "BootPatterns": ["*7*64*.iso"],
+            "BootPatterns": ["*7*86*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "DriverPatterns": ["*7*86*.iso"],
             "SilentPatterns": ["*Lite*.iso"]
