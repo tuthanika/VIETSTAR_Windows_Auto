@@ -16,15 +16,17 @@ Write-Host "=== Build start for $Mode ==="
 $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
 $rule  = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
 if ($rule) {
-    $vsFolder = if ($rule.VietstarFolder -and $rule.VietstarFolder.Count -gt 0) { $rule.VietstarFolder[0] } else { $rule.Folder }
+    $vsFolder  = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
     $env:vietstar = Join-Path $env:SCRIPT_PATH "$($env:vietstar_path)\$vsFolder"
-    Write-Host "[DEBUG] Vietstar local path set to $env:vietstar"
+	$isoFolder = if ($rule.isoFolder) { $rule.isoFolder } else { $rule.Folder }
+    $env:iso = Join-Path $env:SCRIPT_PATH "$($env:iso_path)\$isoFolder"
+    Write-Host "[DEBUG] ISO local path set to $env:iso"
+	Write-Host "[DEBUG] Vietstar local path set to $env:vietstar"
 }
 
 Write-Host "[DEBUG] Env for CMD:"
 "vietstar=$env:vietstar","silent=$env:silent","oem=$env:oem","dll=$env:dll",
 "driver=$env:driver","iso=$env:iso","boot7=$env:boot7" | ForEach-Object { Write-Host "  $_" }
-
 # Build must call file.cmd mode
 $cmdFile = Join-Path $env:SCRIPT_PATH "zzz.Windows-imdisk.cmd"
 if (-not (Test-Path $cmdFile)) {

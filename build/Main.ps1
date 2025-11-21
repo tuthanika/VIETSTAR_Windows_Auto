@@ -30,8 +30,9 @@ function Write-RuleEnvForMode {
     if ($r.BootPatterns)   { $kv += "bootPatterns=$([string]::Join(';',$r.BootPatterns))" }
     if ($r.SilentFolder)   { $kv += "silentFolder=$($r.SilentFolder)" }
     if ($r.SilentPatterns) { $kv += "silentPatterns=$([string]::Join(';',$r.SilentPatterns))" }
-    if ($r.isoFolder)      { $kv += "isoFolder=$($r.isoFolder[0])" }
-    if ($r.VietstarFolder) { $kv += "vietstarFolder=$($r.VietstarFolder[0])" }
+    if ($r.isoFolder)      { $kv += "isoFolder=$($r.isoFolder)" }
+    if ($r.VietstarFolder) { $kv += "vietstarFolder=$($r.VietstarFolder)" }
+
 
     $outPath = "$env:SCRIPT_PATH\rule.env"
     Set-Content -Path $outPath -Value ($kv -join "`n")
@@ -75,12 +76,10 @@ foreach ($m in $runModes) {
     Write-Host "[DEBUG] Silent ISO mounted, silent path set to $env:silent"
 
     # Set env paths for CMD (absolute) before calling build
-    $env:vietstar = Join-Path $env:SCRIPT_PATH $env:vietstar_path
     $env:silent   = $env:silent   # giữ nguyên vì đã mount A:\
     $env:oem      = Join-Path $env:SCRIPT_PATH $env:oem_path
     $env:dll      = Join-Path $env:SCRIPT_PATH $env:dll_path
     $env:driver   = Join-Path $env:SCRIPT_PATH $env:driver_path
-    $env:iso      = Join-Path $env:SCRIPT_PATH $env:iso_path
     $env:boot7    = Join-Path $env:SCRIPT_PATH $env:boot7_path
 
     Write-Host "[DEBUG] Env paths set:"

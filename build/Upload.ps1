@@ -34,7 +34,7 @@ if (-not $rule) {
 }
 
 $folder   = if ([string]::IsNullOrWhiteSpace($rule.Folder)) { $Mode } else { $rule.Folder }
-$vsFolder = if ($rule.VietstarFolder -and $rule.VietstarFolder.Count -gt 0) { $rule.VietstarFolder[0] } else { $folder }
+$vsFolder = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $folder }
 Write-Host "[DEBUG] Vietstar folder for mode=$Mode is '$vsFolder'"
 
 # Local path lấy từ BuildPath (đã set đúng ở Build)
