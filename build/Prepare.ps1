@@ -164,7 +164,16 @@ function Invoke-DownloadGroup {
     }
 
     Write-Host "[DEBUG][$label] Selected file=$($latest.Name) size=$($latest.Size)"
-    $localFile = Join-Path $localDir $latest.Name
+
+    # Xác định thư mục đích local bao gồm cả subFolder
+    $targetDir = if ([string]::IsNullOrWhiteSpace($subFolder)) { $localDir } else { Join-Path $localDir $subFolder }
+
+    # Đảm bảo thư mục tồn tại
+    if (-not (Test-Path -LiteralPath $targetDir)) {
+        New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    }
+
+    $localFile = Join-Path $targetDir $latest.Name
 
     # Kiểm tra file local trước khi tải
     if (Test-Path $localFile) {
@@ -184,7 +193,6 @@ function Invoke-DownloadGroup {
     $ariaLog      = Join-Path $env:SCRIPT_PATH "aria2.$label.log"
     $downloadUrl | Out-File -FilePath $ariaListFile -Encoding utf8 -NoNewline
 
-    # Write-Host "[PREPARE][$label] Download $($latest.Name) from: $downloadUrl"
     Write-Host "[DEBUG][$label] aria2 input=$ariaListFile log=$ariaLog"
 
     $ariaOut = & aria2c `
@@ -194,7 +202,7 @@ function Invoke-DownloadGroup {
         --max-connection-per-server=16 `
         --split=16 `
         --enable-http-keep-alive=false `
-        -d "$localDir" `
+        -d "$targetDir" `
         --input-file="$ariaListFile" 2>&1
 
     Write-Host "=== DEBUG[$label]: aria2c output ==="
