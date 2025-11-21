@@ -48,14 +48,19 @@ $remoteRoot = "$env:RCLONE_PATH$env:vietstar_path"
 $remoteDest = "$remoteRoot/$folder"
 $remoteOld  = "$remoteDest/old"
 
+# Flags cho rclone
+$flags = $env:rclone_flag -split '\s+'
+
 # Đọc MAX_FILE từ env
 [int]$MAX_FILE = if ($env:MAX_FILE) { [int]$env:MAX_FILE } else { 5 }
 Write-Host "[DEBUG] MAX_FILE=$MAX_FILE"
 
-# Lấy patterns từ rule để lọc file cũ
+# Patterns từ rule (dùng cho cả move và prune)
 $patterns = if ($rule.Patterns) { ($rule.Patterns -join ";") } else { "" }
+Write-Host "[DEBUG] Patterns for pruning/move='$patterns'"
 
-# Liệt kê file hiện có khớp patterns
+# Liệt kê file hiện có khớp patterns ở đích
+$files = @()
 try {
     $jsonOut = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDest `
         --config "$env:RCLONE_CONFIG_PATH" `
@@ -63,43 +68,47 @@ try {
     $entries = $jsonOut | ConvertFrom-Json
     $files = @($entries | Where-Object { $_.IsDir -eq $false })
 } catch {
-    Write-Warning "[WARN] rclone lsjson failed: $($_.Exception.Message)"
-    $files = @()
+    Write-Warning "[WARN] rclone lsjson failed at dest: $($_.Exception.Message)"
 }
 
+# Move CHỈ những file khớp patterns sang old
 if ($files.Count -gt 0) {
-    Write-Host "[DEBUG] Found $($files.Count) existing file(s) matching patterns"
-
-    # Move tất cả sang old
+    Write-Host "[DEBUG] Found $($files.Count) existing file(s) matching patterns at dest"
     foreach ($f in $files) {
-        Write-Host "[DEBUG] Move old file: $($f.Name) to $remoteOld"
+        Write-Host "[DEBUG] Move old-matching file: $($f.Name) -> $remoteOld"
         & "$env:SCRIPT_PATH\rclone.exe" move "$remoteDest/$($f.Name)" "$remoteOld" `
             --config "$env:RCLONE_CONFIG_PATH" @flags
     }
-
-    # Giữ lại tối đa MAX_FILE trong old
-    try {
-        $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteOld `
-            --config "$env:RCLONE_CONFIG_PATH" 2>&1
-        $entriesOld = $jsonOld | ConvertFrom-Json
-        $oldFiles = @($entriesOld | Where-Object { $_.IsDir -eq $false } | Sort-Object ModTime -Descending)
-        if ($oldFiles.Count -gt $MAX_FILE) {
-            $toDelete = $oldFiles | Select-Object -Skip $MAX_FILE
-            foreach ($del in $toDelete) {
-                Write-Host "[DEBUG] Delete old file: $($del.Name)"
-                & "$env:SCRIPT_PATH\rclone.exe" delete "$remoteOld/$($del.Name)" `
-                    --config "$env:RCLONE_CONFIG_PATH" @flags
-            }
-        }
-    } catch {
-        Write-Warning "[WARN] rclone lsjson old failed: $($_.Exception.Message)"
-    }
+} else {
+    Write-Host "[DEBUG] No existing matching files to move."
 }
 
+# Prune trong 'old': CHỈ xét những file khớp patterns, giữ lại mới nhất MAX_FILE và xóa phần vượt
+try {
+    $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteOld `
+        --config "$env:RCLONE_CONFIG_PATH" `
+        --include "$patterns" 2>&1
+    $entriesOld = $jsonOld | ConvertFrom-Json
+    $oldMatching = @($entriesOld | Where-Object { $_.IsDir -eq $false } | Sort-Object ModTime -Descending)
+
+    Write-Host "[DEBUG] Old matching count=$($oldMatching.Count), keep MAX_FILE=$MAX_FILE"
+    if ($oldMatching.Count -gt $MAX_FILE) {
+        $toDelete = $oldMatching | Select-Object -Skip $MAX_FILE
+        foreach ($del in $toDelete) {
+            Write-Host "[DEBUG] Delete old-matching file: $($del.Name)"
+            & "$env:SCRIPT_PATH\rclone.exe" delete "$remoteOld/$($del.Name)" `
+                --config "$env:RCLONE_CONFIG_PATH" @flags
+        }
+    }
+} catch {
+    Write-Warning "[WARN] rclone lsjson failed at old: $($_.Exception.Message)"
+}
+
+# Upload ISO mới
 Write-Host "[DEBUG] Uploading ISO to $remoteDest"
-$flags = $env:rclone_flag -split '\s+'
 & "$env:SCRIPT_PATH\rclone.exe" copy "$($isoFile.FullName)" "$remoteDest" --config "$env:RCLONE_CONFIG_PATH" @flags --progress
 
+# Xóa ISO local sau upload
 Remove-Item -Path $isoFile.FullName -Force -ErrorAction SilentlyContinue
 
 return @{ Mode = $Mode; Status = "ISO uploaded and deleted" }
