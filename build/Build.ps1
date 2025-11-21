@@ -27,6 +27,11 @@ if ($rule) {
 Write-Host "[DEBUG] Env for CMD:"
 "vietstar=$env:vietstar","silent=$env:silent","oem=$env:oem","dll=$env:dll",
 "driver=$env:driver","iso=$env:iso","boot7=$env:boot7" | ForEach-Object { Write-Host "  $_" }
+
+if (-not (Test-Path $env:vietstar)) {
+    New-Item -ItemType Directory -Force -Path $env:vietstar | Out-Null
+}
+
 # Build must call file.cmd mode
 $cmdFile = Join-Path $env:SCRIPT_PATH "zzz.Windows-imdisk.cmd"
 if (-not (Test-Path $cmdFile)) {
@@ -43,10 +48,9 @@ if ($exitCode -ne 0) {
     Write-Warning "[WARN] zzz.Windows-imdisk.cmd returned non-zero exit code ($exitCode)"
 }
 
-$buildOut = $env:vietstar
 Write-Host "[DEBUG] Expected ISO output folder (vietstar): $env:vietstar"
 
-$isoFile = Get-ChildItem -Path $buildOut -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$isoFile = Get-ChildItem -Path $env:vietstar -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $Status = if ($isoFile) { "ISO ready" } else { "No ISO" }
 Write-Host "[DEBUG] Status: isoFile"
 Write-Host "[DEBUG] Status: $Status"
