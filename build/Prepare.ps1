@@ -205,17 +205,18 @@ function Invoke-DownloadGroup {
 }
 
 # Lấy subFolder/patterns từ rule.env theo đúng chuẩn bạn yêu cầu
-$isoFolder       = $ruleMap['folder']        # ISO/Vietstar ghép thêm Folder
-$isoPatterns     = $ruleMap['patterns']
+# Lấy subFolder/patterns từ rule.env
+$isoFolder      = if ($ruleMap.ContainsKey('isoFolder') -and $ruleMap['isoFolder']) { $ruleMap['isoFolder'] } else { $ruleMap['folder'] } # ISO/Vietstar ghép thêm Folder
+$isoPatterns    = $ruleMap['patterns']
 
-$drvFolder       = $ruleMap['drvFolder']     # Driver: nếu có thì base/DriverFolder, không thì base
-$drvPatterns     = $ruleMap['drvPatterns']
+$drvFolder      = $ruleMap['drvFolder']     # Driver: nếu có thì base/DriverFolder, không thì base
+$drvPatterns    = $ruleMap['drvPatterns']
 
-$bootFolder      = $ruleMap['bootFolder']    # Boot: nếu có thì base/BootFolder, không thì base
-$bootPatterns    = $ruleMap['bootPatterns']
+$bootFolder     = $ruleMap['bootFolder']    # Boot: nếu có thì base/BootFolder, không thì base
+$bootPatterns   = $ruleMap['bootPatterns']
 
-$silentFolder    = $ruleMap['silentFolder']  # Silent: nếu có thì base/SilentFolder, không thì base
-$silentPatterns  = $ruleMap['silentPatterns']
+$silentFolder   = $ruleMap['silentFolder']  # Silent: nếu có thì base/SilentFolder, không thì base
+$silentPatterns = $ruleMap['silentPatterns']
 
 Write-Host "[DEBUG] ISO folder=$isoFolder patterns=$isoPatterns"
 Write-Host "[DEBUG] DRIVER folder=$drvFolder patterns=$drvPatterns"

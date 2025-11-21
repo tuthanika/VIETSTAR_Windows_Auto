@@ -27,15 +27,17 @@ if ([string]::IsNullOrWhiteSpace($env:RCLONE_PATH)) {
 }
 
 $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-$rule = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
+$rule  = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
 if (-not $rule) {
     Write-Warning "[WARN] Rule for mode '$Mode' not found"
     return @{ Mode = $Mode; Status = "Skipped (no rule for mode)" }
 }
 
-$folder = if ([string]::IsNullOrWhiteSpace($rule.Folder)) { $Mode } else { $rule.Folder }
-Write-Host "[DEBUG] Rule folder for mode=$Mode is '$folder'"
+$folder   = if ([string]::IsNullOrWhiteSpace($rule.Folder)) { $Mode } else { $rule.Folder }
+$vsFolder = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $folder }
+Write-Host "[DEBUG] Vietstar folder for mode=$Mode is '$vsFolder'"
 
+# Local path lấy từ BuildPath (đã set đúng ở Build)
 $isoFile = Get-ChildItem -Path $br.BuildPath -Filter *.iso -File |
            Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $isoFile) {
@@ -45,7 +47,7 @@ if (-not $isoFile) {
 Write-Host "[DEBUG] Uploading ISO: $($isoFile.FullName)"
 
 $remoteRoot = "$env:RCLONE_PATH$env:vietstar_path"
-$remoteDest = "$remoteRoot/$folder"
+$remoteDest = "$remoteRoot/$vsFolder"
 $remoteOld  = "$remoteDest/old"
 
 # Flags cho rclone
