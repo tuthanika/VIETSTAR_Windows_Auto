@@ -14,11 +14,12 @@ Write-Host "=== Build start for $Mode ==="
 
 # Đọc rule để lấy VietstarFolder nếu có
 $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-$rule = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
-$vsFolder = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
-
-# BuildPath chính là thư mục vietstar – nơi ISO được tạo
-$env:vietstar = Join-Path $env:SCRIPT_PATH "$($env:vietstar_path)\$vsFolder"
+$rule  = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
+if ($rule) {
+    $vsFolder = if ($rule.VietstarFolder -and $rule.VietstarFolder.Count -gt 0) { $rule.VietstarFolder[0] } else { $rule.Folder }
+    $env:vietstar = Join-Path $env:SCRIPT_PATH "$($env:vietstar_path)\$vsFolder"
+    Write-Host "[DEBUG] Vietstar local path set to $env:vietstar"
+}
 
 Write-Host "[DEBUG] Env for CMD:"
 "vietstar=$env:vietstar","silent=$env:silent","oem=$env:oem","dll=$env:dll",

@@ -204,9 +204,8 @@ function Invoke-DownloadGroup {
     return $localFile
 }
 
-# Lấy subFolder/patterns từ rule.env theo đúng chuẩn bạn yêu cầu
 # Lấy subFolder/patterns từ rule.env
-$isoFolder      = if ($ruleMap.ContainsKey('isoFolder') -and $ruleMap['isoFolder']) { $ruleMap['isoFolder'] } else { $ruleMap['folder'] } # ISO/Vietstar ghép thêm Folder
+$isoFolder      = if ($ruleMap.ContainsKey('isoFolder') -and $ruleMap['isoFolder']) { $ruleMap['isoFolder'][0] } else { $ruleMap['folder'] }
 $isoPatterns    = $ruleMap['patterns']
 
 $drvFolder      = $ruleMap['drvFolder']     # Driver: nếu có thì base/DriverFolder, không thì base
