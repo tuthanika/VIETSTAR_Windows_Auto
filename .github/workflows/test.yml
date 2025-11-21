@@ -45,8 +45,8 @@ jobs:
             "Patterns": ["*windows*7*86*.iso"],
             "BootPatterns": ["*7*86*.iso"],
             "SilentPatterns": ["*Lite*.iso"],
-            "isoFolder": ["Windows 7/1"],
-            "VietstarFolder": ["Windows 7/1"]
+            "isoFolder": "Windows 7/1",
+            "VietstarFolder": "Windows 7/1"
           },
           {
             "Mode": "7-64",
@@ -54,8 +54,8 @@ jobs:
             "Patterns": ["*windows*7*64*.iso"],
             "BootPatterns": ["*7*64*.iso"],
             "SilentPatterns": ["*Lite*.iso"],
-            "isoFolder": ["Windows 7/1"],
-            "VietstarFolder": ["Windows 7/1"]
+            "isoFolder": "Windows 7/1",
+            "VietstarFolder": "Windows 7/1"
           }
         ]
 
