@@ -44,14 +44,11 @@ if ($exitCode -ne 0) {
 }
 
 $buildOut = $env:vietstar
-Write-Host "[DEBUG] Expected ISO output folder (vietstar): $buildOut"
+Write-Host "[DEBUG] Expected ISO output folder (vietstar): $env:vietstar"
 
-if (-not (Test-Path $buildOut)) {
-    New-Item -ItemType Directory -Force -Path $buildOut | Out-Null
-}
-
-$isoFile = Get-ChildItem -Path $env:vietstar -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$isoFile = Get-ChildItem -Path $buildOut -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $Status = if ($isoFile) { "ISO ready" } else { "No ISO" }
+Write-Host "[DEBUG] Status: isoFile"
 Write-Host "[DEBUG] Status: $Status"
 
 $info = @{
