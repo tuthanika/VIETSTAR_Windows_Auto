@@ -30,6 +30,8 @@ function Write-RuleEnvForMode {
     if ($r.BootPatterns)   { $kv += "bootPatterns=$([string]::Join(';',$r.BootPatterns))" }
     if ($r.SilentFolder)   { $kv += "silentFolder=$($r.SilentFolder)" }
     if ($r.SilentPatterns) { $kv += "silentPatterns=$([string]::Join(';',$r.SilentPatterns))" }
+    if ($r.isoFolder)      { $kv += "isoFolder=$($r.isoFolder[0])" }
+    if ($r.VietstarFolder) { $kv += "vietstarFolder=$($r.VietstarFolder[0])" }
 
     $outPath = "$env:SCRIPT_PATH\rule.env"
     Set-Content -Path $outPath -Value ($kv -join "`n")
