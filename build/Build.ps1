@@ -10,7 +10,7 @@ elseif ($Input -is [System.Collections.IDictionary]) {
     foreach ($k in $Input.Keys) { $inputMap[$k] = $Input[$k] }
 }
 
-Write-Host "[DEBUG] Input keys=$($inputMap.Keys -join ', ')"
+# Write-Host "[DEBUG] Input keys=$($inputMap.Keys -join ', ')"
 Write-Host "=== Build start for $Mode ==="
 Write-Host "[DEBUG] Env for CMD:"
 "vietstar=$env:vietstar","silent=$env:silent","oem=$env:oem","dll=$env:dll",

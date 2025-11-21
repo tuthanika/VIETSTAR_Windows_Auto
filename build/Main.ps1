@@ -2,7 +2,7 @@ param([string]$Mode)
 
 Write-Host "=== MAIN PIPELINE START ==="
 Write-Host "[DEBUG] Mode input=$Mode"
-Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
+# Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 
 if ([string]::IsNullOrWhiteSpace($env:FILE_CODE_RULES)) {
     Write-Error "[ERROR] FILE_CODE_RULES not found in env"

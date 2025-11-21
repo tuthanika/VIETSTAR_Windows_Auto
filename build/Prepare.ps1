@@ -1,7 +1,6 @@
 param([string]$Mode)
 
 Write-Host "=== Prepare start for $Mode ==="
-Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 
 # Tạo thư mục local từ *_path (an toàn, không nhân đôi)
 $isoDir    = Join-Path $env:SCRIPT_PATH $env:iso_path
@@ -11,7 +10,7 @@ $silentDir = Join-Path $env:SCRIPT_PATH $env:silent_path
 
 foreach ($d in @($isoDir, $driverDir, $boot7Dir, $silentDir)) {
     if (-not (Test-Path -LiteralPath $d)) {
-        Write-Host "[DEBUG] mkdir $d"
+        # Write-Host "[DEBUG] mkdir $d"
         New-Item -ItemType Directory -Path $d | Out-Null
     }
 }
@@ -54,14 +53,14 @@ function Resolve-RemoteLatest {
 
     $remoteDir = Resolve-RemoteDir -basePath $base -subFolder $subFolder
     Write-Host "[DEBUG] Resolve-RemoteLatest base=$base subFolder=$subFolder patterns=$patterns"
-    Write-Host "[DEBUG] remoteDir=$remoteDir"
+    # Write-Host "[DEBUG] remoteDir=$remoteDir"
 
     try {
         $jsonOut = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
             --config "$env:RCLONE_CONFIG_PATH" `
             --include "$patterns" 2>&1
 
-        Write-Host "=== DEBUG: raw rclone output ==="
+        # Write-Host "=== DEBUG: raw rclone output ==="
         $jsonOut | ForEach-Object { Write-Host "  $_" }
 
         # Cố gắng parse JSON, nếu lỗi thì coi như không có file
@@ -104,8 +103,8 @@ function Get-DownloadUrl {
     $apiUrl = "$($env:ALIST_HOST.TrimEnd('/'))/api/fs/get"
     $body = @{ path = $alistPathRel } | ConvertTo-Json -Compress
 
-    Write-Host "[DEBUG] Alist API url=$apiUrl"
-    Write-Host "[DEBUG] Alist API path=$alistPathRel"
+    # Write-Host "[DEBUG] Alist API url=$apiUrl"
+    # Write-Host "[DEBUG] Alist API path=$alistPathRel"
 
     try {
         $response = Invoke-RestMethod -Uri $apiUrl `
@@ -115,11 +114,11 @@ function Get-DownloadUrl {
             -ContentType "application/json" `
             -ErrorAction Stop
 
-        Write-Host "=== DEBUG: Alist response ==="
+        # Write-Host "=== DEBUG: Alist response ==="
         ($response | ConvertTo-Json -Depth 6 | Out-String) | Write-Host
 
         $rawUrl = [string]$response.data.raw_url
-        Write-Host "[DEBUG] raw_url=$rawUrl"
+        # Write-Host "[DEBUG] raw_url=$rawUrl"
 
         # Quyết định URL cuối
         $expectedPrefix = "$($env:ALIST_HOST.TrimEnd('/'))/$($env:ALIST_PATH)"
@@ -185,7 +184,7 @@ function Invoke-DownloadGroup {
     $ariaLog      = Join-Path $env:SCRIPT_PATH "aria2.$label.log"
     $downloadUrl | Out-File -FilePath $ariaListFile -Encoding utf8 -NoNewline
 
-    Write-Host "[PREPARE][$label] Download $($latest.Name) from: $downloadUrl"
+    # Write-Host "[PREPARE][$label] Download $($latest.Name) from: $downloadUrl"
     Write-Host "[DEBUG][$label] aria2 input=$ariaListFile log=$ariaLog"
 
     $ariaOut = & aria2c `
