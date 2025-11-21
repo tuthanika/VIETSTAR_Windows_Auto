@@ -144,10 +144,10 @@ function Get-DownloadUrl {
 
 function Invoke-DownloadGroup {
     param(
-        [string]$label,       # iso | driver | boot7 | silent
-        [string]$base,        # *_path
-        [string]$subFolder,   # từ rule.env ứng với nhóm
-        [string]$patterns,    # từ rule.env ứng với nhóm
+        [string]$label,
+        [string]$base,
+        [string]$subFolder,
+        [string]$patterns,
         [string]$localDir
     )
 
@@ -164,10 +164,23 @@ function Invoke-DownloadGroup {
         return $null
     }
 
-    Write-Host "[DEBUG][$label] Selected file=$($latest.Name)"
-    $downloadUrl = Get-DownloadUrl -base $base -subFolder $subFolder -fileName $latest.Name
+    Write-Host "[DEBUG][$label] Selected file=$($latest.Name) size=$($latest.Size)"
+    $localFile = Join-Path $localDir $latest.Name
 
-    # Ghi ra input file cho aria2c
+    # Kiểm tra file local trước khi tải
+    if (Test-Path $localFile) {
+        $localSize = (Get-Item $localFile).Length
+        Write-Host "[DEBUG][$label] Local file exists: $localFile size=$localSize, remote size=$($latest.Size)"
+        if ($localSize -eq $latest.Size) {
+            Write-Host "[DEBUG][$label] Local file matches remote size, skip download."
+            return $localFile
+        } else {
+            Write-Host "[DEBUG][$label] Local file size mismatch, will re-download."
+        }
+    }
+
+    # Nếu chưa có hoặc size khác thì tải về
+    $downloadUrl = Get-DownloadUrl -base $base -subFolder $subFolder -fileName $latest.Name
     $ariaListFile = Join-Path $env:SCRIPT_PATH "aria2_urls.$label.txt"
     $ariaLog      = Join-Path $env:SCRIPT_PATH "aria2.$label.log"
     $downloadUrl | Out-File -FilePath $ariaListFile -Encoding utf8 -NoNewline
@@ -175,21 +188,20 @@ function Invoke-DownloadGroup {
     Write-Host "[PREPARE][$label] Download $($latest.Name) from: $downloadUrl"
     Write-Host "[DEBUG][$label] aria2 input=$ariaListFile log=$ariaLog"
 
-    # Chạy aria2c và stream log ra console
-    & aria2c `
+    $ariaOut = & aria2c `
         -l "$ariaLog" `
-        --log-level=info `
+        --log-level=debug `
         --file-allocation=none `
         --max-connection-per-server=16 `
         --split=16 `
         --enable-http-keep-alive=false `
         -d "$localDir" `
-        --input-file="$ariaListFile"
+        --input-file="$ariaListFile" 2>&1
 
-    if (Test-Path $ariaLog) { Get-Content $ariaLog -Tail 60 | ForEach-Object { Write-Host $_ } }
+    Write-Host "=== DEBUG[$label]: aria2c output ==="
+    $ariaOut | ForEach-Object { Write-Host $_ }
+    if (Test-Path $ariaLog) { Get-Content $ariaLog -Tail 40 | ForEach-Object { Write-Host $_ } }
 
-    $localFile = Join-Path $localDir $latest.Name
-    Write-Host "[DEBUG][$label] Local file expected: $localFile"
     return $localFile
 }
 
