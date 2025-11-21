@@ -46,6 +46,55 @@ Write-Host "[DEBUG] Uploading ISO: $($isoFile.FullName)"
 
 $remoteRoot = "$env:RCLONE_PATH$env:vietstar_path"
 $remoteDest = "$remoteRoot/$folder"
+$remoteOld  = "$remoteDest/old"
+
+# Đọc MAX_FILE từ env
+[int]$MAX_FILE = if ($env:MAX_FILE) { [int]$env:MAX_FILE } else { 5 }
+Write-Host "[DEBUG] MAX_FILE=$MAX_FILE"
+
+# Lấy patterns từ rule để lọc file cũ
+$patterns = if ($rule.Patterns) { ($rule.Patterns -join ";") } else { "" }
+
+# Liệt kê file hiện có khớp patterns
+try {
+    $jsonOut = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDest `
+        --config "$env:RCLONE_CONFIG_PATH" `
+        --include "$patterns" 2>&1
+    $entries = $jsonOut | ConvertFrom-Json
+    $files = @($entries | Where-Object { $_.IsDir -eq $false })
+} catch {
+    Write-Warning "[WARN] rclone lsjson failed: $($_.Exception.Message)"
+    $files = @()
+}
+
+if ($files.Count -gt 0) {
+    Write-Host "[DEBUG] Found $($files.Count) existing file(s) matching patterns"
+
+    # Move tất cả sang old
+    foreach ($f in $files) {
+        Write-Host "[DEBUG] Move old file: $($f.Name) to $remoteOld"
+        & "$env:SCRIPT_PATH\rclone.exe" move "$remoteDest/$($f.Name)" "$remoteOld" `
+            --config "$env:RCLONE_CONFIG_PATH" @flags
+    }
+
+    # Giữ lại tối đa MAX_FILE trong old
+    try {
+        $jsonOld = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteOld `
+            --config "$env:RCLONE_CONFIG_PATH" 2>&1
+        $entriesOld = $jsonOld | ConvertFrom-Json
+        $oldFiles = @($entriesOld | Where-Object { $_.IsDir -eq $false } | Sort-Object ModTime -Descending)
+        if ($oldFiles.Count -gt $MAX_FILE) {
+            $toDelete = $oldFiles | Select-Object -Skip $MAX_FILE
+            foreach ($del in $toDelete) {
+                Write-Host "[DEBUG] Delete old file: $($del.Name)"
+                & "$env:SCRIPT_PATH\rclone.exe" delete "$remoteOld/$($del.Name)" `
+                    --config "$env:RCLONE_CONFIG_PATH" @flags
+            }
+        }
+    } catch {
+        Write-Warning "[WARN] rclone lsjson old failed: $($_.Exception.Message)"
+    }
+}
 
 Write-Host "[DEBUG] Uploading ISO to $remoteDest"
 $flags = $env:rclone_flag -split '\s+'
