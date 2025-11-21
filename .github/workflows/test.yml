@@ -44,8 +44,6 @@ jobs:
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*86*.iso"],
             "BootPatterns": ["*7*86*.iso"],
-            "DriverFolder": "DriverCeo/DP",
-            "DriverPatterns": ["*7*86*.iso"],
             "SilentPatterns": ["*Lite*.iso"]
           },
           {
@@ -53,8 +51,6 @@ jobs:
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*64*.iso"],
             "BootPatterns": ["*7*64*.iso"],
-            "DriverFolder": "DriverCeo/DP",
-            "DriverPatterns": ["*7*64*.iso"],
             "SilentPatterns": ["*Lite*.iso"]
           }
         ]
