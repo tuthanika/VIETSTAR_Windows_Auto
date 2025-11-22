@@ -198,8 +198,6 @@ function Invoke-DownloadGroup {
     $ariaOut = & aria2c `
         -l "$ariaLog" `
         --log-level=notice `
-		--console-log-level=warn `
-		--summary-interval=1 `
         --file-allocation=none `
         --max-connection-per-server=16 `
         --split=16 `
