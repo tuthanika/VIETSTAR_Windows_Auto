@@ -119,20 +119,20 @@ try {
     $timeNow   = Get-Date -Format "HH:mm:ss"
     $remoteIso = $isoFile.Name
 
-    # Local ISO: lấy từ env:iso theo Patterns
-    $localIso = ""
-    if ($env:iso -and -not [string]::IsNullOrWhiteSpace($env:iso)) {
-        $localIsoFile = Get-ChildItem -Path $env:iso -File -Include $rule.Patterns |
-                        Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        if ($localIsoFile) { $localIso = $localIsoFile.Name }
-    }
+    # Local ISO: 
+    $localIsoDir = $env:iso
+    $latestIso = Get-ChildItem -Path $localIsoDir -File -Filter *.iso |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+
+    $localIsoName = if ($latestIso) { $latestIso.Name } else { "" }
 
     $mdFile = Join-Path $env:GITHUB_WORKSPACE "build.md"
     if (-not (Test-Path $mdFile)) {
         @"
 # Build History
 
-| Date | Mode | Build# | Time | Local ISO | Remote ISO |
+| Date | Mode | Build# | Time | ISO Gốc | ISO VIETSTAR|
 |------|------|--------|------|-----------|------------|
 "@ | Out-File $mdFile -Encoding utf8
     }
@@ -146,10 +146,10 @@ try {
         $cols = $oldLine -split '\|'
         $oldCounter = [int]($cols[3].Trim())
         $newCounter = $oldCounter + 1
-        $newLine = "| $buildDate | $Mode | $newCounter | $timeNow | $localIso | $remoteIso |"
+        $newLine = "| $buildDate | $Mode | $newCounter | $timeNow | $localIsoName | $remoteIso |"
         $content[$idx] = $newLine
     } else {
-        $newLine = "| $buildDate | $Mode | 1 | $timeNow | $localIso | $remoteIso |"
+        $newLine = "| $buildDate | $Mode | 1 | $timeNow | $localIsoName | $remoteIso |"
         $content += $newLine
     }
 
