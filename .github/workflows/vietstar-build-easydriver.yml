@@ -1,0 +1,238 @@
+name: VIETSTAR build EasyDriver
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Chọn mode (ví dụ 7-32, 7-64, auto)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - 7-32
+          - 7-64
+          - 10-32-ltsc
+          - 10-64-ltsc
+          - 10-32
+          - 10-64
+          - 11-64
+          - 11-64-ltsc
+          - ALL-32
+          - ALL-64
+          - ALL-32-LITE
+          - ALL-64-LITE
+          - AUTO
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+      ALIST_TOKEN: ${{ secrets.ALIST_TOKEN }}
+      REPO_PATH: ${{ github.workspace }}
+
+      SCRIPT_REPO: ${{ secrets.SCRIPT_REPO }}
+      RCLONE_CONF_REPO: ${{ secrets.RCLONE_CONF_REPO }}
+      RCLONE_CONFIG_PATH: 'D:\RUN\rclone.conf'
+      RCLONE_PATH: ${{ secrets.RCLONE_PATH }}
+      ALIST_HOST: ${{ secrets.ALIST_HOST }}
+      ALIST_PATH: ${{ secrets.ALIST_PATH }}
+
+      SCRIPT_PATH: D:\RUN
+      INSTALL_PATH: D:\INSTALL
+      vietstar_path: z.VIETSTAR
+      silent_path: z.Silent
+      oem_path: 0.OEM
+      dll_path: 1.DLL
+      driver_path: z.DRIVER
+      iso_path: z.ISO
+      boot7_path: z.BOOT7
+      bootwim: C:\1
+      
+      rclone_flag: ${{ vars.rclone_flag }}
+
+      FILE_CODE_RULES: |
+        [
+          {
+            "Mode": "7-32",
+            "Folder": "Windows 7",
+            "Patterns": ["*windows*7*86*.iso"],
+            "BootPatterns": ["*7*86*.iso"],
+            "DriverPatterns": ["*7*86*.iso"],
+            "DriverFolder": "EasyDrv7",
+            "SilentPatterns": ["*Lite*.iso"],
+            "VietstarFolder": "Windows 7/EasyDriver"
+          },
+          {
+            "Mode": "7-64",
+            "Folder": "Windows 7",
+            "Patterns": ["*windows*7*64*.iso"],
+            "BootPatterns": ["*7*64*.iso"],
+            "DriverPatterns": ["*7*64*.iso"],
+            "DriverFolder": "EasyDrv7",
+            "SilentPatterns": ["*Lite*.iso"],
+            "VietstarFolder": "Windows 7/EasyDrive"
+          },
+          {
+            "Mode": "10-32-ltsc",
+            "Folder": "Windows 10 LTSC",
+            "Patterns": ["*windows*10*86*.iso"],
+            "DriverPatterns": ["*10*86*.iso"],
+            "DriverFolder": "EasyDrv7",
+            "SilentPatterns": ["*Lite*.iso"],
+            "VietstarFolder": "Windows 10 LTSC/EasyDrive"
+          },
+          {
+            "Mode": "10-64-ltsc",
+            "Folder": "Windows 10 LTSC",
+            "Patterns": ["*windows*10*64*.iso"],
+            "DriverPatterns": ["*10*64*.iso"],
+            "DriverFolder": "EasyDrv7",
+            "SilentPatterns": ["*Lite*.iso"],
+            "VietstarFolder": "Windows 10 LTSC/EasyDrive"
+          },
+          {
+            "Mode": "10-32",
+            "Folder": "Windows 10",
+            "Patterns": ["*windows*10*86*.iso"],
+            "DriverPatterns": ["*10*86*.iso"],
+            "DriverFolder": "EasyDrv7",
+            "SilentPatterns": ["*Lite*.iso"],
+            "VietstarFolder": "Windows 10/EasyDrive"
+          },
+          {
+            "Mode": "10-64",
+            "Folder": "Windows 10",
+            "Patterns": ["*windows*10*64*.iso"],
+            "DriverPatterns": ["*10*64*.iso"],
+            "DriverFolder": "EasyDrv7",
+            "SilentPatterns": ["*Lite*.iso"],
+            "VietstarFolder": "Windows 10/EasyDrive"
+          },
+          {
+            "Mode": "11-64",
+            "Folder": "Windows 11",
+            "Patterns": ["*windows*11*64*.iso"],
+            "BootPatterns": ["*11*64*.iso"],
+            "DriverPatterns": ["*10*64*.iso"],
+            "DriverFolder": "EasyDrv7",
+            "SilentPatterns": ["*Lite*.iso"],
+            "VietstarFolder": "Windows 11/EasyDrive"
+          },
+          {
+            "Mode": "11-64-ltsc",
+            "Folder": "Windows 11 LTSC",
+            "Patterns": ["*windows*11*64*.iso"],
+            "BootPatterns": ["*11*64*.iso"],
+            "DriverPatterns": ["*10*64*.iso"],
+            "DriverFolder": "EasyDrv7",
+            "SilentPatterns": ["*Lite*.iso"],
+            "VietstarFolder": "Windows 11 LTSC/EasyDrive"
+          }
+        ]
+      MAX_FILE: ${{ vars.MAX_FILE }}
+      #     {
+      #      "Mode": "7-64",
+      #      "Folder": "Windows 7",
+      #      "Patterns": ["*windows*7*64*.iso"],
+      #      "BootPatterns": ["*7*64*.iso"],
+      #      "BootPatterns": ["*7*64*.iso"],
+      #      "DriverFolder": "DriverCeo/DP",
+      #      "DriverPatterns": ["*7*64*.iso"],
+      #      "SilentFolder": "z.Silent",
+      #      "SilentPatterns": ["*Lite*.iso"],
+      #      "isoFolder": "Windows 7",
+      #      "VietstarFolder": "Windows 7/EasyDrive"
+      #     },
+      
+    steps:
+      - name: Checkout Auto repo
+        uses: actions/checkout@v4
+
+      - name: Clone SCRIPT_REPO
+        run: |
+          if (-not (Test-Path "${{ env.SCRIPT_PATH }}")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
+          git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
+
+      - name: Check UltraISO version
+        shell: cmd
+        run: |
+          echo Hello > "%SCRIPT_PATH%\UltraISO\hello.txt"
+          %SCRIPT_PATH%\UltraISO\UltraISO.exe -imax -l -f %SCRIPT_PATH%\UltraISO\hello.txt -volu TEST_CD -out %SCRIPT_PATH%\test.iso
+          
+          if exist "%SCRIPT_PATH%\test.iso" (
+          for %%I in ("%SCRIPT_PATH%\test.iso") do (echo ISO created successfully. Size: %%~zI bytes)) else (echo ERROR: ISO file was not created.)
+
+      - name: Prepare working directories
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path $env:SCRIPT_PATH -Force | Out-Null
+          
+      - name: Create folder
+        shell: pwsh
+        run: |
+          $path = Join-Path $env:SCRIPT_PATH $env:vietstar_path
+          New-Item -ItemType Directory -Force -Path $path
+          Write-Host "Created folder: $path"
+
+      - name: Install aria2
+        run: |
+          choco install aria2 -y
+          
+      - name: Install ImDisk
+        shell: pwsh
+        run: |
+          choco install imdisk -y
+
+      - name: Install rclone
+        shell: pwsh
+        run: |
+          $zip = "$env:SCRIPT_PATH\rclone.zip"
+          Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath "$env:SCRIPT_PATH\rclone" -Force
+          $exe = Get-ChildItem "$env:SCRIPT_PATH\rclone" -Recurse -Filter "rclone.exe" | Select-Object -First 1
+          Copy-Item $exe.FullName "$env:SCRIPT_PATH\rclone.exe" -Force
+          & "$env:SCRIPT_PATH\rclone.exe" version
+
+      - name: Fetch rclone.conf from GitHub
+        shell: cmd
+        run: |
+          curl -H "Authorization: token %GH_PAT%" ^
+               -L -o "%RCLONE_CONFIG_PATH%" ^
+               https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
+      
+      - name: Copy build scripts
+        shell: pwsh
+        run: |
+          mkdir $env:SCRIPT_PATH\build
+          Copy-Item -Path build\* -Destination $env:SCRIPT_PATH\build -Recurse -Force
+          Write-Host "Copied build scripts to $env:SCRIPT_PATH\build" 
+        
+      - name: Show free disk space after cleanup
+        shell: cmd
+        run: |
+          fsutil volume diskfree C:
+          fsutil volume diskfree D:
+               
+#      - name: Fast cleanup runner
+#        shell: cmd
+#        run: |
+#          rd /s /q "C:\Program Files\Java"
+#          rd /s /q "C:\Program Files\Android"
+#          rd /s /q "C:\hostedtoolcache\windows\Python"
+#          rd /s /q "C:\Program Files\nodejs"
+#          rd /s /q "C:\Users\runneradmin\AppData\Local\Programs\Microsoft VS Code"
+#          rd /s /q "C:\Program Files (x86)\Microsoft Visual Studio"
+#          rd /s /q "C:\Program Files\Microsoft Visual Studio"
+#          rd /s /q "C:\Program Files\dotnet\sdk"
+#          rd /s /q "C:\Windows\SoftwareDistribution\Download"
+#          rd /s /q "C:\Users\runneradmin\AppData\Local\Temp"
+#          rd /s /q "C:\Windows\Temp"
+
+      - name: Run integrated pipeline
+        shell: pwsh
+        run: |
+          Set-Location $env:SCRIPT_PATH
+          . "$env:SCRIPT_PATH\build\Main.ps1" "${{ github.event.inputs.mode }}"
+
