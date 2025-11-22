@@ -81,6 +81,16 @@ foreach ($m in $runModes) {
     $env:dll      = Join-Path $env:SCRIPT_PATH $env:dll_path
     $env:driver   = Join-Path $env:SCRIPT_PATH $env:driver_path
     $env:boot7    = Join-Path $env:SCRIPT_PATH $env:boot7_path
+	
+$rules = $env:FILE_CODE_RULES | ConvertFrom-Json
+$rule  = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
+if ($rule) {
+    $vsFolder  = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
+    $isoFolder = if ($rule.isoFolder) { $rule.isoFolder } else { $rule.Folder }
+
+    $env:vietstar = Join-Path (Join-Path $env:SCRIPT_PATH $env:vietstar_path) $vsFolder
+    $env:iso      = Join-Path (Join-Path $env:SCRIPT_PATH $env:iso_path) $isoFolder
+}
 
     Write-Host "[DEBUG] Env paths set:"
     Write-Host "  silent=$env:silent"
@@ -88,6 +98,8 @@ foreach ($m in $runModes) {
     Write-Host "  dll=$env:dll"
     Write-Host "  driver=$env:driver"
     Write-Host "  boot7=$env:boot7"
+	Write-Host "  iso=$env:iso"
+    Write-Host "  vietstar=$env:vietstar"
 
     # Call build (build sẽ ghi JSON)
     $null = . "$env:SCRIPT_PATH\build\Build.ps1" -Mode $m -Input $prepResult

@@ -12,18 +12,6 @@ elseif ($Input -is [System.Collections.IDictionary]) {
 
 Write-Host "=== Build start for $Mode ==="
 
-# Đọc rule để lấy VietstarFolder nếu có
-$rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-$rule  = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
-if ($rule) {
-    $vsFolder  = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
-    $env:vietstar = Join-Path (Join-Path $env:SCRIPT_PATH $env:vietstar_path) $vsFolder
-	$isoFolder = if ($rule.isoFolder) { $rule.isoFolder } else { $rule.Folder }
-    $env:iso      = Join-Path (Join-Path $env:SCRIPT_PATH $env:iso_path) $isoFolder
-    Write-Host "[DEBUG] ISO local path set to $env:iso"
-	Write-Host "[DEBUG] Vietstar local path set to $env:vietstar"
-}
-
 
 Write-Host "[DEBUG] Env for CMD:"
 "vietstar=$env:vietstar","silent=$env:silent","oem=$env:oem","dll=$env:dll",
