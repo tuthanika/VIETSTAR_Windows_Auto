@@ -155,11 +155,7 @@ try {
 
     Set-Content -Path $mdFile -Value $content -Encoding utf8
 
-    git add $mdFile
-    git commit -m "Update build history for $Mode ($buildDate $timeNow)"
-    git push origin main
-
-    Write-Host "[DEBUG] build.md updated and pushed."
+    Write-Host "[DEBUG] build.md updated"
 } catch {
     Write-Warning "[WARN] Failed to update build.md: $($_.Exception.Message)"
 }
