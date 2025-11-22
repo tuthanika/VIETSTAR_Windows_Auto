@@ -15,8 +15,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          fetch-tags: true
-          ref: ""
+
+      - name: Create local branches for all remotes
+        run: |
+          git fetch origin
+          for branch in $(git branch -r | grep -v 'origin/HEAD' | sed 's|origin/||'); do
+            git branch --track "$branch" "origin/$branch" || true
+          done
 
       - name: Unprotect current branch on GitLab before push
         env:
