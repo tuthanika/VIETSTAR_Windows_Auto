@@ -54,6 +54,8 @@ $isoFile = Get-ChildItem -Path $env:vietstar -Filter *.iso -File | Sort-Object L
 $Status = if ($isoFile) { "ISO ready" } else { "No ISO" }
 $isoFile1 = Get-ChildItem -Path $env:vietstar
 
+Get-ChildItem "D:\RUN\z.ISO\Windows 7\1"
+Get-ChildItem "D:\RUN\z.VIETSTAR\Windows 7\1"
 Write-Host "[DEBUG] Status: $isoFile"
 Write-Host "[DEBUG] Status: $isoFile1"
 Write-Host "[DEBUG] Status: $Status"
