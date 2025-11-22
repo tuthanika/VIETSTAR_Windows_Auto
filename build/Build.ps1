@@ -13,25 +13,30 @@ elseif ($Input -is [System.Collections.IDictionary]) {
 Write-Host "=== Build start for $Mode ==="
 
 # Đọc rule để lấy VietstarFolder nếu có
-if ([string]::IsNullOrWhiteSpace($env:iso) -or [string]::IsNullOrWhiteSpace($env:vietstar)) {
-    $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-    $rule  = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
-    if ($rule) {
-        $isoFolder = if ($rule.isoFolder) { $rule.isoFolder } else { $rule.Folder }
-        $vsFolder  = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
-        $env:iso      = Join-Path $env:SCRIPT_PATH "$($env:iso_path)\$isoFolder"
-        $env:vietstar = Join-Path $env:SCRIPT_PATH "$($env:vietstar_path)\$vsFolder"
-        Write-Host "[DEBUG] Refilled env: iso=$env:iso; vietstar=$env:vietstar"
-    }
+$rules = $env:FILE_CODE_RULES | ConvertFrom-Json
+$rule  = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
+if ($rule) {
+    $vsFolder  = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
+    $env:vietstar = Join-Path $env:SCRIPT_PATH "$($env:vietstar_path)\$vsFolder"
+	$isoFolder = if ($rule.isoFolder) { $rule.isoFolder } else { $rule.Folder }
+    $env:iso = Join-Path $env:SCRIPT_PATH "$($env:iso_path)\$isoFolder"
+    Write-Host "[DEBUG] ISO local path set to $env:iso"
+	Write-Host "[DEBUG] Vietstar local path set to $env:vietstar"
 }
 
 Write-Host "[DEBUG] Env for CMD:"
 "vietstar=$env:vietstar","silent=$env:silent","oem=$env:oem","dll=$env:dll",
 "driver=$env:driver","iso=$env:iso","boot7=$env:boot7" | ForEach-Object { Write-Host "  $_" }
 
-if (-not (Test-Path $env:vietstar)) {
+if (-not (Test-Path -LiteralPath $env:vietstar)) {
     New-Item -ItemType Directory -Force -Path $env:vietstar | Out-Null
+    Write-Host "[DEBUG] Created vietstar output dir: $env:vietstar"
 }
+
+$vsFile1 = Get-ChildItem "D:\RUN\z.VIETSTAR"
+$vsFile2 = Get-ChildItem "D:\RUN\z.VIETSTAR\Windows 7"
+Write-Host "[DEBUG] Status: $vsFile1"
+Write-Host "[DEBUG] Status: $vsFile2"
 
 # Build must call file.cmd mode
 $cmdFile = Join-Path $env:SCRIPT_PATH "zzz.Windows-imdisk.cmd"
@@ -62,26 +67,6 @@ cmd.exe /c "$envDumpCmd > `"$envDump`""
 
 Write-Host "[DEBUG] Wrote env seen by CMD to $envDump"
 Get-Content $envDump | ForEach-Object { Write-Host "  $_" }
-
-# Recompute từ rules nếu rỗng (phòng trường hợp biến bị override ở chỗ khác)
-if ([string]::IsNullOrWhiteSpace($env:iso) -or [string]::IsNullOrWhiteSpace($env:vietstar)) {
-    $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
-    $rule  = $rules | Where-Object { $_.Mode -eq $Mode } | Select-Object -First 1
-    if ($rule) {
-        $isoFolder = if ($rule.isoFolder) { $rule.isoFolder } else { $rule.Folder }
-        $vsFolder  = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
-        $env:iso      = Join-Path $env:SCRIPT_PATH "$($env:iso_path)\$isoFolder"
-        $env:vietstar = Join-Path $env:SCRIPT_PATH "$($env:vietstar_path)\$vsFolder"
-        Write-Host "[DEBUG] Refilled env: iso=$env:iso; vietstar=$env:vietstar"
-    }
-}
-
-# Tạo sẵn thư mục output vietstar
-if (-not (Test-Path -LiteralPath $env:vietstar)) {
-    New-Item -ItemType Directory -Force -Path $env:vietstar | Out-Null
-    Write-Host "[DEBUG] Created vietstar output dir: $env:vietstar"
-}
-
 
 
 Write-Host "[DEBUG] Calling: $cmdFile $Mode"
