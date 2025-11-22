@@ -182,5 +182,5 @@ jobs:
           git config user.email "tuthanika-bot@gmail.com"
           git add "$env:SCRIPT_PATH/build.md"
           git commit -m "Lịch sử build VIETSTAR ISO mode ${{ github.event.inputs.mode }} ($(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))"
-          git push origin main
+          git push origin HEAD:${{ github.ref_name }}
 
