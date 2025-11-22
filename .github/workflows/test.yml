@@ -1,4 +1,4 @@
-name: VIETSTAR build
+name: VIETSTAR build Test
 
 on:
   workflow_dispatch:
@@ -7,6 +7,22 @@ on:
         description: 'Chọn mode (ví dụ 7-32, 7-64, auto)'
         required: true
         default: 'all'
+        type: choice
+        options:
+          - all
+          - 7-32
+          - 7-64
+          - 10-32-ltsc
+          - 10-64-ltsc
+          - 10-32
+          - 10-64
+          - 11-64
+          - 11-64-ltsc
+          - ALL-32
+          - ALL-64
+          - ALL-32-LITE
+          - ALL-64-LITE
+          - AUTO
 
 jobs:
   build:
@@ -16,16 +32,15 @@ jobs:
       ALIST_TOKEN: ${{ secrets.ALIST_TOKEN }}
       REPO_PATH: ${{ github.workspace }}
 
-      SCRIPT_REPO: github.com/tuthanika/VIETSTAR-Windows
+      SCRIPT_REPO: ${{ secrets.SCRIPT_REPO }}
+      RCLONE_CONF_REPO: ${{ secrets.RCLONE_CONF_REPO }}
+      RCLONE_CONFIG_PATH: 'D:\RUN\rclone.conf'
+      RCLONE_PATH: ${{ secrets.RCLONE_PATH }}
+      ALIST_HOST: ${{ secrets.ALIST_HOST }}
+      ALIST_PATH: ${{ secrets.ALIST_PATH }}
+
       SCRIPT_PATH: D:\RUN
       INSTALL_PATH: D:\INSTALL
-      RCLONE_CONF_REPO: github.com/tuthanika/Rclone-Auto-Refresh-Token
-      RCLONE_CONFIG_PATH: 'D:\RUN\rclone.conf'
-
-      RCLONE_PATH: "OD_APP-C03-vietstar:"
-      ALIST_HOST: https://cloud.vietstarhp.com
-      ALIST_PATH: od-app/C03.vietstar@vietstarhp.onmicrosoft.com
-
       vietstar_path: z.VIETSTAR
       silent_path: z.Silent
       oem_path: 0.OEM
@@ -34,8 +49,8 @@ jobs:
       iso_path: z.ISO
       boot7_path: z.BOOT7
       bootwim: C:\1
-
-      rclone_flag: --fast-list --delete-during --checksum --no-update-modtime --transfers 8 --checkers 8 --contimeout 60s --timeout 300s --retries 3 --low-level-retries 10 --onedrive-delta --server-side-across-configs --onedrive-no-versions --onedrive-hard-delete --onedrive-av-override --drive-copy-shortcut-content --drive-acknowledge-abuse --drive-stop-on-upload-limit --drive-stop-on-download-limit --checksum --track-renames --no-update-modtime
+      
+      rclone_flag: ${{ vars.rclone_flag }}
 
       FILE_CODE_RULES: |
         [
@@ -56,8 +71,20 @@ jobs:
             "VietstarFolder": "Windows 7/1"
           }
         ]
-
-      MAX_FILE: 1
+      MAX_FILE: ${{ vars.MAX_FILE }}
+      #     {
+      #      "Mode": "7-64",
+      #      "Folder": "Windows 7",
+      #      "Patterns": ["*windows*7*64*.iso"],
+      #      "BootPatterns": ["*7*64*.iso"],
+      #      "BootPatterns": ["*7*64*.iso"],
+      #      "DriverFolder": "DriverCeo/DP",
+      #      "DriverPatterns": ["*7*64*.iso"],
+      #      "SilentFolder": "z.Silent",
+      #      "SilentPatterns": ["*Lite*.iso"],
+      #      "isoFolder": "Windows 7",
+      #      "VietstarFolder": "Windows 7/EasyDrive"
+      #     },
       
     steps:
       - name: Checkout Auto repo
