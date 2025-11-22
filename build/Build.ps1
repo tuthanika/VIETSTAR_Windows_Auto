@@ -33,7 +33,10 @@ if (-not (Test-Path -LiteralPath $env:vietstar)) {
     New-Item -ItemType Directory -Force -Path $env:vietstar | Out-Null
     Write-Host "[DEBUG] Created vietstar output dir: $env:vietstar"
 }
-
+$isFile1 = Get-ChildItem "D:\RUN\z.ISO"
+$isFile2 = Get-ChildItem "$env:iso"
+Write-Host "[DEBUG] Status: $isFile1"
+Write-Host "[DEBUG] Status: $isFile2"
 $vsFile1 = Get-ChildItem "D:\RUN\z.VIETSTAR"
 $vsFile2 = Get-ChildItem "D:\RUN\z.VIETSTAR\Windows 7"
 Write-Host "[DEBUG] Status: $vsFile1"
@@ -48,27 +51,8 @@ if (-not (Test-Path $cmdFile)) {
 
 # 1) Log ngay trước khi gọi CMD
 Write-Host "[DEBUG] Pre-CMD env:"
-Write-Host "  iso=$env:iso"
-Write-Host "  vietstar=$env:vietstar"
-
-# 2) Dump biến môi trường sang file theo ngữ cảnh CMD
-$envDump = Join-Path $env:SCRIPT_PATH "env_from_cmd.$Mode.txt"
-$envDumpCmd = @(
-    "echo iso=%iso%",
-    "echo vietstar=%vietstar%",
-    "echo silent=%silent%",
-    "echo oem=%oem%",
-    "echo dll=%dll%",
-    "echo driver=%driver%",
-    "echo boot7=%boot7%"
-) -join " & "
-
-# Dùng cmd.exe để in biến ra file (đảm bảo là biến rất đúng trong CMD)
-cmd.exe /c "$envDumpCmd > `"$envDump`""
-
-Write-Host "[DEBUG] Wrote env seen by CMD to $envDump"
-Get-Content $envDump | ForEach-Object { Write-Host "  $_" }
-
+Write-Host "iso=$env:iso"
+Write-Host "vietstar=$env:vietstar"
 
 Write-Host "[DEBUG] Calling: $cmdFile $Mode"
 Start-Process -FilePath $cmdFile -ArgumentList $Mode -NoNewWindow -Wait

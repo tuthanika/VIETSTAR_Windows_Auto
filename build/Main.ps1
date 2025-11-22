@@ -83,12 +83,10 @@ foreach ($m in $runModes) {
     $env:boot7    = Join-Path $env:SCRIPT_PATH $env:boot7_path
 
     Write-Host "[DEBUG] Env paths set:"
-    Write-Host "  vietstar=$env:vietstar"
     Write-Host "  silent=$env:silent"
     Write-Host "  oem=$env:oem"
     Write-Host "  dll=$env:dll"
     Write-Host "  driver=$env:driver"
-    Write-Host "  iso=$env:iso"
     Write-Host "  boot7=$env:boot7"
 
     # Call build (build sẽ ghi JSON)
