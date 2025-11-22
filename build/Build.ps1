@@ -52,7 +52,10 @@ Write-Host "[DEBUG] Expected ISO output folder (vietstar): $env:vietstar"
 
 $isoFile = Get-ChildItem -Path $env:vietstar -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $Status = if ($isoFile) { "ISO ready" } else { "No ISO" }
-Write-Host "[DEBUG] Status: isoFile"
+$isoFile1 = Get-ChildItem -Path $env:vietstar
+
+Write-Host "[DEBUG] Status: $isoFile"
+Write-Host "[DEBUG] Status: $isoFile1"
 Write-Host "[DEBUG] Status: $Status"
 
 $info = @{
