@@ -21,14 +21,6 @@ if (-not (Test-Path -LiteralPath $env:vietstar)) {
     New-Item -ItemType Directory -Force -Path $env:vietstar | Out-Null
     Write-Host "[DEBUG] Created vietstar output dir: $env:vietstar"
 }
-$isFile1 = Get-ChildItem "D:\RUN\z.ISO"
-$isFile2 = Get-ChildItem "$env:iso"
-Write-Host "[DEBUG] Status: $isFile1"
-Write-Host "[DEBUG] Status: $isFile2"
-$vsFile1 = Get-ChildItem "D:\RUN\z.VIETSTAR"
-$vsFile2 = Get-ChildItem "D:\RUN\z.VIETSTAR\Windows 7"
-Write-Host "[DEBUG] Status: $vsFile1"
-Write-Host "[DEBUG] Status: $vsFile2"
 
 # Build must call file.cmd mode
 $cmdFile = Join-Path $env:SCRIPT_PATH "zzz.Windows-imdisk.cmd"
@@ -36,11 +28,6 @@ if (-not (Test-Path $cmdFile)) {
     Write-Error "[ERROR] Build script not found: $cmdFile"
     exit 1
 }
-
-# 1) Log ngay trước khi gọi CMD
-Write-Host "[DEBUG] Pre-CMD env:"
-Write-Host "iso=$env:iso"
-Write-Host "vietstar=$env:vietstar"
 
 Write-Host "[DEBUG] Calling: $cmdFile $Mode"
 Start-Process -FilePath $cmdFile -ArgumentList $Mode -NoNewWindow -Wait
@@ -63,6 +50,15 @@ Write-Host "[DEBUG] Status: $isoFile"
 Write-Host "[DEBUG] Status: $isoFile1"
 Write-Host "[DEBUG] Status: $isoFile2"
 Write-Host "[DEBUG] Status: $Status"
+
+$isFile1 = Get-ChildItem "D:\RUN\z.ISO"
+$isFile2 = Get-ChildItem "$env:iso"
+Write-Host "[DEBUG] Status: $isFile1"
+Write-Host "[DEBUG] Status: $isFile2"
+$vsFile1 = Get-ChildItem "D:\RUN\z.VIETSTAR"
+$vsFile2 = Get-ChildItem "D:\RUN\z.VIETSTAR\Windows 7"
+Write-Host "[DEBUG] Status: $vsFile1"
+Write-Host "[DEBUG] Status: $vsFile2"
 
 $info = @{
     Mode      = $Mode
