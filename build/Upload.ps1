@@ -57,22 +57,15 @@ $flags = $env:rclone_flag -split '\s+'
 [int]$MAX_FILE = if ($env:MAX_FILE) { [int]$env:MAX_FILE } else { 5 }
 Write-Host "[DEBUG] MAX_FILE=$MAX_FILE"
 
-# MAX_FILE: số file KHỚP PATTERNS được giữ trong thư mục 'old'
-[int]$MAX_FILE = if ($env:MAX_FILE) { [int]$env:MAX_FILE } else { 2 }
-Write-Host "[DEBUG] MAX_FILE=$MAX_FILE"
-
 # Chuẩn hoá patterns: rclone chấp nhận nhiều mẫu khi nối bằng ';'
 $patterns = if ($rule.Patterns) { ($rule.Patterns -join ";") } else { "" }
 Write-Host "[DEBUG] Patterns for pruning/move='$patterns'"
 
-# Bảo đảm thư mục old tồn tại (tuỳ remote, mkdir có thể cần thiết)
+# Bảo đảm thư mục old tồn tại
 & "$env:SCRIPT_PATH\rclone.exe" mkdir "$remoteOld" --config "$env:RCLONE_CONFIG_PATH" @flags | Out-Null
 
 function Get-RcloneFiles {
-    param(
-        [string]$remotePath,
-        [string]$includePatterns
-    )
+    param([string]$remotePath,[string]$includePatterns)
     try {
         $args = @("lsjson", $remotePath, "--config", "$env:RCLONE_CONFIG_PATH")
         if ($includePatterns -and $includePatterns.Trim() -ne "") {
@@ -87,7 +80,7 @@ function Get-RcloneFiles {
     }
 }
 
-# B1: Tìm file KHỚP ở dest và move hết sang old
+# B1: Move file khớp từ dest sang old
 $destMatching = Get-RcloneFiles -remotePath $remoteDest -includePatterns $patterns
 if ($destMatching.Count -gt 0) {
     Write-Host "[DEBUG] Found $($destMatching.Count) matching file(s) at dest -> move to old"
@@ -100,10 +93,9 @@ if ($destMatching.Count -gt 0) {
     Write-Host "[DEBUG] No matching files at dest to move."
 }
 
-# B2: Prune old để GIỮ ĐÚNG MAX_FILE file khớp (mới nhất trước), xóa phần cũ hơn
+# B2: Prune old để giữ đúng MAX_FILE
 $oldMatching = Get-RcloneFiles -remotePath $remoteOld -includePatterns $patterns |
                Sort-Object ModTime -Descending
-
 Write-Host "[DEBUG] Old matching count=$($oldMatching.Count), keep MAX_FILE=$MAX_FILE"
 if ($oldMatching.Count -gt $MAX_FILE) {
     $toDelete = $oldMatching | Select-Object -Skip $MAX_FILE
@@ -114,11 +106,62 @@ if ($oldMatching.Count -gt $MAX_FILE) {
     }
 }
 
-# Upload ISO mới
+# B3: Upload ISO mới
 Write-Host "[DEBUG] Uploading ISO to $remoteDest"
 & "$env:SCRIPT_PATH\rclone.exe" copy "$($isoFile.FullName)" "$remoteDest" --config "$env:RCLONE_CONFIG_PATH" @flags --progress
 
 # Xóa ISO local sau upload
 Remove-Item -Path $isoFile.FullName -Force -ErrorAction SilentlyContinue
 
-return @{ Mode = $Mode; Status = "ISO uploaded and deleted" }
+# B4: Ghi build.md
+try {
+    $buildDate = Get-Date -Format "yyyy-MM-dd"
+    $timeNow   = Get-Date -Format "HH:mm:ss"
+    $remoteIso = $isoFile.Name
+
+    # Local ISO: lấy từ env:iso theo Patterns
+    $localIso = ""
+    if ($env:iso -and -not [string]::IsNullOrWhiteSpace($env:iso)) {
+        $localIsoFile = Get-ChildItem -Path $env:iso -File -Include $rule.Patterns |
+                        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($localIsoFile) { $localIso = $localIsoFile.Name }
+    }
+
+    $mdFile = Join-Path $env:SCRIPT_PATH "build.md"
+    if (-not (Test-Path $mdFile)) {
+        @"
+# Build History
+
+| Date | Mode | Build# | Time | Local ISO | Remote ISO |
+|------|------|--------|------|-----------|------------|
+"@ | Out-File $mdFile -Encoding utf8
+    }
+
+    $content = Get-Content $mdFile
+    $pattern = "\|\s$buildDate\s\|\s$Mode\s\|"
+    $found = $content | Select-String -Pattern $pattern
+    if ($found) {
+        $idx = $found[0].LineNumber - 1
+        $oldLine = $content[$idx]
+        $cols = $oldLine -split '\|'
+        $oldCounter = [int]($cols[3].Trim())
+        $newCounter = $oldCounter + 1
+        $newLine = "| $buildDate | $Mode | $newCounter | $timeNow | $localIso | $remoteIso |"
+        $content[$idx] = $newLine
+    } else {
+        $newLine = "| $buildDate | $Mode | 1 | $timeNow | $localIso | $remoteIso |"
+        $content += $newLine
+    }
+
+    Set-Content -Path $mdFile -Value $content -Encoding utf8
+
+    git add $mdFile
+    git commit -m "Update build history for $Mode ($buildDate $timeNow)"
+    git push origin main
+
+    Write-Host "[DEBUG] build.md updated and pushed."
+} catch {
+    Write-Warning "[WARN] Failed to update build.md: $($_.Exception.Message)"
+}
+
+return @{ Mode = $Mode; Status = "ISO uploaded, pruned, and build.md updated" }
