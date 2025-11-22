@@ -127,7 +127,7 @@ try {
         if ($localIsoFile) { $localIso = $localIsoFile.Name }
     }
 
-    $mdFile = Join-Path $env:SCRIPT_PATH "build.md"
+    $mdFile = Join-Path $env:GITHUB_WORKSPACE "build.md"
     if (-not (Test-Path $mdFile)) {
         @"
 # Build History
