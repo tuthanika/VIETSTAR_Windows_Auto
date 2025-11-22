@@ -12,7 +12,6 @@ elseif ($Input -is [System.Collections.IDictionary]) {
 
 Write-Host "=== Build start for $Mode ==="
 
-
 Write-Host "[DEBUG] Env for CMD:"
 "vietstar=$env:vietstar","silent=$env:silent","oem=$env:oem","dll=$env:dll",
 "driver=$env:driver","iso=$env:iso","boot7=$env:boot7" | ForEach-Object { Write-Host "  $_" }
@@ -42,23 +41,8 @@ Write-Host "[DEBUG] Expected ISO output folder (vietstar): $env:vietstar"
 
 $isoFile = Get-ChildItem -Path $env:vietstar -Filter *.iso -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $Status = if ($isoFile) { "ISO ready" } else { "No ISO" }
-$isoFile1 = Get-ChildItem "D:\RUN\z.ISO\Windows 7\1"
-$isoFile2 = Get-ChildItem "D:\RUN\z.VIETSTAR\Windows 7\1"
 
-
-Write-Host "[DEBUG] Status: $isoFile"
-Write-Host "[DEBUG] Status: $isoFile1"
-Write-Host "[DEBUG] Status: $isoFile2"
 Write-Host "[DEBUG] Status: $Status"
-
-$isFile1 = Get-ChildItem "D:\RUN\z.ISO"
-$isFile2 = Get-ChildItem "$env:iso"
-Write-Host "[DEBUG] Status: $isFile1"
-Write-Host "[DEBUG] Status: $isFile2"
-$vsFile1 = Get-ChildItem "D:\RUN\z.VIETSTAR"
-$vsFile2 = Get-ChildItem "D:\RUN\z.VIETSTAR\Windows 7"
-Write-Host "[DEBUG] Status: $vsFile1"
-Write-Host "[DEBUG] Status: $vsFile2"
 
 $info = @{
     Mode      = $Mode

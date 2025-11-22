@@ -61,7 +61,7 @@ function Resolve-RemoteLatest {
             --include "$patterns" 2>&1
 
         # Write-Host "=== DEBUG: raw rclone output ==="
-        $jsonOut | ForEach-Object { Write-Host "  $_" }
+        # $jsonOut | ForEach-Object { Write-Host "  $_" }
 
         # Cố gắng parse JSON, nếu lỗi thì coi như không có file
         try {
@@ -197,7 +197,7 @@ function Invoke-DownloadGroup {
 
     $ariaOut = & aria2c `
         -l "$ariaLog" `
-        --log-level=debug `
+        --log-level=notice `
         --file-allocation=none `
         --max-connection-per-server=16 `
         --split=16 `
