@@ -115,7 +115,7 @@ function Get-DownloadUrl {
             -ErrorAction Stop
 
         # Write-Host "=== DEBUG: Alist response ==="
-        ($response | ConvertTo-Json -Depth 6 | Out-String) | Write-Host
+        # ($response | ConvertTo-Json -Depth 6 | Out-String) | Write-Host
 
         $rawUrl = [string]$response.data.raw_url
         # Write-Host "[DEBUG] raw_url=$rawUrl"
@@ -198,6 +198,8 @@ function Invoke-DownloadGroup {
     $ariaOut = & aria2c `
         -l "$ariaLog" `
         --log-level=notice `
+		--console-log-level=warn `
+		--summary-interval=1 `
         --file-allocation=none `
         --max-connection-per-server=16 `
         --split=16 `
