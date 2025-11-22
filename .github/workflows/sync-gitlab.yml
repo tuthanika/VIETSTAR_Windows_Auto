@@ -35,9 +35,10 @@ jobs:
           git config --global user.name "tuthanika-bot"
           git config --global user.email "tuthanika@gmail.com"
           git remote add gitlab https://oauth2:${GITLAB_TOKEN}@gitlab.com/${{ github.repository }}.git
-          current_branch=$(git rev-parse --abbrev-ref HEAD)
-          git push --force gitlab "$current_branch:$current_branch"
-
+          git push --force --all gitlab
+#       current_branch=$(git rev-parse --abbrev-ref HEAD)
+#          git push --force gitlab "$current_branch:$current_branch"
+          
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
