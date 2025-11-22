@@ -57,12 +57,18 @@ $flags = $env:rclone_flag -split '\s+'
 [int]$MAX_FILE = if ($env:MAX_FILE) { [int]$env:MAX_FILE } else { 5 }
 Write-Host "[DEBUG] MAX_FILE=$MAX_FILE"
 
-# Patterns từ rule (dùng cho move và prune)
+# MAX_FILE: số file KHỚP PATTERNS được giữ trong thư mục 'old'
+[int]$MAX_FILE = if ($env:MAX_FILE) { [int]$env:MAX_FILE } else { 2 }
+Write-Host "[DEBUG] MAX_FILE=$MAX_FILE"
+
+# Chuẩn hoá patterns: rclone chấp nhận nhiều mẫu khi nối bằng ';'
 $patterns = if ($rule.Patterns) { ($rule.Patterns -join ";") } else { "" }
 Write-Host "[DEBUG] Patterns for pruning/move='$patterns'"
 
-# Helper: rclone lsjson có thể trả về nhiều dòng/không JSON khi lỗi -> bắt và ConvertFrom-Json an toàn
-function Get-RcloneFilesJson {
+# Bảo đảm thư mục old tồn tại (tuỳ remote, mkdir có thể cần thiết)
+& "$env:SCRIPT_PATH\rclone.exe" mkdir "$remoteOld" --config "$env:RCLONE_CONFIG_PATH" @flags | Out-Null
+
+function Get-RcloneFiles {
     param(
         [string]$remotePath,
         [string]$includePatterns
@@ -76,13 +82,13 @@ function Get-RcloneFilesJson {
         $entries = $json | ConvertFrom-Json
         return @($entries | Where-Object { $_.IsDir -eq $false })
     } catch {
-        Write-Warning "[WARN] rclone lsjson failed at $remotePath: $($_.Exception.Message)"
+        Write-Warning "[WARN] rclone lsjson failed at remotePath: $($_.Exception.Message)"
         return @()
     }
 }
 
-# B1: Move tất cả file khớp patterns từ thư mục chính sang old
-$destMatching = Get-RcloneFilesJson -remotePath $remoteDest -includePatterns $patterns
+# B1: Tìm file KHỚP ở dest và move hết sang old
+$destMatching = Get-RcloneFiles -remotePath $remoteDest -includePatterns $patterns
 if ($destMatching.Count -gt 0) {
     Write-Host "[DEBUG] Found $($destMatching.Count) matching file(s) at dest -> move to old"
     foreach ($f in $destMatching) {
@@ -94,8 +100,8 @@ if ($destMatching.Count -gt 0) {
     Write-Host "[DEBUG] No matching files at dest to move."
 }
 
-# B2: Prune old để giữ đúng MAX_FILE (theo patterns, mới nhất trước)
-$oldMatching = Get-RcloneFilesJson -remotePath $remoteOld -includePatterns $patterns |
+# B2: Prune old để GIỮ ĐÚNG MAX_FILE file khớp (mới nhất trước), xóa phần cũ hơn
+$oldMatching = Get-RcloneFiles -remotePath $remoteOld -includePatterns $patterns |
                Sort-Object ModTime -Descending
 
 Write-Host "[DEBUG] Old matching count=$($oldMatching.Count), keep MAX_FILE=$MAX_FILE"
