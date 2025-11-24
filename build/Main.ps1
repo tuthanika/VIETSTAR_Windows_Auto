@@ -2,7 +2,6 @@ param([string]$Mode)
 
 Write-Host "=== MAIN PIPELINE START ==="
 Write-Host "[DEBUG] Mode input=$Mode"
-# Write-Host "[DEBUG] SCRIPT_PATH=$env:SCRIPT_PATH"
 
 if ([string]::IsNullOrWhiteSpace($env:FILE_CODE_RULES)) {
     Write-Error "[ERROR] FILE_CODE_RULES not found in env"
@@ -33,7 +32,6 @@ function Write-RuleEnvForMode {
     if ($r.isoFolder)      { $kv += "isoFolder=$($r.isoFolder)" }
     if ($r.VietstarFolder) { $kv += "vietstarFolder=$($r.VietstarFolder)" }
 
-
     $outPath = "$env:SCRIPT_PATH\rule.env"
     Set-Content -Path $outPath -Value ($kv -join "`n")
     Write-Host "[DEBUG] Wrote rule.env for mode=$($r.Mode) at $outPath"
@@ -55,42 +53,46 @@ foreach ($m in $runModes) {
     $prepResult = $prepOut | Where-Object { $_ -is [hashtable] } | Select-Object -Last 1
     if (-not $prepResult) { $prepResult = @{} }
 
+    # Lấy rule theo mode hiện tại ($m)
+    $rule = $rules | Where-Object { $_.Mode -eq $m } | Select-Object -First 1
+    if ($rule) {
+        $vsFolder     = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
+        $isoFolder    = if ($rule.isoFolder)      { $rule.isoFolder }      else { $rule.Folder }
+        $drvFolder    = if ($rule.DriverFolder)   { $rule.DriverFolder }   else { "" }
+        $silentFolder = if ($rule.SilentFolder)   { $rule.SilentFolder }   else { "" }
+
+        $env:vietstar = Join-Path (Join-Path $env:SCRIPT_PATH $env:vietstar_path) $vsFolder
+        $env:iso      = Join-Path (Join-Path $env:SCRIPT_PATH $env:iso_path)      $isoFolder
+        $env:driver   = if ([string]::IsNullOrWhiteSpace($drvFolder)) {
+                            Join-Path $env:SCRIPT_PATH $env:driver_path
+                        } else {
+                            Join-Path (Join-Path $env:SCRIPT_PATH $env:driver_path) $drvFolder
+                        }
+        $env:silent   = if ([string]::IsNullOrWhiteSpace($silentFolder)) {
+                            Join-Path $env:SCRIPT_PATH $env:silent_path
+                        } else {
+                            Join-Path (Join-Path $env:SCRIPT_PATH $env:silent_path) $silentFolder
+                        }
+    }
+
     # Mount Silent ISO to A:
-    # Thư mục chứa ISO silent
-    $isoFolder = Join-Path $env:SCRIPT_PATH "z.Silent"
-    
-    # Lấy file ISO mới nhất trong thư mục
-    $isoSilent = Get-ChildItem -Path $isoFolder -Filter *.iso -File |
+    $isoSilent = Get-ChildItem -Path $env:silent -Filter *.iso -File |
                  Sort-Object LastWriteTime -Descending |
                  Select-Object -First 1
 
     if ($isoSilent) {
         Write-Host "[DEBUG] Mounting Silent ISO: $($isoSilent.FullName) to drive A:"
         & imdisk -a -m A: -f $isoSilent.FullName
+        $env:silent = "A:\Apps\exe"
+        Write-Host "[DEBUG] Silent ISO mounted, silent path set to $env:silent"
     } else {
-        Write-Warning "[WARN] No ISO file found in $isoFolder"
+        Write-Warning "[WARN] No ISO file found in $env:silent"
     }
-
-    # Override silent path to A:\
-    $env:silent = "A:\Apps\exe"
-    Write-Host "[DEBUG] Silent ISO mounted, silent path set to $env:silent"
 
     # Set env paths for CMD (absolute) before calling build
-    $env:silent   = $env:silent   # giữ nguyên vì đã mount A:\
-    $env:oem      = Join-Path $env:SCRIPT_PATH $env:oem_path
-    $env:dll      = Join-Path $env:SCRIPT_PATH $env:dll_path
-    $env:driver   = Join-Path $env:SCRIPT_PATH $env:driver_path
-    $env:boot7    = Join-Path $env:SCRIPT_PATH $env:boot7_path
-
-    # Lấy rule theo mode hiện tại ($m)
-    $rule = $rules | Where-Object { $_.Mode -eq $m } | Select-Object -First 1
-    if ($rule) {
-        $vsFolder  = if ($rule.VietstarFolder) { $rule.VietstarFolder } else { $rule.Folder }
-        $isoFolder = if ($rule.isoFolder)      { $rule.isoFolder }      else { $rule.Folder }
-
-        $env:vietstar = Join-Path (Join-Path $env:SCRIPT_PATH $env:vietstar_path) $vsFolder
-        $env:iso      = Join-Path (Join-Path $env:SCRIPT_PATH $env:iso_path)      $isoFolder
-    }
+    $env:oem   = Join-Path $env:SCRIPT_PATH $env:oem_path
+    $env:dll   = Join-Path $env:SCRIPT_PATH $env:dll_path
+    $env:boot7 = Join-Path $env:SCRIPT_PATH $env:boot7_path
 
     Write-Host "[DEBUG] Env paths set:"
     Write-Host "  silent=$env:silent"
@@ -98,13 +100,13 @@ foreach ($m in $runModes) {
     Write-Host "  dll=$env:dll"
     Write-Host "  driver=$env:driver"
     Write-Host "  boot7=$env:boot7"
-	Write-Host "  iso=$env:iso"
+    Write-Host "  iso=$env:iso"
     Write-Host "  vietstar=$env:vietstar"
 
-    # Call build (build sẽ ghi JSON)
+    # Call build
     $null = . "$env:SCRIPT_PATH\build\Build.ps1" -Mode $m -Input $prepResult
 
-    # Đọc JSON (Raw để lấy toàn chuỗi)
+    # Đọc JSON
     $outFile = Join-Path $env:SCRIPT_PATH "build_result_$m.json"
     if (-not (Test-Path $outFile)) {
         Write-Warning "[WARN] Build result file not found for mode $m"
@@ -120,10 +122,9 @@ foreach ($m in $runModes) {
 
     Write-Host "[DEBUG] Build result: Status=$($buildResult.Status), BuildPath=$($buildResult.BuildPath)"
 
-    # Chỉ gọi Upload nếu ISO ready
     if ($buildResult.Status -eq "ISO ready") {
-        Write-Host "[DEBUG] Calling Upload for mode $m (Upload sẽ tự xác định remote path theo env rules)"
-		& "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m
+        Write-Host "[DEBUG] Calling Upload for mode $m"
+        & "$env:SCRIPT_PATH\build\Upload.ps1" -Mode $m
     } else {
         Write-Host "[DEBUG] Skip Upload for mode $m (Status=$($buildResult.Status))"
     }

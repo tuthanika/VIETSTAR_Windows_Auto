@@ -216,13 +216,13 @@ function Invoke-DownloadGroup {
 $isoFolder      = if ($ruleMap.ContainsKey('isoFolder') -and $ruleMap['isoFolder']) { $ruleMap['isoFolder'] } else { $ruleMap['folder'] }
 $isoPatterns    = $ruleMap['patterns']
 
-$drvFolder      = $ruleMap['drvFolder']     # Driver: nếu có thì base/DriverFolder, không thì base
+$drvFolder      = if ($ruleMap.ContainsKey('drvFolder') -and $ruleMap['drvFolder']) { $ruleMap['drvFolder'] } else { "" }
 $drvPatterns    = $ruleMap['drvPatterns']
 
-$bootFolder     = $ruleMap['bootFolder']    # Boot: nếu có thì base/BootFolder, không thì base
+$bootFolder     = if ($ruleMap.ContainsKey('bootFolder') -and $ruleMap['bootFolder']) { $ruleMap['bootFolder'] } else { "" }
 $bootPatterns   = $ruleMap['bootPatterns']
 
-$silentFolder   = $ruleMap['silentFolder']  # Silent: nếu có thì base/SilentFolder, không thì base
+$silentFolder   = if ($ruleMap.ContainsKey('silentFolder') -and $ruleMap['silentFolder']) { $ruleMap['silentFolder'] } else { "" }
 $silentPatterns = $ruleMap['silentPatterns']
 
 Write-Host "[DEBUG] ISO folder=$isoFolder patterns=$isoPatterns"
