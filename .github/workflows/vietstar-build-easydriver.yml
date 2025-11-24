@@ -155,15 +155,6 @@ jobs:
           if (-not (Test-Path "${{ env.SCRIPT_PATH }}")) { New-Item -ItemType Directory -Path "${{ env.SCRIPT_PATH }}" }
           git clone https://${{ env.GH_PAT }}@${{ env.SCRIPT_REPO }} "${{ env.SCRIPT_PATH }}"
 
-      - name: Check UltraISO version
-        shell: cmd
-        run: |
-          echo Hello > "%SCRIPT_PATH%\UltraISO\hello.txt"
-          %SCRIPT_PATH%\UltraISO\UltraISO.exe -imax -l -f %SCRIPT_PATH%\UltraISO\hello.txt -volu TEST_CD -out %SCRIPT_PATH%\test.iso
-          
-          if exist "%SCRIPT_PATH%\test.iso" (
-          for %%I in ("%SCRIPT_PATH%\test.iso") do (echo ISO created successfully. Size: %%~zI bytes)) else (echo ERROR: ISO file was not created.)
-
       - name: Prepare working directories
         shell: pwsh
         run: |
