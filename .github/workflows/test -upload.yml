@@ -125,4 +125,4 @@ jobs:
 
       - name: Upload dummy ISO to OneDrive
         run: |
-          "$env:SCRIPT_PATH\rclone.exe" copy dummy.iso "${{ secrets.RCLONE_PATH }}" --progress -vv
+          "$env:SCRIPT_PATH\rclone.exe" copy dummy.iso "${{ secrets.RCLONE_PATH }}" --config "$env:RCLONE_CONFIG_PATH" --progress -vv
