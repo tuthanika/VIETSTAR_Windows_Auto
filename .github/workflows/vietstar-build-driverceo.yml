@@ -59,7 +59,7 @@ jobs:
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*86*.iso"],
             "BootPatterns": ["*7*86*.iso"],
-            "DriverPatterns": ["*7*86*.iso"],
+            "DriverPatterns": ["*Win7*86*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 7/EasyDriver"
@@ -69,7 +69,7 @@ jobs:
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*64*.iso"],
             "BootPatterns": ["*7*64*.iso"],
-            "DriverPatterns": ["*7*64*.iso"],
+            "DriverPatterns": ["*Win7*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 7/EasyDrive"
@@ -78,7 +78,7 @@ jobs:
             "Mode": "10-32-ltsc",
             "Folder": "Windows 10 LTSC",
             "Patterns": ["*windows*10*86*.iso"],
-            "DriverPatterns": ["*10*86*.iso"],
+            "DriverPatterns": ["*Win10*86*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 10 LTSC/EasyDrive"
@@ -87,7 +87,7 @@ jobs:
             "Mode": "10-64-ltsc",
             "Folder": "Windows 10 LTSC",
             "Patterns": ["*windows*10*64*.iso"],
-            "DriverPatterns": ["*10*64*.iso"],
+            "DriverPatterns": ["*Win10*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 10 LTSC/EasyDrive"
@@ -96,7 +96,7 @@ jobs:
             "Mode": "10-32",
             "Folder": "Windows 10",
             "Patterns": ["*windows*10*86*.iso"],
-            "DriverPatterns": ["*10*86*.iso"],
+            "DriverPatterns": ["*Win10*86*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 10/EasyDrive"
@@ -105,7 +105,7 @@ jobs:
             "Mode": "10-64",
             "Folder": "Windows 10",
             "Patterns": ["*windows*10*64*.iso"],
-            "DriverPatterns": ["*10*64*.iso"],
+            "DriverPatterns": ["*Win10*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 10/EasyDrive"
@@ -115,7 +115,7 @@ jobs:
             "Folder": "Windows 11",
             "Patterns": ["*windows*11*64*.iso"],
             "BootPatterns": ["*11*64*.iso"],
-            "DriverPatterns": ["*11*64*.iso"],
+            "DriverPatterns": ["*Win11*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 11/EasyDrive"
@@ -125,7 +125,7 @@ jobs:
             "Folder": "Windows 11 LTSC",
             "Patterns": ["*windows*11*64*.iso"],
             "BootPatterns": ["*11*64*.iso"],
-            "DriverPatterns": ["*11*64*.iso"],
+            "DriverPatterns": ["*Win11*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 11 LTSC/EasyDrive"
