@@ -108,6 +108,7 @@ if ($oldMatching.Count -gt $MAX_FILE) {
 
 # B3: Upload ISO mới
 Write-Host "[DEBUG] Uploading ISO to $remoteDest"
+Write-Host "[DEBUG] Uploading ISO to $remoteDest with flags: $($flags -join ' ')"
 & "$env:SCRIPT_PATH\rclone.exe" copy "$($isoFile.FullName)" "$remoteDest" --config "$env:RCLONE_CONFIG_PATH" @flags --progress
 
 # Xóa ISO local sau upload
