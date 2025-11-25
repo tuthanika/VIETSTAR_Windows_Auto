@@ -153,7 +153,7 @@ jobs:
       - name: Change DNS Server
         shell: pwsh
         run: |
-          $newDnsServers = @('1.1.1.1', '8.8.8.8')
+          $newDnsServers = @('1.1.1.1')
           $networkAdapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
           foreach ($adapter in $networkAdapters) {
                try {
@@ -164,6 +164,8 @@ jobs:
               }
           }
           ipconfig /flushdns
+          
+        # $newDnsServers = @('1.1.1.1', '8.8.8.8')
 
       - name: Clone SCRIPT_REPO
         run: |
