@@ -1,28 +1,13 @@
-name: 1. VIETSTAR build DriverCeo
+name: 2. VIETSTAR build DriverCeo Nhập Mode
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Chọn mode (ví dụ 7-32, 7-64, auto)'
-        required: true
+        description: |
+          Nhập mode (tách bằng , hoặc ;mặc định all):7-32,7-64,10-32-ltsc,10-64-ltsc,10-32,10-64,11-64,11-64-ltsc,ALL-32,ALL-64,ALL-32-LITE,ALL-64-LITE,AUTO
+        required: false
         default: 'all'
-        type: choice
-        options:
-          - all
-          - 7-32
-          - 7-64
-          - 10-32-ltsc
-          - 10-64-ltsc
-          - 10-32
-          - 10-64
-          - 11-64
-          - 11-64-ltsc
-          - ALL-32
-          - ALL-64
-          - ALL-32-LITE
-          - ALL-64-LITE
-          - AUTO
 
 jobs:
   build:
