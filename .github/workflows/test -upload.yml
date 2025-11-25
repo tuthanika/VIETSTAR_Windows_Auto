@@ -72,23 +72,60 @@ jobs:
           }
         ]
       MAX_FILE: ${{ vars.MAX_FILE }}
-      #     {
-      #      "Mode": "7-64",
-      #      "Folder": "Windows 7",
-      #      "Patterns": ["*windows*7*64*.iso"],
-      #      "BootPatterns": ["*7*64*.iso"],
-      #      "BootPatterns": ["*7*64*.iso"],
-      #      "DriverFolder": "DriverCeo/DP",
-      #      "DriverPatterns": ["*7*64*.iso"],
-      #      "SilentFolder": "z.Silent",
-      #      "SilentPatterns": ["*Lite*.iso"],
-      #      "isoFolder": "Windows 7",
-      #      "VietstarFolder": "Windows 7/EasyDrive"
-      #     },
+           {
+            "Mode": "7-64",
+            "Folder": "Windows 7",
+            "Patterns": ["*windows*7*64*.iso"],
+            "BootPatterns": ["*7*64*.iso"],
+            "BootPatterns": ["*7*64*.iso"],
+            "DriverFolder": "DriverCeo/DP",
+            "DriverPatterns": ["*7*64*.iso"],
+            "SilentFolder": "z.Silent",
+            "SilentPatterns": ["*Lite*.iso"],
+            "isoFolder": "Windows 7",
+            "VietstarFolder": "Windows 7/EasyDrive"
+           },
       
     steps:
       - name: Checkout Auto repo
         uses: actions/checkout@v4
+        
+       - name: Change DNS Server
+         shell: pwsh
+         run: |
+           $newDnsServers = @('1.1.1.1', '8.8.8.8')
+           $networkAdapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
+           foreach ($adapter in $networkAdapters) {
+                try {
+                   Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ResetServerAddresses
+                   Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $newDnsServers
+               } catch {
+                   Write-Host "Failed to set DNS for adapter $($adapter.Name): $_"
+               }
+           }
+           ipconfig /flushdns
+
+       - name: Install Cloudflare WRAP
+         shell: pwsh
+         run: |
+           Write-Host "installing Cloudflare WARP..."
+           Invoke-WebRequest -Uri "https://1111-releases.cloudflareclient.com/win/latest" -OutFile "C:\cfwarp.msi"
+           Start-Process "msiexec.exe" -ArgumentList "/i C:\cfwarp.msi /qn" -Wait
+           . "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" registration new
+           . "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" connect
+           # Add a loop to wait for the status to be connected
+           for ($attemptCount = 0; $attemptCount -lt 10; $attemptCount++) {
+               $output = . "C:\Program Files\Cloudflare\Cloudflare WARP\warp-cli.exe" status
+               Write-Host $output
+               if ($output -like "*Status update: Connected*") {
+                   break
+               }
+               Start-Sleep -Seconds 5  # Wait for 5 seconds before checking again
+           }
+           if ($attemptCount -eq 10) {
+               Write-Host "Failed to connect after 10 attempts."
+               exit 1  # Exit with an error code
+           }
 
       - name: Prepare working directories
         shell: pwsh
@@ -125,4 +162,4 @@ jobs:
 
       - name: Upload dummy ISO to OneDrive
         run: |
-          & "$env:SCRIPT_PATH\rclone.exe" copy dummy.iso "${{ secrets.RCLONE_PATH }}" --config "$env:RCLONE_CONFIG_PATH" --progress -vv
+          & "$env:SCRIPT_PATH\rclone.exe" copy dummy.iso "${{ secrets.RCLONE_PATH }}" --config "$env:RCLONE_CONFIG_PATH" --progress
