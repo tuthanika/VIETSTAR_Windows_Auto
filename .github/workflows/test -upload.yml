@@ -116,11 +116,17 @@ jobs:
       - name: Change DNS to Cloudflare
         shell: pwsh
         run: |
-          $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
-          Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses 1.1.1.1
+          $newDnsServers = @('1.1.1.1')
+          $networkAdapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
+          foreach ($adapter in $networkAdapters) {
+               try {
+                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ResetServerAddresses
+                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $newDnsServers
+              } catch {
+                  Write-Host "Failed to set DNS for adapter $($adapter.Name): $_"
+              }
+          }
           ipconfig /flushdns
-          # In ra DNS hiện tại để kiểm tra
-          Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize
 
       - name: Upload dummy 1 ISO to OneDrive
         shell: cmd
@@ -135,11 +141,17 @@ jobs:
       - name: Change DNS to Google
         shell: pwsh
         run: |
-          $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
-          Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses 8.8.8.8
+          $newDnsServers = @('8.8.8.8')
+          $networkAdapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
+          foreach ($adapter in $networkAdapters) {
+               try {
+                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ResetServerAddresses
+                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $newDnsServers
+              } catch {
+                  Write-Host "Failed to set DNS for adapter $($adapter.Name): $_"
+              }
+          }
           ipconfig /flushdns
-          # In ra DNS hiện tại để kiểm tra
-          Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize
       
       - name: Upload dummy 3 ISO to OneDrive
         shell: cmd
