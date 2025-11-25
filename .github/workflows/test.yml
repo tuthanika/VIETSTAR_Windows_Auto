@@ -5,7 +5,7 @@ on:
     inputs:
       mode:
         description: |
-          Nhập mode (tách bằng ,;mặc định all):7-32,7-64,10-32-ltsc,10-64-ltsc,10-32,10-64,11-64,11-64-ltsc,ALL-32,ALL-64,ALL-32-LITE,ALL-64-LITE,AUTO
+          Nhập mode (tách bằng , hoặc ;mặc định all):7-32,7-64,10-32-ltsc,10-64-ltsc,10-32,10-64,11-64,11-64-ltsc,ALL-32,ALL-64,ALL-32-LITE,ALL-64-LITE,AUTO
         required: false
         default: 'all'
         
