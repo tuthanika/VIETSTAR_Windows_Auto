@@ -148,5 +148,6 @@ jobs:
           fsutil file createnew dummy.iso 2147483648
 
       - name: Upload dummy ISO to OneDrive
+        shell: cmd
         run: |
-          & "$env:SCRIPT_PATH\rclone.exe" copy dummy.iso "${{ secrets.RCLONE_PATH }}" --config "$env:RCLONE_CONFIG_PATH" --progress
+          %SCRIPT_PATH%\rclone.exe copy dummy.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --progress
