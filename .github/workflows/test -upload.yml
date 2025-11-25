@@ -110,6 +110,8 @@ jobs:
         run: |
           fsutil file createnew dummy1.iso 1073741824
           fsutil file createnew dummy2.iso 1073741824
+          fsutil file createnew dummy3.iso 1073741824
+          fsutil file createnew dummy4.iso 1073741824
 
       - name: Change DNS to Cloudflare
         shell: pwsh
@@ -120,10 +122,15 @@ jobs:
           # In ra DNS hiện tại để kiểm tra
           Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize
 
-      - name: Upload dummy ISO via PS1
+      - name: Upload dummy 1 ISO to OneDrive
+        shell: cmd
+        run: |
+          %SCRIPT_PATH%\rclone.exe copy dummy1.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --progress
+
+      - name: Upload dummy 2 ISO via PS1
         shell: pwsh
         run: |
-          .\upload-test.ps1 -Files "dummy1.iso"
+          .\upload-test.ps1 -Files "dummy2.iso"
 
       - name: Change DNS to Google
         shell: pwsh
@@ -134,7 +141,12 @@ jobs:
           # In ra DNS hiện tại để kiểm tra
           Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize
       
+      - name: Upload dummy 3 ISO to OneDrive
+        shell: cmd
+        run: |
+          %SCRIPT_PATH%\rclone.exe copy dummy3.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --progress
+      
       - name: Upload dummy ISO to OneDrive
         shell: pwsh
         run: |
-          .\upload-test.ps1 -Files "dummy2.iso"
+          .\upload-test.ps1 -Files "dummy4.iso"
