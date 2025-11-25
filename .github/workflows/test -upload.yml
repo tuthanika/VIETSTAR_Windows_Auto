@@ -76,21 +76,6 @@ jobs:
     steps:
       - name: Checkout Auto repo
         uses: actions/checkout@v4
-        
-      - name: Change DNS Server
-        shell: pwsh
-        run: |
-          $newDnsServers = @('1.1.1.1', '8.8.8.8')
-          $networkAdapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
-          foreach ($adapter in $networkAdapters) {
-               try {
-                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ResetServerAddresses
-                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $newDnsServers
-              } catch {
-                  Write-Host "Failed to set DNS for adapter $($adapter.Name): $_"
-              }
-          }
-          ipconfig /flushdns
 
       - name: Prepare working directories
         shell: pwsh
@@ -125,6 +110,25 @@ jobs:
         run: |
           fsutil file createnew dummy.iso 2147483648
 
+      - name: Change DNS to Cloudflare
+        shell: pwsh
+        run: |
+          $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+          Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses 1.1.1.1
+          ipconfig /flushdns
+
+      - name: Upload dummy ISO to OneDrive
+        shell: cmd
+        run: |
+          %SCRIPT_PATH%\rclone.exe copy dummy.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --progress
+
+      - name: Change DNS to Google
+        shell: pwsh
+        run: |
+          $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+          Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses 8.8.8.8
+          ipconfig /flushdns
+      
       - name: Upload dummy ISO to OneDrive
         shell: cmd
         run: |
