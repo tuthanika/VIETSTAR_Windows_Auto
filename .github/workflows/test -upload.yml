@@ -123,7 +123,7 @@ jobs:
       - name: Upload dummy ISO via PS1
         shell: pwsh
         run: |
-          .\upload-test.ps1 -FileName "dummy1.iso"
+          & "$env:REPO_PATH\upload-test.ps1" -FileName "dummy1.iso"
 
       - name: Change DNS to Google
         shell: pwsh
@@ -137,4 +137,4 @@ jobs:
       - name: Upload dummy ISO to OneDrive
         shell: pwsh
         run: |
-          .\upload-test.ps1 -FileName "dummy2.iso"
+          & "$env:REPO_PATH\upload-test.ps1" -FileName "dummy2.iso"
