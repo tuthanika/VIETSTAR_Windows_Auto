@@ -125,7 +125,7 @@ jobs:
       - name: Upload dummy 1 ISO to OneDrive
         shell: cmd
         run: |
-          %SCRIPT_PATH%\rclone.exe copy dummy1.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --progress
+          %SCRIPT_PATH%\rclone.exe copy dummy1.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --multi-thread-streams=10 --transfers=10 --checkers=10 --tpslimit=10 --tpslimit-burst=15 --progress
 
       - name: Upload dummy 2 ISO via PS1
         shell: pwsh
@@ -144,7 +144,7 @@ jobs:
       - name: Upload dummy 3 ISO to OneDrive
         shell: cmd
         run: |
-          %SCRIPT_PATH%\rclone.exe copy dummy3.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --progress
+          %SCRIPT_PATH%\rclone.exe copy dummy3.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --multi-thread-streams=10 --transfers=10 --checkers=10 --tpslimit=10 --tpslimit-burst=15 --progress
       
       - name: Upload dummy ISO to OneDrive
         shell: pwsh

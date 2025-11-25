@@ -13,6 +13,11 @@ foreach ($file in $Files) {
         $file
         $env:RCLONE_PATH
         "--config", $env:RCLONE_CONFIG_PATH
+		"--multi-thread-streams=10"
+		"--transfers=10"
+		"--checkers=10"
+		"--tpslimit=10"
+		"--tpslimit-burst=15"
         "--progress"
     )
 
