@@ -120,10 +120,10 @@ jobs:
           # In ra DNS hiện tại để kiểm tra
           Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize
 
-      - name: Upload dummy ISO to OneDrive
-        shell: cmd
+      - name: Upload dummy ISO via PS1
+        shell: pwsh
         run: |
-          %SCRIPT_PATH%\rclone.exe copy dummy1.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --progress
+          .\upload-test.ps1 -FileName "dummy1.iso"
 
       - name: Change DNS to Google
         shell: pwsh
@@ -135,6 +135,6 @@ jobs:
           Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize
       
       - name: Upload dummy ISO to OneDrive
-        shell: cmd
+        shell: pwsh
         run: |
-          %SCRIPT_PATH%\rclone.exe copy dummy2.iso %RCLONE_PATH% --config %RCLONE_CONFIG_PATH% --progress
+          .\upload-test.ps1 -FileName "dummy2.iso"
