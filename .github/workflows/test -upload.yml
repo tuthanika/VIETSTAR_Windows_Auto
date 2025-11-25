@@ -72,19 +72,6 @@ jobs:
           }
         ]
       MAX_FILE: ${{ vars.MAX_FILE }}
-           {
-            "Mode": "7-64",
-            "Folder": "Windows 7",
-            "Patterns": ["*windows*7*64*.iso"],
-            "BootPatterns": ["*7*64*.iso"],
-            "BootPatterns": ["*7*64*.iso"],
-            "DriverFolder": "DriverCeo/DP",
-            "DriverPatterns": ["*7*64*.iso"],
-            "SilentFolder": "z.Silent",
-            "SilentPatterns": ["*Lite*.iso"],
-            "isoFolder": "Windows 7",
-            "VietstarFolder": "Windows 7/EasyDrive"
-           },
       
     steps:
       - name: Checkout Auto repo
