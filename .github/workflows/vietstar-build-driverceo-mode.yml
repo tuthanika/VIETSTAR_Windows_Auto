@@ -1,28 +1,13 @@
-name: 1. VIETSTAR build DriverCeo
+name: 2. VIETSTAR build DriverCeo Nhập Mode
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Chọn mode (ví dụ 7-32, 7-64, auto)'
-        required: true
+        description: |
+          Nhập mode (tách bằng , hoặc ;mặc định all):7-32,7-64,10-32-ltsc,10-64-ltsc,10-32,10-64,11-64,11-64-ltsc,ALL-32,ALL-64,ALL-32-LITE,ALL-64-LITE,AUTO
+        required: false
         default: 'all'
-        type: choice
-        options:
-          - all
-          - 7-32
-          - 7-64
-          - 10-32-ltsc
-          - 10-64-ltsc
-          - 10-32
-          - 10-64
-          - 11-64
-          - 11-64-ltsc
-          - ALL-32
-          - ALL-64
-          - ALL-32-LITE
-          - ALL-64-LITE
-          - AUTO
 
 jobs:
   build:
@@ -149,6 +134,21 @@ jobs:
     steps:
       - name: Checkout Auto repo
         uses: actions/checkout@v4
+        
+      - name: Change DNS Server
+        shell: pwsh
+        run: |
+          $newDnsServers = @('1.1.1.1', '8.8.8.8')
+          $networkAdapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
+          foreach ($adapter in $networkAdapters) {
+               try {
+                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ResetServerAddresses
+                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $newDnsServers
+              } catch {
+                  Write-Host "Failed to set DNS for adapter $($adapter.Name): $_"
+              }
+          }
+          ipconfig /flushdns
 
       - name: Clone SCRIPT_REPO
         run: |
