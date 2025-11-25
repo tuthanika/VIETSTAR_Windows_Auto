@@ -39,6 +39,21 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        
+      - name: Change DNS Server
+        shell: pwsh
+        run: |
+          $newDnsServers = @('1.1.1.1', '8.8.8.8')
+          $networkAdapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
+          foreach ($adapter in $networkAdapters) {
+               try {
+                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ResetServerAddresses
+                  Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses $newDnsServers
+              } catch {
+                  Write-Host "Failed to set DNS for adapter $($adapter.Name): $_"
+              }
+          }
+          ipconfig /flushdns
 
       - name: Prepare working directories
         shell: pwsh
