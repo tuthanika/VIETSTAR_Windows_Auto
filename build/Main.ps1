@@ -12,7 +12,12 @@ $rules = $env:FILE_CODE_RULES | ConvertFrom-Json
 Write-Host "[DEBUG] Rules count=$($rules.Count)"
 
 # Determine modes to run
-$runModes = if ($Mode -eq "all") { @($rules.Mode) } else { @($Mode) }
+if ($Mode -eq "all") {
+    $runModes = @($rules.Mode)
+} else {
+    # Tách theo dấu phẩy hoặc chấm phẩy, loại bỏ khoảng trắng thừa
+    $runModes = $Mode -split '[,;]' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+}
 Write-Host "[DEBUG] Will run modes: $($runModes -join ', ')"
 
 function Write-RuleEnvForMode {
