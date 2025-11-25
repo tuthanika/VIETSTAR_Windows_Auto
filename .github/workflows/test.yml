@@ -4,11 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Chọn mode (ví dụ 7-32, 7-64, auto)'
-        required: true
-        default: 'all'
-        type: choice
-        options:
+        description: |
+          Nhập mode cần chạy:
           - all
           - 7-32
           - 7-64
@@ -23,7 +20,10 @@ on:
           - ALL-32-LITE
           - ALL-64-LITE
           - AUTO
-
+          Hoặc nhập nhiều mode phân tách bằng , hoặc ;
+        required: false
+        default: 'all'
+        
 jobs:
   build:
     runs-on: windows-latest
