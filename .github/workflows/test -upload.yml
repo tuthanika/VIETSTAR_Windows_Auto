@@ -116,6 +116,8 @@ jobs:
           $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
           Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses 1.1.1.1
           ipconfig /flushdns
+          # In ra DNS hiện tại để kiểm tra
+          Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize
 
       - name: Upload dummy ISO to OneDrive
         shell: cmd
@@ -128,6 +130,8 @@ jobs:
           $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
           Set-DnsClientServerAddress -InterfaceIndex $adapter.ifIndex -ServerAddresses 8.8.8.8
           ipconfig /flushdns
+          # In ra DNS hiện tại để kiểm tra
+          Get-DnsClientServerAddress | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize
       
       - name: Upload dummy ISO to OneDrive
         shell: cmd
