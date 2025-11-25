@@ -57,7 +57,7 @@ jobs:
             "DriverPatterns": ["*Win7*64*.iso"],
             "DriverFolder": "EasyDrv7",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 7/EasyDrive"
+            "VietstarFolder": "Windows 7/EasyDriver"
           },
           {
             "Mode": "10-32-ltsc",
@@ -66,7 +66,7 @@ jobs:
             "DriverPatterns": ["*Win10*86*.iso"],
             "DriverFolder": "EasyDrv7",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 10 LTSC/EasyDrive"
+            "VietstarFolder": "Windows 10 LTSC/EasyDriver"
           },
           {
             "Mode": "10-64-ltsc",
@@ -75,7 +75,7 @@ jobs:
             "DriverPatterns": ["*Win10*64*.iso"],
             "DriverFolder": "EasyDrv7",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 10 LTSC/EasyDrive"
+            "VietstarFolder": "Windows 10 LTSC/EasyDriver"
           },
           {
             "Mode": "10-32",
@@ -84,7 +84,7 @@ jobs:
             "DriverPatterns": ["*Win10*86*.iso"],
             "DriverFolder": "EasyDrv7",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 10/EasyDrive"
+            "VietstarFolder": "Windows 10/EasyDriver"
           },
           {
             "Mode": "10-64",
@@ -93,7 +93,7 @@ jobs:
             "DriverPatterns": ["*Win10*64*.iso"],
             "DriverFolder": "EasyDrv7",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 10/EasyDrive"
+            "VietstarFolder": "Windows 10/EasyDriver"
           },
           {
             "Mode": "11-64",
@@ -103,7 +103,7 @@ jobs:
             "DriverPatterns": ["*Win10*64*.iso"],
             "DriverFolder": "EasyDrv7",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 11/EasyDrive"
+            "VietstarFolder": "Windows 11/EasyDriver"
           },
           {
             "Mode": "11-64-ltsc",
@@ -113,23 +113,10 @@ jobs:
             "DriverPatterns": ["*Win10*64*.iso"],
             "DriverFolder": "EasyDrv7",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 11 LTSC/EasyDrive"
+            "VietstarFolder": "Windows 11 LTSC/EasyDriver"
           }
         ]
       MAX_FILE: ${{ vars.MAX_FILE }}
-      #     {
-      #      "Mode": "7-64",
-      #      "Folder": "Windows 7",
-      #      "Patterns": ["*windows*7*64*.iso"],
-      #      "BootPatterns": ["*7*64*.iso"],
-      #      "BootPatterns": ["*7*64*.iso"],
-      #      "DriverFolder": "DriverCeo/DP",
-      #      "DriverPatterns": ["*7*64*.iso"],
-      #      "SilentFolder": "z.Silent",
-      #      "SilentPatterns": ["*Lite*.iso"],
-      #      "isoFolder": "Windows 7",
-      #      "VietstarFolder": "Windows 7/EasyDriver"
-      #     },
       
     steps:
       - name: Checkout Auto repo
