@@ -11,7 +11,7 @@ function Process-DownloaderOutput {
     try {
         $dlOutput  = (& php (Join-Path $env:REPO_PATH "downloader.php") $SourceUrl 2>&1 | Out-String)
     } catch {
-        Write-Error "PHP downloader failed for $SourceUrl: $($_.Exception.Message)"
+		Write-Error ("PHP downloader failed for " + $SourceUrl + ": " + $_.Exception.Message)
         throw
     }
 
