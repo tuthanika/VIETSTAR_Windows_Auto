@@ -19,7 +19,6 @@ foreach ($raw in $rawLinks) {
   Write-Host "DEBUG: Processing link=[$link] (threadFilter=[$threadFilter], downloadKey=[$downloadKey])"
 
   if ($link -like "https://forum.rg-adguard.net/forums/*") {
-    # Section → lấy threads theo rules
     $results = & (Join-Path $env:REPO_PATH "scripts\threads.ps1") -SectionUrl $link -ThreadFilter $threadFilter
     foreach ($res in $results) {
       $partsRes = $res.Split('|')
@@ -38,6 +37,7 @@ foreach ($raw in $rawLinks) {
 
       try {
         $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $shareLink -PipePath $pipePath 2>&1
+        $out | ForEach-Object { Write-Host "downloader.ps1 >> $_" }
         if (-not $?) {
           Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$shareLink"
           $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
@@ -63,6 +63,7 @@ foreach ($raw in $rawLinks) {
 
     try {
       $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $shareLink -PipePath $pipePath 2>&1
+      $out | ForEach-Object { Write-Host "downloader.ps1 >> $_" }
       if (-not $?) {
         Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$shareLink"
         $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
@@ -77,6 +78,7 @@ foreach ($raw in $rawLinks) {
   elseif ($link -like "https://cloud.mail.ru/*") {
     try {
       $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $link -PipePath $pipePath 2>&1
+      $out | ForEach-Object { Write-Host "downloader.ps1 >> $_" }
       if (-not $?) {
         Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$link"
         $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
