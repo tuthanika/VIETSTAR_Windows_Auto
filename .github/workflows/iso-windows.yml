@@ -101,9 +101,19 @@ jobs:
       - name: Build download list (orchestrator)
         shell: pwsh
         run: |
-          & "${{ github.workspace }}\scripts\build-list.ps1"
+          & "${{ github.workspace }}\scripts\build-list.ps1"pwsh -File scripts/build-list.ps1
 
-      - name: Run uploader
+      - name: Upload debug logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-logs
+          path: |
+            ${{ github.workspace }}\scripts\debug.log
+            ${{ github.workspace }}\scripts\errors.log
+            ${{ github.workspace }}\scripts\links.final.txt
+          
+     - name: Run uploader
         shell: pwsh
         run: |
           & "$env:REPO_PATH\scripts\uploader.ps1" -PipePath "$env:SCRIPT_PATH\links.final.txt"
