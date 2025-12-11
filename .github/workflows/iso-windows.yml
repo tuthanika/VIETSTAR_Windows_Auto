@@ -99,11 +99,21 @@ jobs:
                https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
       - name: Build download list (orchestrator)
-        shell: pwsh
         run: |
-          & "${{ github.workspace }}\scripts\build-list.ps1"
+          pwsh -File "${{ github.workspace }}\scripts\build-list.ps1"
+
+      - name: Upload debug logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-logs
+          path: |
+            C:\RUN\debug.log
+            C:\RUN\errors.log
+            C:\RUN\links.final.txt
 
       - name: Run uploader
         shell: pwsh
         run: |
           & "$env:REPO_PATH\scripts\uploader.ps1" -PipePath "$env:SCRIPT_PATH\links.final.txt"
+
