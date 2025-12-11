@@ -10,12 +10,21 @@ function Process-DownloaderOutput {
 
     $dlOutput  = (& php (Join-Path $env:REPO_PATH "downloader.php") $SourceUrl 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "PHP downloader returned exit code $LASTEXITCODE for ${SourceUrl}"
+    $msg = "PHP downloader returned exit code $LASTEXITCODE for ${SourceUrl}"
+    Write-Error $msg
     Write-Host "=== PHP raw output ==="
     Write-Host $dlOutput
     Write-Host "=== End of PHP raw output ==="
+
+    # Ghi chi tiết vào errors.log để build-list tổng hợp
+    Add-Content -Path (Join-Path $env:SCRIPT_PATH "errors.log") -Value $msg
+    $dlOutput -split "`r?`n" | ForEach-Object {
+        Add-Content -Path (Join-Path $env:SCRIPT_PATH "errors.log") -Value "  >> $_"
+    }
+
     exit $LASTEXITCODE
 }
+
 
     $realLines = ($dlOutput -replace "`r`n","`n" -replace "`r","`n").Trim() -split "`n"
     Write-Host "DEBUG: downloader lines count=[$($realLines.Count)]"
