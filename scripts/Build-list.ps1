@@ -56,6 +56,13 @@ foreach ($raw in $rawLinks) {
   }
 }
 
+if (Test-Path $pipePath) {
+  Write-Host "=== links.final.txt content ==="
+  Get-Content $pipePath | ForEach-Object { Write-Host $_ }
+  Write-Host "=== end of file ==="
+}
+
+
 # Sau khi xử lý xong toàn bộ links, in thống kê
 if (Test-Path $pipePath) {
   $count = (Get-Content $pipePath | Measure-Object).Count
