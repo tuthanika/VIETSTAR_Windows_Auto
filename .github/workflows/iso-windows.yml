@@ -99,7 +99,6 @@ jobs:
                https://raw.githubusercontent.com/tuthanika/Rclone-Auto-Refresh-Token/main/rclone.conf
 
       - name: Build download list (orchestrator)
-        shell: pwsh
         run: |
           pwsh -File "${{ github.workspace }}\scripts\build-list.ps1"
 
