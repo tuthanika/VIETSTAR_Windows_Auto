@@ -58,7 +58,7 @@ function Process-DownloaderOutput {
             # Nếu check-exists trả về 3 → coi là trạng thái upload, không fail
             if ($checkExit -eq 3) {
                 Write-Host "INFO: check-exists signaled upload for $filenameA"
-				$global:LASTEXITCODE = 0   # reset để không propagate ra ngoài
+                $global:LASTEXITCODE = 0   # reset để không propagate ra ngoài
             }
 
             if (-not ($RawJson.StartsWith("{"))) { throw "check-exists returned non-JSON for file [$filenameA]" }
