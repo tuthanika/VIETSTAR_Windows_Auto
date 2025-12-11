@@ -56,16 +56,18 @@ foreach ($raw in $rawLinks) {
       }
 
       try {
-        & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $shareLink -PipePath $pipePath
-        if (-not $?) { Add-Content -Path $errPath -Value "ERROR downloader.ps1 returned failure for SourceUrl=$shareLink" }
-        if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
-          Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$shareLink"
-        }
-      } catch {
-        Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$shareLink)"
-      }
-    }
+  $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $shareLink -PipePath $pipePath 2>&1
+  if (-not $?) {
+    Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$shareLink"
+    $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
   }
+  if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
+    Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$shareLink"
+  }
+} catch {
+  Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$shareLink)"
+}
+
   elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
     try {
       $goLink = & (Join-Path $env:REPO_PATH "scripts\go-link.ps1") -ThreadUrl $link
@@ -90,26 +92,32 @@ foreach ($raw in $rawLinks) {
     }
 
     try {
-      & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $shareLink -PipePath $pipePath
-      if (-not $?) { Add-Content -Path $errPath -Value "ERROR downloader.ps1 returned failure for SourceUrl=$shareLink" }
-      if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
-        Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$shareLink"
-      }
-    } catch {
-      Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$shareLink)"
-    }
+  $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $shareLink -PipePath $pipePath 2>&1
+  if (-not $?) {
+    Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$shareLink"
+    $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
   }
+  if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
+    Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$shareLink"
+  }
+} catch {
+  Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$shareLink)"
+}
+
   elseif ($link -like "https://cloud.mail.ru/*") {
     try {
-      & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $link -PipePath $pipePath
-      if (-not $?) { Add-Content -Path $errPath -Value "ERROR downloader.ps1 returned failure for SourceUrl=$link" }
-      if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
-        Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$link"
-      }
-    } catch {
-      Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$link)"
-    }
+  $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $link -PipePath $pipePath 2>&1
+  if (-not $?) {
+    Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$link"
+    $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
   }
+  if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
+    Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$link"
+  }
+} catch {
+  Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$link)"
+}
+
   else {
     Write-Host "WARN: Unknown link type"
   }
