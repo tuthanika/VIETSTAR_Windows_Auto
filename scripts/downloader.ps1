@@ -10,31 +10,19 @@ function Process-DownloaderOutput {
 
     $dlOutput = (& php (Join-Path $env:REPO_PATH "downloader.php") $SourceUrl 2>&1 | Out-String)
 
-# Ghi vào debug.log
-$debugPath = Join-Path $env:SCRIPT_PATH "debug.log"
-Add-Content -Path $debugPath -Value "=== downloader.php output for $SourceUrl ==="
-Add-Content -Path $debugPath -Value $dlOutput
+    # Ghi vào debug.log
+    $debugPath = Join-Path $env:SCRIPT_PATH "debug.log"
+    Add-Content -Path $debugPath -Value "=== downloader.php output for $SourceUrl ==="
+    Add-Content -Path $debugPath -Value $dlOutput
 
-if ($LASTEXITCODE -ne 0) {
-    $errPath = Join-Path $env:SCRIPT_PATH "errors.log"
-    $msg = "ERROR: PHP exit code $LASTEXITCODE for $SourceUrl"
-    Write-Error $msg
-    Add-Content -Path $errPath -Value $msg
-    $dlOutput -split "`r?`n" | ForEach-Object {
-        if ($_ -and $_.Trim().Length -gt 0) { Add-Content -Path $errPath -Value "  >> $_" }
-    }
-    exit $LASTEXITCODE
-}
-
-        # Ghi chi tiết vào errors.log
+    if ($LASTEXITCODE -ne 0) {
         $errPath = Join-Path $env:SCRIPT_PATH "errors.log"
+        $msg = "ERROR: PHP exit code $LASTEXITCODE for $SourceUrl"
+        Write-Error $msg
         Add-Content -Path $errPath -Value $msg
         $dlOutput -split "`r?`n" | ForEach-Object {
-            if ($_ -and $_.Trim().Length -gt 0) {
-                Add-Content -Path $errPath -Value "  >> $_"
-            }
+            if ($_ -and $_.Trim().Length -gt 0) { Add-Content -Path $errPath -Value "  >> $_" }
         }
-
         exit $LASTEXITCODE
     }
 
