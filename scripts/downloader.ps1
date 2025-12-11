@@ -54,6 +54,13 @@ function Process-DownloaderOutput {
             $checkExit = $LASTEXITCODE
             Write-Host "DEBUG: check-exists.ps1 exit code = $checkExit"
             Write-Host "DEBUG: check-exists raw=[$RawJson]"
+
+            # Nếu check-exists trả về 3 → coi là trạng thái upload, không fail
+            if ($checkExit -eq 3) {
+                Write-Host "INFO: check-exists signaled upload for $filenameA"
+                $checkExit = 0
+            }
+
             if (-not ($RawJson.StartsWith("{"))) { throw "check-exists returned non-JSON for file [$filenameA]" }
 
             $Info = $RawJson | ConvertFrom-Json
