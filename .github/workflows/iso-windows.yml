@@ -101,7 +101,7 @@ jobs:
       - name: Build download list (orchestrator)
         shell: pwsh
         run: |
-          & "${{ github.workspace }}\scripts\build-list.ps1"pwsh -File scripts/build-list.ps1
+          pwsh -File "${{ github.workspace }}\scripts\build-list.ps1"
 
       - name: Upload debug logs
         if: always()
