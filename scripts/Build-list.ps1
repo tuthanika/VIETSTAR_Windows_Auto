@@ -10,6 +10,25 @@ $listPath = (Join-Path $env:REPO_PATH "link.txt")
 if (-not (Test-Path $listPath)) { Write-Host "WARN: link.txt not found"; exit 0 }
 $rawLinks = Get-Content $listPath | Where-Object { $_.Trim().Length -gt 0 }
 
+function Run-Downloader {
+    param([string]$url)
+
+    try {
+        $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $url -PipePath $pipePath 2>&1
+        $out | ForEach-Object { Write-Host "downloader.ps1 >> $_" }
+        if (-not $?) {
+            Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$url"
+            $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
+        }
+        if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
+            Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$url"
+            $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
+        }
+    } catch {
+        Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$url)"
+    }
+}
+
 foreach ($raw in $rawLinks) {
   $parts = $raw.Split('|')
   $link          = $parts[0].Trim()
@@ -35,19 +54,7 @@ foreach ($raw in $rawLinks) {
         $shareLink = ($shareLink.TrimEnd('/')) + "/" + $downloadKey
       }
 
-      try {
-        $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $shareLink -PipePath $pipePath 2>&1
-        $out | ForEach-Object { Write-Host "downloader.ps1 >> $_" }
-        if (-not $?) {
-          Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$shareLink"
-          $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
-        }
-        if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
-          Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$shareLink"
-        }
-      } catch {
-        Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$shareLink)"
-      }
+      Run-Downloader $shareLink
     }
   }
   elseif ($link -like "https://forum.rg-adguard.net/threads/*") {
@@ -61,34 +68,10 @@ foreach ($raw in $rawLinks) {
       $shareLink = ($shareLink.TrimEnd('/')) + "/" + $downloadKey
     }
 
-    try {
-      $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $shareLink -PipePath $pipePath 2>&1
-      $out | ForEach-Object { Write-Host "downloader.ps1 >> $_" }
-      if (-not $?) {
-        Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$shareLink"
-        $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
-      }
-      if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
-        Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$shareLink"
-      }
-    } catch {
-      Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$shareLink)"
-    }
+    Run-Downloader $shareLink
   }
   elseif ($link -like "https://cloud.mail.ru/*") {
-    try {
-      $out = & (Join-Path $env:REPO_PATH "scripts\downloader.ps1") -SourceUrl $link -PipePath $pipePath 2>&1
-      $out | ForEach-Object { Write-Host "downloader.ps1 >> $_" }
-      if (-not $?) {
-        Add-Content -Path $errPath -Value "ERROR downloader.ps1 failure for SourceUrl=$link"
-        $out | ForEach-Object { Add-Content -Path $errPath -Value "  >> $_" }
-      }
-      if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
-        Add-Content -Path $errPath -Value "ERROR downloader.ps1 exit code=$LASTEXITCODE for SourceUrl=$link"
-      }
-    } catch {
-      Add-Content -Path $errPath -Value "ERROR downloader.ps1 exception: $($_.Exception.Message) (SourceUrl=$link)"
-    }
+    Run-Downloader $link
   }
   else {
     Write-Host "WARN: Unknown link type"
@@ -113,11 +96,3 @@ if (Test-Path $pipePath) {
 }
 
 # Kiểm tra lỗi và thoát với exit code phù hợp
-if (Test-Path $errPath) {
-  Write-Host "=== Error summary ==="
-  Get-Content $errPath | ForEach-Object { Write-Host $_ }
-  Write-Host "=== End of errors ==="
-  exit 1
-} else {
-  exit 0
-}

@@ -9,22 +9,25 @@ function Process-DownloaderOutput {
     param([string]$SourceUrl,[string]$PipePath)
 
     $dlOutput  = (& php (Join-Path $env:REPO_PATH "downloader.php") $SourceUrl 2>&1 | Out-String)
-if ($LASTEXITCODE -ne 0) {
-    $msg = "PHP downloader returned exit code $LASTEXITCODE for ${SourceUrl}"
-    Write-Error $msg
-    Write-Host "=== PHP raw output ==="
-    Write-Host $dlOutput
-    Write-Host "=== End of PHP raw output ==="
 
-    # Ghi chi tiết vào errors.log để build-list tổng hợp
-    Add-Content -Path (Join-Path $env:SCRIPT_PATH "errors.log") -Value $msg
-    $dlOutput -split "`r?`n" | ForEach-Object {
-        Add-Content -Path (Join-Path $env:SCRIPT_PATH "errors.log") -Value "  >> $_"
+    if ($LASTEXITCODE -ne 0) {
+        $msg = "PHP downloader returned exit code $LASTEXITCODE for ${SourceUrl}"
+        Write-Error $msg
+        Write-Host "=== PHP raw output ==="
+        Write-Host $dlOutput
+        Write-Host "=== End of PHP raw output ==="
+
+        # Ghi chi tiết vào errors.log để build-list tổng hợp
+        $errPath = Join-Path $env:SCRIPT_PATH "errors.log"
+        Add-Content -Path $errPath -Value $msg
+        $dlOutput -split "`r?`n" | ForEach-Object {
+            if ($_ -and $_.Trim().Length -gt 0) {
+                Add-Content -Path $errPath -Value "  >> $_"
+            }
+        }
+
+        exit $LASTEXITCODE
     }
-
-    exit $LASTEXITCODE
-}
-
 
     $realLines = ($dlOutput -replace "`r`n","`n" -replace "`r","`n").Trim() -split "`n"
     Write-Host "DEBUG: downloader lines count=[$($realLines.Count)]"
@@ -61,7 +64,7 @@ if ($LASTEXITCODE -ne 0) {
     }
 }
 
-# Thực thi: log chi tiết rồi ném lại lỗi để YAML nhận đúng exit code
+# Thực thi
 try {
     Process-DownloaderOutput -SourceUrl $SourceUrl -PipePath $PipePath
 } catch {
