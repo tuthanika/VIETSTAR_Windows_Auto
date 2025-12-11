@@ -8,12 +8,14 @@ $ErrorActionPreference = 'Stop'
 function Process-DownloaderOutput {
     param([string]$SourceUrl,[string]$PipePath)
 
-    try {
-        $dlOutput  = (& php (Join-Path $env:REPO_PATH "downloader.php") $SourceUrl 2>&1 | Out-String)
-    } catch {
-		Write-Error ("PHP downloader failed for " + $SourceUrl + ": " + $_.Exception.Message)
-        throw
-    }
+    $dlOutput  = (& php (Join-Path $env:REPO_PATH "downloader.php") $SourceUrl 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "PHP downloader returned exit code $LASTEXITCODE for ${SourceUrl}"
+    Write-Host "=== PHP raw output ==="
+    Write-Host $dlOutput
+    Write-Host "=== End of PHP raw output ==="
+    exit $LASTEXITCODE
+}
 
     $realLines = ($dlOutput -replace "`r`n","`n" -replace "`r","`n").Trim() -split "`n"
     Write-Host "DEBUG: downloader lines count=[$($realLines.Count)]"
