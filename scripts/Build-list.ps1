@@ -96,3 +96,11 @@ if (Test-Path $pipePath) {
 }
 
 # Kiểm tra lỗi và thoát với exit code phù hợp
+if (Test-Path $errPath) {
+  Write-Host "=== Error summary ==="
+  Get-Content $errPath | ForEach-Object { Write-Host $_ }
+  Write-Host "=== End of errors ==="
+  exit 1
+} else {
+  exit 0
+}
