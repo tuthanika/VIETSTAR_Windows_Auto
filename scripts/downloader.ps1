@@ -40,4 +40,16 @@ function Process-DownloaderOutput {
 }
 
 # Thực thi
-Process-DownloaderOutput -SourceUrl $SourceUrl -PipePath $PipePath
+try {
+    Process-DownloaderOutput -SourceUrl $SourceUrl -PipePath $PipePath
+    exit 0
+}
+catch {
+    Write-Host "ERROR: downloader.ps1 failed for $SourceUrl"
+    Write-Host "ERROR detail: $($_.Exception.Message)"
+    if ($_.ScriptStackTrace) {
+        Write-Host "ERROR stack: $($_.ScriptStackTrace)"
+    }
+    exit 3
+}
+
