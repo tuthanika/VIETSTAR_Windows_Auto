@@ -111,8 +111,9 @@ jobs:
             ${{ github.workspace }}\scripts\debug.log
             ${{ github.workspace }}\scripts\errors.log
             ${{ github.workspace }}\scripts\links.final.txt
-          
-     - name: Run uploader
+
+      - name: Run uploader
         shell: pwsh
         run: |
           & "$env:REPO_PATH\scripts\uploader.ps1" -PipePath "$env:SCRIPT_PATH\links.final.txt"
+
