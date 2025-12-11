@@ -102,18 +102,6 @@ jobs:
         shell: pwsh
         run: |
           & "${{ github.workspace }}\scripts\build-list.ps1"
-          
-      - name: Show links.final.txt content
-        shell: pwsh
-        run: |
-          $pipePath = Join-Path $env:SCRIPT_PATH "links.final.txt"
-          if (Test-Path $pipePath) {
-            Write-Host "=== links.final.txt content ==="
-            Get-Content $pipePath | ForEach-Object { Write-Host $_ }
-            Write-Host "=== end of file ==="
-          } else {
-            Write-Host "links.final.txt not found"
-          }
 
       - name: Run uploader
         shell: pwsh
