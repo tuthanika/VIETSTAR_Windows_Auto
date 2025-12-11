@@ -61,15 +61,3 @@ if (Test-Path $pipePath) {
   Get-Content $pipePath | ForEach-Object { Write-Host $_ }
   Write-Host "=== end of file ==="
 }
-
-
-# Sau khi xử lý xong toàn bộ links, in thống kê
-if (Test-Path $pipePath) {
-  $count = (Get-Content $pipePath | Measure-Object).Count
-  Write-Host "DEBUG: links.final.txt count=$count"
-  if ($count -eq 0) {
-    Write-Host "No new links. Done."
-  } else {
-    Write-Host "Processing finished, $count links written."
-  }
-}
