@@ -108,9 +108,9 @@ jobs:
         with:
           name: debug-logs
           path: |
-            ${{ github.workspace }}\scripts\debug.log
-            ${{ github.workspace }}\scripts\errors.log
-            ${{ github.workspace }}\scripts\links.final.txt
+            C:\RUN\debug.log
+            C:\RUN\errors.log
+            C:\RUN\links.final.txt
 
       - name: Run uploader
         shell: pwsh
