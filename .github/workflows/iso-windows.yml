@@ -34,7 +34,7 @@ jobs:
           { "Patterns": ["*windows_11*ltsc*", "*windows-11*ltsc*", "*windows 11*ltsc*"], "Folder": "Windows 11 LTSC" },
           { "Patterns": ["*windows_11*", "*windows-11*", "*windows 11*"], "Folder": "Windows 11" }
         ]
-      MAX_FILE: 2
+      MAX_FILE: ${{ vars.MAX_FILE }}
 
     steps:
       - name: Checkout repo
