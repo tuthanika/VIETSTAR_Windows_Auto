@@ -26,6 +26,9 @@ foreach ($line in $lines) {
   $remoteDir = "${env:REMOTE_NAME}:${env:REMOTE_TARGET}/$folder"
   $oldDir    = "$remoteDir/old"
 
+  # Flags cho rclone
+  $flags = $env:rclone_flag -split '\s+'
+
   if ($status -eq 'exists') {
     Write-Host "Skip: $filenameA already exists"; continue
   }
@@ -46,7 +49,7 @@ foreach ($line in $lines) {
       foreach ($del in $deleteList -split '\|') {
         if ([string]::IsNullOrWhiteSpace($del)) { continue }
         Write-Host "DEBUG: Delete old → $del"
-        & "$env:SCRIPT_PATH\rclone.exe" deletefile "$oldDir/$del" --config "$env:RCLONE_CONFIG_PATH"
+        & "$env:SCRIPT_PATH\rclone.exe" deletefile "$oldDir/$del" --config "$env:RCLONE_CONFIG_PATH" @flags
       }
     }
 
@@ -61,7 +64,6 @@ foreach ($line in $lines) {
 
     # Upload bản mới vào main
     Write-Host "DEBUG: Uploading $filenameA → $remoteDir"
-    $flags = $env:RCLONE_FLAG -split '\s+'
     & "$env:SCRIPT_PATH\rclone.exe" copy "$(Resolve-Path $localFile)" "$remoteDir" --config "$env:RCLONE_CONFIG_PATH" @flags --progress
     if ($LASTEXITCODE -ne 0) { Write-Error "Upload failed: $filenameA"; exit 1 }
 

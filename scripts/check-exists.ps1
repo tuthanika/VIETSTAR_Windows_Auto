@@ -92,21 +92,25 @@ $filenameB = ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLow
 
 $filenameB_delete = ""
 if ($maxFile -gt 0) {
-    $matchesMain = ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
-    $matchesOld  = ($filesOld  | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
-    $plannedCount = $matchesMain.Count + $matchesOld.Count + 1
-    $needDelete   = [math]::Max(0, $plannedCount - $maxFile)
-    if ($needDelete -gt 0) {
-        $oldCandidates = $matchesOld | Sort-Object -Property ModTime
-        $toDel = $oldCandidates | Select-Object -First $needDelete | Select-Object -ExpandProperty Name
-        if ($toDel) { $filenameB_delete = ($toDel -join "|") }
+    # Gom tất cả file matching từ cả main và old
+    $allMatches = @()
+    $allMatches += ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
+    $allMatches += ($filesOld  | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
+
+    # Sort theo thời gian mới nhất trước
+    $sortedMatches = $allMatches | Sort-Object -Property ModTime -Descending
+
+    # Nếu số lượng vượt quá MAX_FILE thì chọn phần dư để xóa
+    if ($sortedMatches.Count -gt $maxFile) {
+        $toDelete = $sortedMatches | Select-Object -Skip $maxFile | Select-Object -ExpandProperty Name
+        if ($toDelete) { $filenameB_delete = ($toDelete -join "|") }
     }
 }
 
 [pscustomobject]@{
-    status            = "upload"
-    key_date          = $dateA
-    filenameB         = $filenameB
-    folder            = $folderName
-    filenameB_delete  = $filenameB_delete
+    status           = "upload"
+    key_date         = $dateA
+    filenameB        = $filenameB
+    folder           = $folderName
+    filenameB_delete = $filenameB_delete
 } | ConvertTo-Json -Compress
