@@ -32,3 +32,5 @@
 | 2026-02-11 | 10-64 | 2 | 15:40:33 | en-ru_windows_10_version_22h2_with_update_19045.6937_aio_32in1_x64_v26.02.11_by_adguard.iso | VIETSTAR_windows_10_version_22h2_19045.6937_aio_32in1_x64_v26.02.11_11-02-2026.iso |
 | 2026-02-11 | 11-64 | 2 | 16:20:11 | en-ru_windows_11_version_26h1_with_update_28000.1575_aio_38in1_x64_v26.02.11_by_adguard.iso | VIETSTAR_windows_11_version_26h1_28000.1575_aio_38in1_x64_v26.02.11_11-02-2026.iso |
 | 2026-02-11 | 11-64-ltsc | 2 | 17:00:41 | en-ru_windows_11_enterprise_ltsc_2024_with_update_26100.7840_aio_8in1_x64_v26.02.11_by_adguard.iso | VIETSTAR_windows_11_enterprise_ltsc_2024_26100.7840_aio_8in1_x64_v26.02.11_11-02-2026.iso |
+| 2026-03-01 | 11-64 | 1 | 09:09:29 | en-ru_windows_11_version_26h1_with_update_28000.1575_aio_38in1_x64_v26.02.11_by_adguard.iso | VIETSTAR_windows_11_version_26h1_28000.1575_aio_38in1_x64_v26.02.11_01-03-2026.iso |
+| 2026-03-01 | 11-64-ltsc | 1 | 09:33:38 | en-ru_windows_11_enterprise_ltsc_2024_with_update_26100.7840_aio_8in1_x64_v26.02.11_by_adguard.iso | VIETSTAR_windows_11_enterprise_ltsc_2024_26100.7840_aio_8in1_x64_v26.02.11_01-03-2026.iso |
