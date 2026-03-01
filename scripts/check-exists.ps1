@@ -92,18 +92,20 @@ $filenameB = ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLow
 
 $filenameB_delete = ""
 if ($maxFile -gt 0) {
-    # Gom tất cả file matching từ cả main và old
-    $allMatches = @()
-    $allMatches += ($filesMain | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
-    $allMatches += ($filesOld  | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() })
+    # 1. Chỉ lấy các file đang nằm trong thư mục OLD
+    # (Vì Upload.ps1 chỉ tính toán số lượng dựa trên những gì đang có trong OLD)
+    $matchesInOld = $filesOld | Where-Object { $_.Name.ToLower() -like $baseKey.ToLower() } | Sort-Object -Property ModTime -Descending
 
-    # Sort theo thời gian mới nhất trước
-    $sortedMatches = $allMatches | Sort-Object -Property ModTime -Descending
-
-    # Nếu số lượng vượt quá MAX_FILE thì chọn phần dư để xóa
-    if ($sortedMatches.Count -gt $maxFile) {
-        $toDelete = $sortedMatches | Select-Object -Skip $maxFile | Select-Object -ExpandProperty Name
-        if ($toDelete) { $filenameB_delete = ($toDelete -join "|") }
+    # 2. Logic của Upload.ps1:
+    # Số lượng cần xóa = (Số file hiện có trong old) - (MAX_FILE - 1)
+    # Tại sao lại là -1? Vì lát nữa uploader.ps1 sẽ move thêm 1 file từ Main vào Old.
+    
+    $keepInOldCount = $maxFile - 1
+    
+    if ($matchesInOld.Count -gt $keepInOldCount) {
+        # Bỏ qua những file mới nhất trong OLD, còn lại đưa vào danh sách xóa
+        $toDelete = $matchesInOld | Select-Object -Skip $keepInOldCount | Select-Object -ExpandProperty Name
+        $filenameB_delete = $toDelete -join "|"
     }
 }
 
