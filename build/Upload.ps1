@@ -113,51 +113,27 @@ Write-Host "[DEBUG] Uploading ISO to $remoteDest with flags: $($flags -join ' ')
 # Xóa ISO local sau upload
 Remove-Item -Path $isoFile.FullName -Force -ErrorAction SilentlyContinue
 
-# B4: Ghi build.md
+# B4: Ghi thông tin vào file tạm (Hỗ trợ nhiều file trong 1 lần chạy)
 try {
     $buildDate = Get-Date -Format "yyyy-MM-dd"
     $timeNow   = Get-Date -Format "HH:mm:ss"
     $remoteIso = $isoFile.Name
 
-    # Local ISO: 
     $localIsoDir = $env:iso
     $latestIso = Get-ChildItem -Path $localIsoDir -File -Filter *.iso |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1
-
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
     $localIsoName = if ($latestIso) { $latestIso.Name } else { "" }
 
-    $mdFile = Join-Path $env:GITHUB_WORKSPACE "build.md"
-    if (-not (Test-Path $mdFile)) {
-        @"
-# Build History
+    # Tạo dòng dữ liệu cho file hiện tại
+    $currentLine = "$buildDate|$timeNow|$localIsoName|$remoteIso"
 
-| Date | Mode | Build# | Time | ISO Gốc | ISO VIETSTAR|
-|------|------|--------|------|-----------|------------|
-"@ | Out-File $mdFile -Encoding utf8
-    }
+    # Ghi THÊM (Append) vào file tạm chung của Job này
+    # File này nằm trong thư mục WORKSPACE của GitHub
+    $tempDataFile = Join-Path $env:GITHUB_WORKSPACE "all_builds_data.txt"
+    $currentLine | Out-File -FilePath $tempDataFile -Append -Encoding utf8
 
-    $content = Get-Content $mdFile
-    $pattern = "\|\s$buildDate\s\|\s$Mode\s\|"
-    $found = $content | Select-String -Pattern $pattern
-    if ($found) {
-        $idx = $found[0].LineNumber - 1
-        $oldLine = $content[$idx]
-        $cols = $oldLine -split '\|'
-        $oldCounter = [int]($cols[3].Trim())
-        $newCounter = $oldCounter + 1
-        $newLine = "| $buildDate | $Mode | $newCounter | $timeNow | $localIsoName | $remoteIso |"
-        $content[$idx] = $newLine
-    } else {
-        $newLine = "| $buildDate | $Mode | 1 | $timeNow | $localIsoName | $remoteIso |"
-        $content += $newLine
-    }
-
-    Set-Content -Path $mdFile -Value $content -Encoding utf8
-
-    Write-Host "[DEBUG] build.md updated"
+    Write-Host "[DEBUG] Added to temp file: $currentLine"
 } catch {
-    Write-Warning "[WARN] Failed to update build.md: $($_.Exception.Message)"
+    Write-Warning "[WARN] Failed to save build data: $($_.Exception.Message)"
 }
-
-return @{ Mode = $Mode; Status = "ISO uploaded, pruned, and build.md updated" }
+return @{ Mode = $Mode; Status = "ISO uploaded and build data prepared" }
