@@ -1,4 +1,7 @@
-param([string]$Mode)
+param(
+    [string]$Mode,
+    [bool]$Overwrite = $false  # Thêm tham số này
+)
 
 Write-Host "=== MAIN PIPELINE START ==="
 Write-Host "[DEBUG] Mode input=$Mode"
@@ -50,6 +53,45 @@ foreach ($m in $runModes) {
         Write-Warning "[WARN] Mode '$m' not found in FILE_CODE_RULES, skipping"
         continue
     }
+
+# --- LOGIC SO SÁNH PHIÊN BẢN (CHÈN VÀO ĐÂY) ---
+    if (-not $Overwrite) {
+        Write-Host "[INFO] Dang kiem tra phien ban cho mode: $m"
+
+        # Tận dụng trực tiếp $r.isoFolder hoặc $r.Folder như logic gốc
+        $isoSub = if ($r.isoFolder) { $r.isoFolder } else { $r.Folder }
+        $vsSub  = if ($r.VietstarFolder) { $r.VietstarFolder } else { $r.Folder }
+
+        $remoteOrigin   = "$($env:RCLONE_PATH)$($env:iso_path)/$isoSub"
+        $remoteVietstar = "$($env:RCLONE_PATH)$($env:vietstar_path)/$vsSub"
+
+        # Lọc đúng theo Patterns của chính mode đó
+        $includeParams = @()
+        foreach ($p in $r.Patterns) { $includeParams += "--include"; $includeParams += "$p" }
+
+        $rclone = "$env:SCRIPT_PATH\rclone.exe"
+        $commonFlags = "--config", "$env:RCLONE_CONFIG_PATH", "--no-check-certificate"
+
+        # Lấy file ISO mới nhất khớp với Patterns
+        $originFile = & $rclone lsf "$remoteOrigin" @includeParams @commonFlags | Sort-Object | Select-Object -Last 1
+        $modFile    = & $rclone lsf "$remoteVietstar" @includeParams @commonFlags | Sort-Object | Select-Object -Last 1
+
+        if ($originFile -and $modFile) {
+            $regex = "v\d{2}\.\d{2}\.\d{2}"
+            $originVer = ([regex]::Match($originFile, $regex)).Value
+            $modVer    = ([regex]::Match($modFile, $regex)).Value
+
+            if ($originVer -and ($originVer -eq $modVer)) {
+                Write-Host "========================================================="
+                Write-Host "[SKIP] Mode $m: Phien ban $originVer da ton tai. Dung build."
+                Write-Host "========================================================="
+                continue # Nhảy sang mode tiếp theo, bỏ qua Prepare/Build
+            }
+        }
+    }
+    # --- KẾT THÚC LOGIC SO SÁNH ---
+
+    # Nếu không trùng hoặc bật Overwrite, mới bắt đầu chạy Prepare và Build
 
     Write-RuleEnvForMode -r $r
 
