@@ -54,25 +54,27 @@ foreach ($m in $runModes) {
         continue
     }
 
-# --- LOGIC SO SÁNH PHIÊN BẢN (CHÈN VÀO ĐÂY) ---
+# --- LOGIC SO SÁNH PHIÊN BẢN ---
     if (-not $Overwrite) {
-        Write-Host "[INFO] Dang kiem tra phien ban cho mode: $m"
+        Write-Host "[INFO] Dang kiem tra phien ban cho mode: ${m}"
 
-        # Tận dụng trực tiếp $r.isoFolder hoặc $r.Folder như logic gốc
         $isoSub = if ($r.isoFolder) { $r.isoFolder } else { $r.Folder }
         $vsSub  = if ($r.VietstarFolder) { $r.VietstarFolder } else { $r.Folder }
 
         $remoteOrigin   = "$($env:RCLONE_PATH)$($env:iso_path)/$isoSub"
         $remoteVietstar = "$($env:RCLONE_PATH)$($env:vietstar_path)/$vsSub"
 
-        # Lọc đúng theo Patterns của chính mode đó
+        # SỬA TẠI ĐÂY: Tham số và giá trị phải tách biệt
         $includeParams = @()
-        foreach ($p in $r.Patterns) { $includeParams += "--include"; $includeParams += "$p" }
+        foreach ($p in $r.Patterns) { 
+            $includeParams += "--include"
+            $includeParams += "$p" 
+        }
 
         $rclone = "$env:SCRIPT_PATH\rclone.exe"
         $commonFlags = "--config", "$env:RCLONE_CONFIG_PATH", "--no-check-certificate"
 
-        # Lấy file ISO mới nhất khớp với Patterns
+        # Gọi rclone với mảng tham số đã sửa
         $originFile = & $rclone lsf "$remoteOrigin" @includeParams @commonFlags | Sort-Object | Select-Object -Last 1
         $modFile    = & $rclone lsf "$remoteVietstar" @includeParams @commonFlags | Sort-Object | Select-Object -Last 1
 
@@ -81,12 +83,20 @@ foreach ($m in $runModes) {
             $originVer = ([regex]::Match($originFile, $regex)).Value
             $modVer    = ([regex]::Match($modFile, $regex)).Value
 
+            Write-Host "[DEBUG] Found Origin: $originFile (Ver: $originVer)"
+            Write-Host "[DEBUG] Found Modded: $modFile (Ver: $modVer)"
+
             if ($originVer -and ($originVer -eq $modVer)) {
                 Write-Host "========================================================="
-                Write-Host "[SKIP] Mode ${m}: Phien ban ${originVer} da ton tai. Dung build."                
+                Write-Host "[SKIP] Mode ${m}: Phien ban ${originVer} da ton tai. Dung build."
                 Write-Host "========================================================="
-                continue # Nhảy sang mode tiếp theo, bỏ qua Prepare/Build
+                continue 
             }
+        } else {
+            # Debug xem tại sao không thấy file
+            Write-Host "[DEBUG] Khong tim thay file de so sanh."
+            Write-Host "[DEBUG] Remote Origin Path: $remoteOrigin"
+            Write-Host "[DEBUG] Include Params: $($includeParams -join ' ')"
         }
     }
     # --- KẾT THÚC LOGIC SO SÁNH ---
