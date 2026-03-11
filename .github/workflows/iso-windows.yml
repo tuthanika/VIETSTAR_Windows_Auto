@@ -2,6 +2,11 @@ name: Tự động tải và upload ISO Windows
 
 on:
   workflow_dispatch:
+    inputs:
+      trigger_next:
+        description: 'Kích hoạt 2 workflow tiếp theo sau khi xong?'
+        type: boolean
+        default: true
 
 jobs:
   run-download-upload:
@@ -117,3 +122,23 @@ jobs:
         run: |
           & "$env:REPO_PATH\scripts\uploader.ps1" -PipePath "$env:SCRIPT_PATH\links.final.txt"
 
+      - name: Tự chạy build sau khi tải xong
+        if: success() && github.event.inputs.trigger_next == 'true'
+        shell: pwsh
+        run: |
+          $owner = "${{ github.repository_owner }}"
+          $repo = "${{ github.event.repository.name }}"
+          $token = "${{ secrets.GH_PAT }}" # Đảm bảo PAT này có quyền 'workflow'
+          
+          # Danh sách tên các file YAML của workflow bạn muốn chạy
+          $workflows = @("vietstar-build-driverceo.yml", "vietstar-build-easydriver.yml") 
+          
+          foreach ($wf in $workflows) {
+              Write-Host "Đang kích hoạt workflow: $wf"
+              $url = "https://api.github.com/repos/$owner/$repo/actions/workflows/$wf/dispatches"
+              
+              Invoke-RestMethod -Uri $url -Method Post -Headers @{
+                  "Authorization" = "token $token"
+                  "Accept" = "application/vnd.github.v3+json"
+              } -Body (ConvertTo-Json @{ ref = "master" }) # Thay master bằng branch của bạn nếu cần
+          }
