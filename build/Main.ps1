@@ -83,7 +83,7 @@ foreach ($m in $runModes) {
 
             if ($originVer -and ($originVer -eq $modVer)) {
                 Write-Host "========================================================="
-                Write-Host "[SKIP] Mode $m: Phien ban $originVer da ton tai. Dung build."
+                Write-Host "[SKIP] Mode ${m}: Phien ban ${originVer} da ton tai. Dung build."                
                 Write-Host "========================================================="
                 continue # Nhảy sang mode tiếp theo, bỏ qua Prepare/Build
             }
