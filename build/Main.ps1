@@ -72,7 +72,7 @@ foreach ($m in $runModes) {
         }
 
         $rclone = "$env:SCRIPT_PATH\rclone.exe"
-        $commonFlags = "--config", "$env:RCLONE_CONFIG_PATH", "--no-check-certificate"
+        $commonFlags = "--config", "$env:RCLONE_CONFIG_PATH", "--no-check-certificate", "--files-only"
 
         # Gọi rclone với mảng tham số đã sửa
         $originFile = & $rclone lsf "$remoteOrigin" @includeParams @commonFlags | Sort-Object | Select-Object -Last 1
