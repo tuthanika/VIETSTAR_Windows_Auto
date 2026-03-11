@@ -8,6 +8,11 @@ on:
           Nhập mode (tách bằng , hoặc ;mặc định all):7-32,7-64,10-32-ltsc,10-64-ltsc,10-32,10-64,11-64,11-64-ltsc,ALL-32,ALL-64,ALL-32-LITE,ALL-64-LITE,AUTO
         required: false
         default: 'all'
+      overwrite:
+        description: 'Ghi đè (Bỏ qua kiểm tra trùng phiên bản)'
+        required: true
+        default: false
+        type: boolean     
 
 jobs:
   build:
@@ -227,11 +232,10 @@ jobs:
         shell: pwsh
         run: |
           Set-Location $env:SCRIPT_PATH
-          . "$env:SCRIPT_PATH\build\Main.ps1" "${{ github.event.inputs.mode }}"
+          . "$env:SCRIPT_PATH\build\Main.ps1" "${{ github.event.inputs.mode }}" ([bool]::Parse("${{ github.event.inputs.overwrite }}"))
 
       - name: Sync Build History
         shell: pwsh
         if: success()
         run: |
-          # Dùng lại script cho bất kỳ file nào bạn muốn
-          . "$env:SCRIPT_PATH\build\Update-BuildHistory.ps1" -TargetFile "build.md" -Mode "${{ github.event.inputs.mode }}"
+          . "$env:SCRIPT_PATH\build\Update-BuildHistory.ps1" -TargetFile "build.md"

@@ -253,5 +253,4 @@ jobs:
         shell: pwsh
         if: success()
         run: |
-          # Dùng lại script cho bất kỳ file nào bạn muốn
-          . "$env:SCRIPT_PATH\build\Update-BuildHistory.ps1" -TargetFile "build.md" -Mode "${{ github.event.inputs.mode }}"
+          . "$env:SCRIPT_PATH\build\Update-BuildHistory.ps1" -TargetFile "build.md"
