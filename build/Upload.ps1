@@ -125,7 +125,7 @@ try {
     $localIsoName = if ($latestIso) { $latestIso.Name } else { "" }
 
     # Tạo dòng dữ liệu cho file hiện tại
-    $currentLine = "$buildDate|$timeNow|$localIsoName|$remoteIso"
+    $currentLine = "$Mode|$buildDate|$timeNow|$localIsoName|$remoteIso"
 
     # Ghi THÊM (Append) vào file tạm chung của Job này
     # File này nằm trong thư mục WORKSPACE của GitHub
