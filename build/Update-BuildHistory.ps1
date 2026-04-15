@@ -12,9 +12,9 @@ git config --global user.email "github-actions[bot]@users.noreply.github.com"
 git config --global core.autocrlf false
 
 for ($i = 1; $i -le 10; $i++) {
-    Write-Host "[RETRY $i/10] Pulling latest history..."
-    # Pull để đồng bộ các Job khác trước khi sửa
-    git pull origin master --rebase
+    Write-Host "[RETRY $i/10] Syncing with origin/master..."
+    git fetch origin master
+    git reset --hard origin/master
 
     # 1. Tạo file nếu chưa có (Dùng System.IO để đảm bảo encoding chuẩn không lỗi ký tự lạ)
     if (-not (Test-Path $filePath)) {
@@ -64,14 +64,12 @@ for ($i = 1; $i -le 10; $i++) {
         $updatedLines | Set-Content -Path $filePath -Encoding UTF8
     }
 
-    # 4. Git xử lý: QUAN TRỌNG NHẤT
+    # 4. Git commit & push
     git add "$TargetFile"
-    
-    # Kiểm tra xem thực sự có thay đổi gì so với commit trước không
     $gitStatus = git status --porcelain "$TargetFile"
     if ($gitStatus) {
         $timestamp = Get-Date -Format "HH:mm:ss"
-        git commit -m "Update history build.md at $timestamp [skip ci]"
+        git commit -m "Update history $TargetFile at $timestamp [skip ci]"
         
         git push origin master
         if ($LASTEXITCODE -eq 0) {
@@ -79,11 +77,12 @@ for ($i = 1; $i -le 10; $i++) {
             Remove-Item $dataFile -ErrorAction SilentlyContinue
             exit 0
         }
+        Write-Host "[WARNING] Push failed. Someone might have pushed changes. Retrying..."
     } else {
         Write-Host "[INFO] No changes detected to commit."
         exit 0
     }
 
     # Nếu xung đột push, đợi rồi thử lại
-    Start-Sleep -Seconds (Get-Random -Minimum 3 -Maximum 10)
+    Start-Sleep -Seconds (Get-Random -Minimum 5 -Maximum 15)
 }
