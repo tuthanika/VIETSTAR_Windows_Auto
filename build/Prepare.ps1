@@ -58,6 +58,7 @@ function Resolve-RemoteLatest {
     try {
         $jsonOut = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
             --config "$env:RCLONE_CONFIG_PATH" `
+            --ignore-case `
             --include "$patterns" 2>&1
 
         # Write-Host "=== DEBUG: raw rclone output ==="
