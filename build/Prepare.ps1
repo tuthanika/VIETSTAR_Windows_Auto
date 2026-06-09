@@ -56,10 +56,10 @@ function Resolve-RemoteLatest {
     # Write-Host "[DEBUG] remoteDir=$remoteDir"
 
     try {
-        # Lấy toàn bộ danh sách file (không dùng --include của rclone vì phân biệt hoa/thường)
         $jsonOut = & "$env:SCRIPT_PATH\rclone.exe" lsjson $remoteDir `
             --config "$env:RCLONE_CONFIG_PATH" `
-            --files-only 2>&1
+            --ignore-case `
+            --include "$patterns" 2>&1
 
         # Write-Host "=== DEBUG: raw rclone output ==="
         # $jsonOut | ForEach-Object { Write-Host "  $_" }
@@ -77,17 +77,7 @@ function Resolve-RemoteLatest {
             return $null
         }
 
-        # Lọc file theo patterns (case-insensitive) trong PowerShell
-        # patterns có thể là nhiều pattern cách nhau bằng ;
-        $patternList = $patterns -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
-        $files = @($entries | Where-Object {
-            $name = $_.Name
-            $matched = $false
-            foreach ($p in $patternList) {
-                if ($name -ilike $p) { $matched = $true; break }
-            }
-            $matched
-        })
+        $files = @($entries | Where-Object { $_.IsDir -eq $false })
         Write-Host "[DEBUG] entries count=$($entries.Count), file entries=$($files.Count)"
         $files | ForEach-Object { Write-Host "  file: Name=$($_.Name) Size=$($_.Size) ModTime=$($_.ModTime)" }
 
