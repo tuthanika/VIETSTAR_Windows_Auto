@@ -6,5 +6,5 @@
 | 2026-05-13 | 10-64 | 1 | 10:42:21 | en-ru_windows_10_version_22h2_with_update_19045.7291_aio_32in1_x64_v26.05.12_by_adguard.iso | VIETSTAR_windows_10_version_22h2_19045.7291_aio_32in1_x64_v26.05.12_13-05-2026.iso |
 | 2026-05-13 | 11-64 | 1 | 11:08:56 | en-ru_windows_11_version_26h1_with_update_28000.2113_aio_38in1_x64_v26.05.12_by_adguard.iso | VIETSTAR_windows_11_version_26h1_28000.2113_aio_38in1_x64_v26.05.12_13-05-2026.iso |
 | 2026-05-13 | 11-64-ltsc | 1 | 11:35:41 | en-ru_windows_11_enterprise_ltsc_2024_with_update_26100.8457_aio_8in1_x64_v26.05.12_by_adguard.iso | VIETSTAR_windows_11_enterprise_ltsc_2024_26100.8457_aio_8in1_x64_v26.05.12_13-05-2026.iso |
-| 2026-06-09 | 7-32 | 1 | 08:06:29 | en-ru_windows_7_sp1_with_update_7601.27366_aio_24in1_x86_v24.10.12_by_adguard.iso | VIETSTAR_windows_7_sp1_7601.27366_aio_24in1_x86_v24.10.12_09-06-2026.iso |
-| 2026-06-09 | 7-64 | 1 | 08:15:15 | en-ru_windows_7_sp1_with_update_7601.28117_aio_20in1_x64_v26.01.13_by_adguard.iso | VIETSTAR_windows_7_sp1_7601.28117_aio_20in1_x64_v26.01.13_09-06-2026.iso |
+| 2026-06-09 | 7-32 | 2 | 09:35:30 | en-ru_windows_7_sp1_with_update_7601.27366_aio_24in1_x86_v24.10.12_by_adguard.iso | VIETSTAR_windows_7_sp1_7601.27366_aio_24in1_x86_v24.10.12_09-06-2026.iso |
+| 2026-06-09 | 7-64 | 2 | 09:54:52 | en-ru_windows_7_sp1_with_update_7601.28117_aio_20in1_x64_v26.01.13_by_adguard.iso | VIETSTAR_windows_7_sp1_7601.28117_aio_20in1_x64_v26.01.13_09-06-2026.iso |
