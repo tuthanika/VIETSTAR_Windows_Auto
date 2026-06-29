@@ -14,3 +14,5 @@
 | 2026-06-10 | 10-64 | 1 | 10:38:47 | en-ru_windows_10_version_22h2_with_update_19045.7417_aio_32in1_x64_v26.06.10_by_adguard.iso | VIETSTAR_windows_10_version_22h2_19045.7417_aio_32in1_x64_v26.06.10_10-06-2026.iso |
 | 2026-06-10 | 11-64 | 1 | 10:53:59 | en-ru_windows_11_version_26h1_with_update_28000.2269_aio_38in1_x64_v26.06.10_by_adguard.iso | VIETSTAR_windows_11_version_26h1_28000.2269_aio_38in1_x64_v26.06.10_10-06-2026.iso |
 | 2026-06-10 | 11-64-ltsc | 1 | 11:10:08 | en-ru_windows_11_enterprise_ltsc_2024_with_update_26100.8655_aio_8in1_x64_v26.06.10_by_adguard.iso | VIETSTAR_windows_11_enterprise_ltsc_2024_26100.8655_aio_8in1_x64_v26.06.10_10-06-2026.iso |
+| 2026-06-29 | 11-64 | 1 | 08:11:46 | en-ru_windows_11_version_26h1_with_update_28000.2269_aio_38in1_x64_v26.06.10_by_adguard.iso | VIETSTAR_windows_11_version_26h1_28000.2269_aio_38in1_x64_v26.06.10_29-06-2026.iso |
+| 2026-06-29 | 11-64-ltsc | 1 | 08:25:54 | en-ru_windows_11_enterprise_ltsc_2024_with_update_26100.8655_aio_8in1_x64_v26.06.10_by_adguard.iso | VIETSTAR_windows_11_enterprise_ltsc_2024_26100.8655_aio_8in1_x64_v26.06.10_29-06-2026.iso |
