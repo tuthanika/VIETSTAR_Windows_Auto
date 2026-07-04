@@ -279,5 +279,5 @@ jobs:
         shell: pwsh
         if: success()
         run: |
-          . "$env:SCRIPT_PATH\build\Update-BuildHistory.ps1" -TargetFile "build-easydriver.md"
+          . "$env:SCRIPT_PATH\build\Update-BuildHistory.ps1" -TargetFile "build-easydriver-bq.md"
                   
