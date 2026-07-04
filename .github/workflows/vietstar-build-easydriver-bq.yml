@@ -255,6 +255,19 @@ jobs:
             -replace '\s-f "%silent%\\\*WinRAR.*-W7.*"\s?', '' |
           Set-Content $file
 
+      - name: Thay thế các file iso oem
+        shell: pwsh
+        run: |
+          Set-Location $env:SCRIPT_PATH
+          $file = "${{ env.SCRIPT_PATH }}\zzz.Windows-imdisk.cmd"
+          (Get-Content $file) `
+            -replace '7-32.iso', '7-32-bq.iso' `
+            -replace '7-64.iso', '7-64-bq.iso' `
+            -replace '10-32.iso', '10-32-bq.iso' `
+            -replace '10-64.iso', '10-64-bq.iso' `
+            -replace '11-64.iso', '11-64-bq.iso' `
+            -replace 'ALL.iso', 'ALL-bq.iso' ` |
+          Set-Content $file
 
       - name: Run integrated pipeline
         shell: pwsh
