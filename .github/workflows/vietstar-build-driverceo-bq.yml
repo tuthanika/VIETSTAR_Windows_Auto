@@ -64,9 +64,6 @@ jobs:
             "Folder": "Windows 7",
             "Patterns": ["*windows*7*86*.iso"],
             "BootPatterns": ["*7*86*.iso"],
-            "DriverPatterns": ["*Win7*86*.iso"],
-            "DriverFolder": "DriverCeo/DP",
-            "SilentPatterns": ["*Lite*.iso"],
             "VietstarFolder": "Windows 7/DriverCeo-BQ"
           },
           {
