@@ -52,7 +52,7 @@ jobs:
             "DriverPatterns": ["*Win7*86*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 7/DriverCeo"
+            "VietstarFolder": "Windows 7/DriverCeo-BQ"
           },
           {
             "Mode": "7-64",
@@ -62,7 +62,7 @@ jobs:
             "DriverPatterns": ["*Win7*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 7/DriverCeo"
+            "VietstarFolder": "Windows 7/DriverCeo-BQ"
           },
           {
             "Mode": "10-32-ltsc",
@@ -71,7 +71,7 @@ jobs:
             "DriverPatterns": ["*Win10*86*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 10 LTSC/DriverCeo"
+            "VietstarFolder": "Windows 10 LTSC/DriverCeo-BQ"
           },
           {
             "Mode": "10-64-ltsc",
@@ -80,7 +80,7 @@ jobs:
             "DriverPatterns": ["*Win10*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 10 LTSC/DriverCeo"
+            "VietstarFolder": "Windows 10 LTSC/DriverCeo-BQ"
           },
           {
             "Mode": "10-32",
@@ -89,7 +89,7 @@ jobs:
             "DriverPatterns": ["*Win10*86*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 10/DriverCeo"
+            "VietstarFolder": "Windows 10/DriverCeo-BQ"
           },
           {
             "Mode": "10-64",
@@ -98,7 +98,7 @@ jobs:
             "DriverPatterns": ["*Win10*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 10/DriverCeo"
+            "VietstarFolder": "Windows 10/DriverCeo-BQ"
           },
           {
             "Mode": "11-64",
@@ -108,7 +108,7 @@ jobs:
             "DriverPatterns": ["*Win11*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 11/DriverCeo"
+            "VietstarFolder": "Windows 11/DriverCeo-BQ"
           },
           {
             "Mode": "11-64-ltsc",
@@ -118,7 +118,7 @@ jobs:
             "DriverPatterns": ["*Win11*64*.iso"],
             "DriverFolder": "DriverCeo/DP",
             "SilentPatterns": ["*Lite*.iso"],
-            "VietstarFolder": "Windows 11 LTSC/DriverCeo"
+            "VietstarFolder": "Windows 11 LTSC/DriverCeo-BQ"
           }
         ]
       MAX_FILE: ${{ vars.MAX_FILE }}
