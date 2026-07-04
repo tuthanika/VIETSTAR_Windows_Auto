@@ -245,15 +245,15 @@ jobs:
         run: |
           Set-Location $env:SCRIPT_PATH
           $file = "${{ env.SCRIPT_PATH }}\zzz.Windows-imdisk.cmd"
-          $content = Get-Content $file `
-            | ForEach-Object {
-                $_ `
-                  -replace ' -f "%silent%\\*Cleaner.*-W7.*"', '' `
-                  -replace ' -f "%silent%\\*Internet.Download.Manager.*-W7.*"', '' `
-                  -replace ' -f "%silent%\\*Internet.Download.Manager.*-rsload.*"', '' `
-                  -replace ' -f "%silent%\\*WinRAR.*-W7.*"', '' `
-                  -replace '\s{2,}', ' '   # gộp nhiều khoảng trắng liên tiếp thành 1
-              }
+          $content = Get-Content $file | ForEach-Object {
+              $_ `
+                -replace ' -f "%silent%\*Cleaner.*-W7.*"', '' `
+                -replace ' -f "%silent%\*Internet.Download.Manager.*-W7.*"', '' `
+                -replace ' -f "%silent%\*Internet.Download.Manager.*-rsload.*"', '' `
+                -replace ' -f "%silent%\*WinRAR.*-W7.*"', ''
+          }
+          # dọn khoảng trắng thừa
+          $content = $content | ForEach-Object { $_ -replace '\s{2,}', ' ' }
           Set-Content $file -Value $content
           
       - name: Thay thế các file iso oem
