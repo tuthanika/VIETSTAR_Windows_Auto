@@ -248,12 +248,24 @@ jobs:
         run: |
           Set-Location $env:SCRIPT_PATH
           $file = "${{ env.SCRIPT_PATH }}\zzz.Windows-imdisk.cmd"
-          (Get-Content $file) `
-            -replace '\s-f "%silent%\\\*Cleaner.*-W7.*"\s?', '' `
-            -replace '\s-f "%silent%\\\*Internet\.Download\.Manager.*-W7.*"\s?', '' `
-            -replace '\s-f "%silent%\\\*Internet\.Download\.Manager.*-rsload.*"\s?', '' `
-            -replace '\s-f "%silent%\\\*WinRAR.*-W7.*"\s?', '' |
-          Set-Content $file
+
+          $patterns = @(
+            ' -f "%silent%\*Cleaner.*-W7.*"',
+            ' -f "%silent%\*Internet.Download.Manager.*-W7.*"',
+            ' -f "%silent%\*Internet.Download.Manager.*-rsload.*"',
+            ' -f "%silent%\*WinRAR.*-W7.*"'
+          )
+
+          $content = Get-Content $file | ForEach-Object {
+              $line = $_
+              foreach ($p in $patterns) {
+                  $line = $line -replace [Regex]::Escape($p), ''
+              }
+              # gộp khoảng trắng dư
+              $line -replace '\s{2,}', ' '
+          }
+
+          Set-Content $file -Value $content
 
       - name: Thay thế các file iso oem
         shell: pwsh
