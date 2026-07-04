@@ -279,20 +279,6 @@ jobs:
             -replace 'ALL.iso', 'ALL-bq.iso' ` |
           Set-Content $file
 
-      - name: Show modified CMD file
-        run: |
-          $file = "${{ env.SCRIPT_PATH }}\zzz.Windows-imdisk.cmd"
-          Write-Host "===== CONTENT OF zzz.Windows-imdisk.cmd ====="
-          Get-Content $file | ForEach-Object { Write-Host $_ }
-          Write-Host "===== END OF FILE ====="
-
-      - name: Upload modified CMD file
-        uses: actions/upload-artifact@v4
-        with:
-          name: modified-cmd
-          path: ${{ env.SCRIPT_PATH }}/zzz.Windows-imdisk.cmd
-
-
       - name: Run integrated pipeline
         shell: pwsh
         run: |
