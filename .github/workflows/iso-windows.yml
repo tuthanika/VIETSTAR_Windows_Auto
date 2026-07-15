@@ -131,7 +131,7 @@ jobs:
           $token = "${{ secrets.GH_PAT }}" # Đảm bảo PAT này có quyền 'workflow'
           
           # Danh sách tên các file YAML của workflow bạn muốn chạy
-          $workflows = @("vietstar-build-driverceo.yml", "vietstar-build-easydriver.yml") 
+          $workflows = @("vietstar-build-driverceo.yml", "vietstar-build-driverceo-bq.yml", "vietstar-build-easydriver.yml", "vietstar-build-easydriver-bq.yml") 
           
           foreach ($wf in $workflows) {
               Write-Host "Đang kích hoạt workflow: $wf"
