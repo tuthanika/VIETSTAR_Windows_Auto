@@ -40,6 +40,7 @@ jobs:
           { "Patterns": ["*windows_11*", "*windows-11*", "*windows 11*"], "Folder": "Windows 11" }
         ]
       MAX_FILE: ${{ vars.MAX_FILE }}
+      LINK: ${{ vars.LINK }}
 
     steps:
       - name: Checkout repo

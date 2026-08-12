@@ -39,6 +39,41 @@ function Run-Downloader {
     }
 }
 
+# ── FAST PATH: Nếu biến LINK có giá trị, bỏ qua scrape forum ──────────────────
+$envLink = $env:LINK
+if (-not [string]::IsNullOrWhiteSpace($envLink)) {
+    Write-Host "INFO: Biến LINK được cung cấp – bỏ qua scrape forum, xử lý trực tiếp các link."
+    Add-Content -Path $debugPath -Value "=== FAST PATH: LINK var supplied, skipping forum scrape ==="
+
+    $directLinks = $envLink -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+
+    foreach ($dLink in $directLinks) {
+        Write-Host "DEBUG: FAST PATH – xử lý link trực tiếp: [$dLink]"
+        Add-Content -Path $debugPath -Value "FAST PATH link: $dLink"
+        Run-Downloader $dLink
+    }
+
+    # Thống kê và thoát – giống phần cuối luồng bình thường
+    if (Test-Path $pipePath) {
+        Write-Host "=== links.final.txt content ==="
+        Get-Content $pipePath | ForEach-Object { Write-Host $_ }
+        Write-Host "=== end of file ==="
+        $count = (Get-Content $pipePath | Measure-Object).Count
+        Write-Host "DEBUG: links.final.txt count=$count"
+        if ($count -eq 0) { Write-Host "No new links. Done." } else { Write-Host "Processing finished, $count links written." }
+    }
+
+    if (Test-Path $errPath) {
+        Write-Host "=== Error summary ==="
+        Get-Content $errPath | ForEach-Object { Write-Host $_ }
+        Write-Host "=== End of errors ==="
+        exit 1
+    } else {
+        exit 0
+    }
+}
+# ── END FAST PATH ──────────────────────────────────────────────────────────────
+
 foreach ($raw in $rawLinks) {
     $parts = $raw.Split('|')
     $link          = $parts[0].Trim()
